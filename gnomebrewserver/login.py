@@ -1,0 +1,2 @@
+from gnomebrewserver import app
+
