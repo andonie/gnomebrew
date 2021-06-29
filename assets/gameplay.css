@@ -1,0 +1,84 @@
+
+/* STATION DATA */
+
+.station-warning {
+    color: red;
+    min-height: 1.5em;
+    margin-bottom: 5px;
+}
+
+
+/* BUTTON */
+
+button {
+    min-width: 80px;
+}
+
+/* SLOTS */
+
+.slots {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.slot-ext {
+    position: relative;
+    width: 100%;
+    background-color: lightgrey;
+    margin-bottom: 5px;
+}
+
+.slot-bar {
+    height: 15px;
+    background-color: green;
+    width: 0%;
+}
+
+.slot-desc {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+
+.description {
+    display: flex;
+    justify-content: space-between;
+}
+
+.descriptor {
+}
+
+.description-value {
+}
+
+/* GNOMEBREW TABLES */
+
+.gb-table-wrap {
+    overflow: scroll;
+    max-height: 250px;
+}
+
+.gb-table {
+
+}
+
+.gb-table td, .gb-table th {
+    border: none !important;
+    vertical-align: middle !important;
+}
+
+.gb-table-desc {
+
+}
+
+.gb-table-value {
+
+}
+
+.gb-icon {
+    max-width: 40px;
+    margin: 5px;
+}

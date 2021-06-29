@@ -1,0 +1,34 @@
+{% extends "stations/_station.html" %}
+
+{% block station_body %}
+{% with offers = game_data.market.inventory %}
+<table class="market-offers table gb-table table-hover">
+    <thead>
+        <tr>
+            <th scope="col"></th>
+            <th scope="col"></th>
+            <th scope="col">stock</th>
+            <th scope="col">gold</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for offer in offers %}
+        {% with item = current_user.get('item.' + offer).get_json() %}
+        <tr>
+            <td><img class="gb-icon" src="{{ url_for('static_res', res='default.png') }}"></td>
+            <td><span id="market.offer.{{ offer }}">{{ item.name }}</span></td>
+            <td><span id="data.market.inventory.{{ offer }}.stock">{{ offers[offer].stock}}</span></td>
+            <td><span id="data.market.inventory.{{ offer }}.price">{{ offers[offer].price}}</span> gold</td>
+            <td><button class="" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this)">Buy</button></td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+    </tbody>
+</table>
+<div class="description">
+    <div class="descriptor">New Inventory in:</div>
+    <div class="description-value countdown" id='data.market.due' data-due="{{ game_data.market.due.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"></div>
+</div>
+{% endwith %}
+{% endblock %}

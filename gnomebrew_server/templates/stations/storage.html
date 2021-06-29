@@ -1,0 +1,27 @@
+{% extends "stations/_station.html" %}
+
+{% block station_body %}
+{{ super() }}
+<div class="description">
+    <div class="descriptor">Gold:</div>
+    <div class="description-value" id="data.storage.content.gold">{{ game_data.storage.content.gold }}</div>
+</div>
+<div class="description">
+    <div class="descriptor">Storage Capacity:</div>
+    <div class="description-value" id="attr.storage.max_capacity">{{ current_user.get('attr.storage.max_capacity') }}</div>
+</div>
+<div class="gb-table-wrap">
+    <table class="station-storage-content table table-sm table-hover gb-table">
+        {% for material in game_data.storage.content %}
+        {% if material != 'gold' %}
+        {% set item = current_user.get('item.' + material) %}
+        <tr title="{{ item.description() }}">
+            <td class=""><img class="gb-icon" src="{{ url_for('static_res', res='default.png') }}"></td>
+            <td class="gb-table-desc"><h4>{{ item.name() }}</h4></td>
+            <td class="gb-table-value" id="data.storage.content.{{ material }}">{{ game_data.storage.content[material] }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
