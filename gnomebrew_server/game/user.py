@@ -369,8 +369,10 @@ def recipe(game_id: str, user: User):
 def recipes(game_id: str, user: User):
     splits = game_id.split('.')
     assert len(splits) == 2
-    return [Recipe.from_id(x) for x in user.get('attr.' + splits[1] + '.recipes', default=[])
-            if Recipe.from_id(x).can_execute(user)]
+    user_ws_data = user.get('data.workshop')
+    return [r for r in Recipe.get_recipes_by_station(splits[1]) if r.can_execute(user,
+                                                                                 user_upgrades=user_ws_data['upgrades'],
+                                                                                 user_otr=user_ws_data['finished_otr'])]
 
 
 @game_id_resolver

@@ -8,10 +8,12 @@ This module contains the static data classes and logic, like:
 etc.
 """
 import datetime
+import re
 
 from gnomebrew_server import app, mongo
 from gnomebrew_server.game.gnomebrew_io import GameResponse
 import gnomebrew_server.game.event as event
+from bisect import bisect_left
 
 
 class StaticGameObject(object):
@@ -57,6 +59,9 @@ class Recipe(StaticGameObject):
 
         # Check if prerequisites are met
         ok = True
+
+
+
         # 1. Material Cost
         player_inventory = user.get_inventory()
         if not all([x in player_inventory and player_inventory[x] >= self._data['cost'][x] for x in
@@ -79,9 +84,9 @@ class Recipe(StaticGameObject):
                 ok = False
 
         # 4. Recipe Already Available
-        if self._data['game_id'] not in user.get('attr.' + self._data['station'] + '.recipes', default=[]):
-            response.add_fail_msg("You don't know this recipe yet.")
+        if not self.requirements_met(user):
             ok = False
+            response.add_fail_msg('Recipe not unlocked yet.')
 
         # If all requirements are met, execute Recipe
         if ok:
@@ -104,6 +109,10 @@ class Recipe(StaticGameObject):
                 if 'push_data' not in result:
                     result['push_data'] = dict()
                 result['push_data']['data.workshop.finished_otr'] = self._data['game_id']
+                result['ui_update'] = {
+                    'type': 'reload',
+                    'station': self._data['station']
+                }
 
             event.Event.generate_event_from_recipe_data(target=user.get_id(),
                                                         result=result,
@@ -121,28 +130,71 @@ class Recipe(StaticGameObject):
 
         return response
 
-    def _otr_check(self, user):
+    def _otr_check(self, user, **kwargs):
         """
         Helper Function.
         Checks if a OTR recipe can (still) be executed
         :param user:    a user
         :return:        `True` if this recipe can still be executed, otherwise `False`
         """
-        return self._data['game_id'] not in user.get('data.workshop.finished_otr') \
-            or mongo.db.events.find_one({'target': user.get_id(), 'recipe_id': self._data['game_id']})
+        if 'user_otr' in kwargs:
+            user_otr = kwargs['user_otr']
+        else:
+            user_otr = user.get('data.workshop.finished_otr')
+        return self._data['game_id'] not in user_otr or mongo.db.events.find_one(
+            {'target': user.get_id(), 'recipe_id': self._data['game_id']})
 
     def is_one_time(self):
         return 'one_time' in self._data and self._data['one_time']
 
-    def can_execute(self, user):
+    def requirements_met(self, user, **kwargs):
+        """
+        Checks if the recipe's requirements are met
+        :param user:    a user
+        :param kwargs:  if `user_upgrades` is set, the function will not call a `get`
+        :return:        `True` if this recipe's requirements are met. Otherwise `False`
+        """
+        if 'requirements' not in self._data:
+            # No requirements
+            return True
+
+        # Binsearch Helper. Upgrade Data is in an always sorted list
+        # Thank you: https://stackoverflow.com/a/2233940/13481946
+        def binary_search(a, x, lo=0, hi=None):
+            if hi is None: hi = len(a)
+            pos = bisect_left(a, x, lo, hi)  # find insertion position
+            return True if pos != hi and a[pos] == x else False
+
+        # Make sure all requirements are met, if any
+        if 'user_upgrades' in kwargs:
+            user_upgrades = kwargs['user_upgrades']
+        else:
+            user_upgrades = user.get('data.workshop.upgrades')
+
+        return all([binary_search(user_upgrades, req) for req in self._data['requirements']])
+
+    def can_execute(self, user, **kwargs):
         """
         Checks if a given user *could* execute this recipe, not taking into account their current resources.
-        This check does NOT factor in the resources the user has available.
+        This check does NOT factor in the resources the user has available. This takes into account:
+
+        * If the user already unlocked the recipe
+        * If the recipe is a one-time-recipe and is already executed
+
         :param user:  a user
         :return: True, if this recipe can be executed. False, if this recipe is not executable (anymore) no matter the
                     resources.
         """
-        return not self.is_one_time() or self._otr_check(user)
+
+        return (not self.is_one_time() or self._otr_check(user, **kwargs)) and self.requirements_met(user, **kwargs)
+
+    def unlocked_by_upgrade(self, upgrade):
+        """
+        Checks if a given upgrade unlocks this recipe
+        :param upgrade: an upgrade
+        :return:    `True` if this recipe is unlocked by this upgrade
+        """
+        return False if 'requirements' not in self._data else upgrade.get_value('game_id') in self._data['requirements']
 
     def describe_outcome(self):
         """
@@ -151,6 +203,11 @@ class Recipe(StaticGameObject):
         """
 
         return "Creates "
+
+    @staticmethod
+    def get_recipes_by_station(station_name: str):
+        global _RECIPES_BY_STATION
+        return [] if station_name not in _RECIPES_BY_STATION else _RECIPES_BY_STATION[station_name]
 
 
 class Station(StaticGameObject):
@@ -178,7 +235,6 @@ class Upgrade(StaticGameObject):
 
     def __init__(self, mongo_data):
         self._data = mongo_data
-        assert self._data['effect']
 
     def apply_to(self, val, game_id: str):
         """
@@ -250,12 +306,27 @@ class Upgrade(StaticGameObject):
                  frontend attributes.
         """
         stations_to_update = set()
-        for update_path in self._data['effect']:
-            splits = update_path.split('.')
-            assert splits[0] == 'attr'
-            if len(splits) == 3 and splits[2] == 'recipes':
-                # This update path adds a new recipe -> Update this station
-                stations_to_update.add(splits[1])
+
+        # Every Station with a recipe that is unlocked by this upgrade is to be updated
+        global _RECIPE_LIST
+        for station in map(lambda r: r.get_value('station'),
+                           filter(lambda recipe: recipe.unlocked_by_upgrade(self), _RECIPE_LIST)):
+            stations_to_update.add(station)
+
+        # Go Through the actual upgrade effect and check if something needs to be updated
+        # Relevent regexes to check for
+        regexes = [
+            re.compile(r'^attr\.(?P<station_name>\w+)\.slots$') # Changes in Slots should be UI updated
+        ]
+
+        for attribute in self._data['effect']:
+            print(f"{attribute=}")
+            for regex in regexes:
+                match = regex.match(attribute)
+                print(f"{match=}")
+                if match:
+                    # Attribute match. Get station name
+                    stations_to_update.add(match.group('station_name'))
 
         return stations_to_update
 
@@ -289,6 +360,8 @@ class Item(StaticGameObject):
 
 # Internal References
 _STATIC_GAME_OBJECTS = dict()
+_RECIPES_BY_STATION = dict()
+_RECIPE_LIST = list()
 
 
 def _fill_from_db(col, conversion_function):
@@ -312,7 +385,18 @@ def update_static_data():
     res = dict()
 
     app.logger.info('Updating Recipe Data')
-    res.update(_fill_from_db(mongo.db.recipes, lambda doc: Recipe(doc)))
+    recipe_list = []
+
+    def process_recipe_data(doc):
+        recipe_object = Recipe(doc)
+        recipe_list.append(recipe_object)
+        return recipe_object
+
+    res.update(_fill_from_db(mongo.db.recipes, process_recipe_data))
+
+    global _RECIPE_LIST
+    _RECIPE_LIST = recipe_list
+
     app.logger.info('Recipe Data Updated')
 
     app.logger.info('Updating Upgrade Data')
@@ -329,3 +413,17 @@ def update_static_data():
 
     global _STATIC_GAME_OBJECTS
     _STATIC_GAME_OBJECTS = res
+
+    # Create Lookup Table for all Recipes by Station
+    app.logger.info('Updating Recipe Lookup')
+    recipe_lookup = dict()
+
+    for recipe in recipe_list:
+        station_name = recipe.get_value('station')
+        if station_name not in recipe_lookup:
+            recipe_lookup[station_name] = list()
+        recipe_lookup[station_name].append(recipe)
+
+    global _RECIPES_BY_STATION
+    _RECIPES_BY_STATION = recipe_lookup
+    app.logger.info('Recipe Lookup Updated')

@@ -9,6 +9,7 @@ import datetime
 from gnomebrew_server.game.user import User, load_user
 import threading
 
+
 _EVENT_FUNCTIONS = dict()
 _SLEEP_TIME = .5
 
@@ -78,8 +79,9 @@ class Event(object):
 
         # Clean up the escaped dots (.)
         for effect_type in self._data['effect']:
-            for key, _ in self._data['effect'][effect_type].copy().items():
-                self._data['effect'][effect_type][key.replace('-', '.')] = self._data['effect'][effect_type].pop(key)
+            if type(self._data['effect'][effect_type]) is dict:
+                for key, _ in self._data['effect'][effect_type].copy().items():
+                    self._data['effect'][effect_type][key.replace('-', '.')] = self._data['effect'][effect_type].pop(key)
 
         global _EVENT_FUNCTIONS
         for effect in self._data['effect']:
@@ -122,10 +124,11 @@ class Event(object):
         data['effect'] = dict()
         data['effect'].update(result)
         for effect_type in data['effect']:
-            # Change dots (.) to dashes (-) because BSON/Mongo gets sad :(
-            for key, _ in data['effect'][effect_type].copy().items():
-                # Take an iteration copy to avoid concurrent modification horrors
-                data['effect'][effect_type][key.replace('.', '-')] = data['effect'][effect_type].pop(key)
+            if type(data['effect'][effect_type]) is dict:
+                # Change dots (.) to dashes (-) because BSON/Mongo gets sad :(
+                for key, _ in data['effect'][effect_type].copy().items():
+                    # Take an iteration copy to avoid concurrent modification horrors
+                    data['effect'][effect_type][key.replace('.', '-')] = data['effect'][effect_type].pop(key)
         data['due_time'] = due_time
         data['slots'] = slots
         data['station'] = station
@@ -199,3 +202,11 @@ def push_data(user: User, effect_data: dict):
             # Can fetch the list tail and knows this is the pushed change
             user.update_game_data(data_path, data)
 
+@Event.register
+def ui_update(user: User, effect_data:dict):
+    """
+    Event execution for a user ui update
+    :param user:            The user to execute on.
+    :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
+    """
+    user.frontend_update('ui', effect_data)
