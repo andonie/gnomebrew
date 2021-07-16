@@ -19,6 +19,8 @@ function startup_script() {
     // Register socket handlers
     socket.on('update', handle_update);
     socket.on('ui', handle_ui_req);
+
+    fire_boot_list();
 }
 
 $(document).ready(startup_script);
@@ -48,9 +50,17 @@ function handle_update(data) {
         } else {
             // This is a value to be updated in the UI.
             try {
-                document.getElementById(id).innerHTML = data[id];
+                value = data[id];
+                if(typeof value === "number") {
+                    value = shorten_num(value);
+                }
+                document.getElementById(id).innerHTML = value;
             } catch(error) {
+
                 // If any error happens, reload the entire DIV.
+                // Errors should NOT happen.
+
+                console.error('Unable to handle: ' + JSON.stringify(data))
 
                 var station_name = id.split('.')[1];
                 reload_station(station_name);
@@ -69,8 +79,11 @@ function handle_ui_req(data) {
         case 'duetime':
             animate_due_time(data);
             break;
-        case 'reload':
+        case 'reload_station':
             reload_station(data.station);
+            break;
+        case 'reload_element':
+            reload_element(data.element);
             break;
     }
 }
@@ -100,13 +113,27 @@ function reload_station(station_name) {
     });
 }
 
+function reload_element(element_name) {
+    $.post('/play/game_id/html.' + element_name).done(function(response) {
+        element_to_reload = document.getElementById(element_name);
+        element_to_reload.innerHTML = response;
+        animate_whole_ui(station_element);
+    }).fail(function(response){
+        global_error('Error while connecting to server!');
+    });
+}
+
 /* GAMEPLAY */
 
 // Wrapper for all Game Requests that do not require a direct reaction to the response, which covers all UI
 function one_way_game_request(request_data, error_target, trigger_element) {
     trigger_element.disabled = true;
     var html_before = trigger_element.innerHTML;
-    trigger_element.innerHTML = 'Sending...';
+    if(html_before.length < 3) {
+        trigger_element.innerHTML = '.';
+    } else {
+        trigger_element.innerHTML = '...';
+    }
 
     var reset_element = function(){
         trigger_element.disabled = false;
@@ -133,12 +160,37 @@ function execute_recipe(recipe_id, error_target, trigger_element) {
 }
 
 // Buy From Market
-function market_buy(item_id, error_target, trigger_element) {
+function market_buy(item_id, error_target, trigger_element, buy_all) {
+    var amount = 1;
+    if(buy_all) {
+        // Buy all section is chosen -> change amount to all that's left.
+        var stock_indicator = document.getElementById('data.market.inventory.' + item_id.substring(5) + '.stock')
+        amount = parseInt(stock_indicator.innerHTML, 10)
+        if (amount == 0) {
+            error_msg(error_target, 'Inventory is empty.');
+            return;
+        }
+    }
     one_way_game_request({
         type: 'market_buy',
         item_id: item_id,
-        amount: 1
+        amount: amount
     }, error_target, trigger_element);
+}
+
+function serve_next(action, error_target, trigger_element) {
+    one_way_game_request({
+        type: 'serve_next',
+        what_do: action
+    }, error_target, trigger_element);
+}
+
+function set_price(item_id, error_target, trigger_element) {
+    one_way_game_request({
+        type: 'set_price',
+        item: item_id,
+        price: document.getElementById('data.tavern.prices.' + item_id).value
+    }, error_target, trigger_element)
 }
 
 

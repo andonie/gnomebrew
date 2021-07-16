@@ -1,27 +1,28 @@
 {% extends 'base.html' %}
 
 {% block scripts %}
-{{ super() }}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+<script src="{{ url_for('static_res', res='bootstrap.min.js') }}"></script>
 <script src="{{ url_for('static_res', res='gnomebrew.js') }}"></script>
 <script src="{{ url_for('static_res', res='gnomebrew-ui.js') }}"></script>
 {% endblock %}
 
 
 {% block app_content %}
+<script src="{{ url_for('static_res', res='gnomebrew-startup.js') }}"></script>
+
+
 <!-- TODO Change this to a more suitable station layout -->
-<div class="row">
-{% with user_stations = current_user.get_unlocked_station_list(),
-    slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
-{% for station in user_stations %}
-{{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
-{% if loop.index is divisibleby 3 and not loop.last %}
-</div>
-<div class="row">
-{% endif %}
-{% if loop.last %}
-</div>
-{% endif %}
+<div class="row row-margin-05">
+    {% with user_stations = current_user.get_unlocked_station_list(),
+        slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
+    {% for station in user_stations %}
+    <div class="col-md-4">
+        {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
+    </div>
+    {% if loop.index is divisibleby 3 and not loop.last %}</div><div class="row row-margin-05">{% endif %}
+    {% if loop.last %}</div>{% endif %}
 
 {% endfor %}
 {% endwith %}

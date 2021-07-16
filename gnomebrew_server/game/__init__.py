@@ -4,7 +4,9 @@ Init module
 from gnomebrew_server import app, mongo
 import gnomebrew_server.game.event
 import gnomebrew_server.game.static_data
+from gnomebrew_server.game.util import shorten_num
 from gnomebrew_server.game.event import EventThread
+from gnomebrew_server.core_modules.tavern import TavernSimulationThread
 
 
 # Load in static data (Recipes, Stations, etc.)
@@ -18,3 +20,7 @@ import gnomebrew_server.core_modules.workshop
 
 # Start Event Thread
 _EVENT_THREAD = EventThread(mongo_instance=mongo)
+_TAVERN_THREAD = TavernSimulationThread(mongo_instance=mongo)
+
+# Make Utility Functions available in template engine
+app.jinja_env.globals.update(shorten_num=shorten_num)

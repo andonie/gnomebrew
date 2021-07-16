@@ -9,6 +9,7 @@ etc.
 """
 import datetime
 import re
+from flask import url_for
 
 from gnomebrew_server import app, mongo
 from gnomebrew_server.game.gnomebrew_io import GameResponse
@@ -32,6 +33,9 @@ class StaticGameObject(object):
 
     def get_value(self, key: str):
         return self._data[key]
+
+    def get_id(self):
+        return self._data['game_id']
 
 
 class Recipe(StaticGameObject):
@@ -63,7 +67,7 @@ class Recipe(StaticGameObject):
 
 
         # 1. Material Cost
-        player_inventory = user.get_inventory()
+        player_inventory = user.get('data.storage.content')
         if not all([x in player_inventory and player_inventory[x] >= self._data['cost'][x] for x in
                     self._data['cost'].keys()]):
             response.add_fail_msg('Not enough resources to execute recipe.')
@@ -95,7 +99,7 @@ class Recipe(StaticGameObject):
             for material in update_data:
                 update_data[material] = player_inventory[material] - update_data[material]
             if update_data:
-                user.update_game_data('data.storage.content', update_data)
+                user.update_game_data('data.storage.content', update_data, is_bulk=True)
 
             # (slots don't have to be discounted as they are logged via the eventqueue)
 
@@ -110,7 +114,7 @@ class Recipe(StaticGameObject):
                     result['push_data'] = dict()
                 result['push_data']['data.workshop.finished_otr'] = self._data['game_id']
                 result['ui_update'] = {
-                    'type': 'reload',
+                    'type': 'reload_station',
                     'station': self._data['station']
                 }
 
@@ -185,7 +189,6 @@ class Recipe(StaticGameObject):
         :return: True, if this recipe can be executed. False, if this recipe is not executable (anymore) no matter the
                     resources.
         """
-
         return (not self.is_one_time() or self._otr_check(user, **kwargs)) and self.requirements_met(user, **kwargs)
 
     def unlocked_by_upgrade(self, upgrade):
@@ -199,10 +202,24 @@ class Recipe(StaticGameObject):
     def describe_outcome(self):
         """
         Utility Method that describes the outcome of this recipe.
-        :return:
+        :return:    Outcome of the recipe formatted in HTML (if necessary)
         """
+        output = ''
+        # If the recipe contains inventory output, we want this formatted in the output.
+        if 'delta_inventory' in self._data['result']:
+            output += '<span class="gb-outcome-descriptor">Creates</span> '
+            for item in self._data['result']['delta_inventory']:
+                output += f"""<div class="gb-outcome-item">
+                        <img class="gb-icon-sm" src="{ url_for('get_icon', game_id='item.' + item)}">
+                        {self._data['result']['delta_inventory'][item]}
+                    </div>"""
 
-        return "Creates "
+        # if the recipe contains upgrade(s), access the upgrades description:
+        if 'upgrade' in self._data['result']:
+            for upgrade in self._data['result']['upgrade']:
+                upgrade_entity = Upgrade.from_id(upgrade)
+                output += upgrade_entity.describe_outcome()
+        return output
 
     @staticmethod
     def get_recipes_by_station(station_name: str):
@@ -342,6 +359,14 @@ class Upgrade(StaticGameObject):
         assert type(other) is Upgrade
         return self.upgrade_order() < other.upgrade_order()
 
+    def describe_outcome(self):
+        """
+        Utility Method that generates HTML text that summarizes the outcome of this upgrade.
+        """
+        if 'description' in self._data:
+            return self._data['description']
+
+
 
 class Item(StaticGameObject):
     """
@@ -357,12 +382,19 @@ class Item(StaticGameObject):
     def description(self):
         return self._data['description']
 
+    def is_orderable(self):
+        """
+        Returns `True` if patrons can order this item.
+        """
+        return self._data['orderable'] if 'orderable' in self._data else False
+
 
 # Internal References
 _STATIC_GAME_OBJECTS = dict()
 _RECIPES_BY_STATION = dict()
 _RECIPE_LIST = list()
-
+_ITEM_LIST = list()
+patron_order_list = list()
 
 def _fill_from_db(col, conversion_function):
     """
@@ -408,7 +440,19 @@ def update_static_data():
     app.logger.info('Station Data Updated')
 
     app.logger.info('Updating Item Data')
-    res.update(_fill_from_db(mongo.db.items, lambda doc: Item(doc)))
+    item_list = []
+
+    def process_item_data(doc):
+        item_object = Item(doc)
+        item_list.append(item_object)
+        return item_object
+
+    res.update(_fill_from_db(mongo.db.items, process_item_data))
+
+    global _ITEM_LIST
+    _ITEM_LIST = item_list
+    global patron_order_list
+    patron_order_list = filter(lambda item: item.is_orderable(), _ITEM_LIST)
     app.logger.info('Item Data Updated')
 
     global _STATIC_GAME_OBJECTS

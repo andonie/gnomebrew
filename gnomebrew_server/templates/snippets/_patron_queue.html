@@ -1,0 +1,36 @@
+{#
+This snippet renders the patron queue.
+Expects two set variables:
+
+* `queue` with the data of the user's order queue and
+* `patrons` with the data of the user's patrons.
+#}
+<table class="table gb-table table-hover table-sm station-tavern-queue">
+    <tbody>
+    {% if not queue %}
+    <tr class="table-light">
+        <h4>Queue is empty.</h4>
+    </tr>
+    {% else %}
+    {% for order in queue %}
+    {% with patron = patrons[order.id] %}
+    <tr {% if loop.first %}class="table-light"{% endif %}>
+        <td>
+            <h4>{{ patron.name }}</h4>
+            <div class="gb-cost">
+                {% for order_item in order.order %}
+                {% with item = current_user.get('item.' + order_item.item) %}
+                <div class="gb-cost-item" title="{{ item.name() }}">
+                    <img class="gb-icon-sm" src="{{ url_for('get_icon', game_id=item.get_id()) }}">
+                    {{ order_item.amount }}
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+        </td>
+    </tr>
+    {% endwith %}
+    {% endfor %}
+    {% endif %}
+    </tbody>
+</table>

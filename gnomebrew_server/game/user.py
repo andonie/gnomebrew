@@ -15,6 +15,7 @@ from functools import reduce
 _GAME_ID_RESOLVERS = dict()
 _USER_ASSERTIONS = list()
 _FRONTEND_DATA_RESOLVERS = dict()
+_HTML_GENERATOR_RESOLVERS = dict()
 _USR_CACHE = dict()
 
 
@@ -56,6 +57,22 @@ def frontend_id_resolver(game_id_regex):
         global _FRONTEND_DATA_RESOLVERS
         assert game_id_regex not in _FRONTEND_DATA_RESOLVERS
         _FRONTEND_DATA_RESOLVERS[re.compile(game_id_regex)] = fun
+
+    return wrapper
+
+
+def html_generator(html_id):
+    """
+    Registers a resolver for HTML code.
+    :param html_id:     The ID this html generator will generate HTML for
+    :return: The wrapper for the function that will cover the `html_id`. Expects a function that has a `user: User`
+            parameter.
+    """
+
+    def wrapper(fun: Callable):
+        global _HTML_GENERATOR_RESOLVERS
+        assert html_id not in _HTML_GENERATOR_RESOLVERS
+        _HTML_GENERATOR_RESOLVERS[html_id] = fun
 
     return wrapper
 
@@ -154,14 +171,6 @@ class User(UserMixin):
 
     # +++++++++++++++++++++ Game Interface Methods +++++++++++++++++++++
 
-    def get_inventory(self) -> dict:
-        """
-        Returns the player's current inventory
-        :return: The player's current inventory as a dict (key: resource-id, value: amount)
-                    Equivalent to `get('data.storage.content')`
-        """
-        return self.get('data.storage.content')
-
     def get(self, game_id: str, **kwargs):
         """
         Universal Method to retrieve an input with Game ID
@@ -173,27 +182,32 @@ class User(UserMixin):
         assert id_type in _GAME_ID_RESOLVERS
         return _GAME_ID_RESOLVERS[id_type](user=self, game_id=game_id, **kwargs)
 
-    def update_game_data(self, path: str, update):
+    def update_game_data(self, path: str, update, **kwargs):
         """
         Updates Game Data to the database *and* broadcasts the data changes to potentially listening clients.
         Calling this function is the only way a game data should be updated, since this ensures integrity from database
         to frontend.
         :param path:    User Data path, e.g. `data.storage.content'
         :param update:  The update data
+        :param kwargs:
+
+        * `is_bulk`: If True, the update will be split the paths in keys
+        * `command`: Default '$set' - mongo_db command to use for the update
         """
         splits = path.split('.')
         assert splits[0] == 'data'
-        if type(update) is dict:
+        if 'is_bulk' in kwargs and kwargs['is_bulk']:
             # Update is a dict. We don't want delete the other entries in here
             # Only for ONE layer though
-            set_content = dict()
+            command_content = dict()
             for key in update:
-                set_content[path + '.' + key] = update[key]
+                command_content[path + '.' + key] = update[key]
         else:
-            set_content = {path: update}
-        mongo.db.users.update_one({"username": self.username}, {'$set': set_content})
+            command_content = {path: update}
+        mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
+        mongo.db.users.update_one({"username": self.username}, {mongo_command: command_content})
         # Also update the currently attached users.
-        self._data_update_to_frontends(set_content)
+        self._data_update_to_frontends(command_content)
 
     def _data_update_to_frontends(self, set_content):
         """
@@ -347,8 +361,6 @@ def attr(game_id: str, user: User, **kwargs):
     upgrade_list = [Upgrade.from_id(x) for x in user.get('data.workshop.upgrades')]
     upgrades: list[Upgrade] = sorted(filter(lambda x: x.relevant_for(game_id), upgrade_list))
 
-
-
     # Apply upgrades in sorted order
     for upgrade in upgrades:
         val = upgrade.apply_to(val=val, game_id=game_id)
@@ -383,10 +395,16 @@ def item(game_id: str, user: User):
 @game_id_resolver
 def html(game_id: str, user: User, **kwargs):
     splits = game_id.split('.')
-    assert len(splits) == 2
-    return render_template("stations/" + splits[1] + ".html",
-                           station=user.get('station.' + splits[1]).get_json(),
-                           **kwargs)
+    if game_id in _HTML_GENERATOR_RESOLVERS:
+        return _HTML_GENERATOR_RESOLVERS[game_id](user=user)
+    elif len(splits) == 2:
+        # Prototypical Case: Reload the entire station
+        return render_template("stations/" + splits[1] + ".html",
+                               station=user.get('station.' + splits[1]).get_json(),
+                               **kwargs)
+    else:
+        return KeyError('This HTML request type was unknown.')
+
 
 
 @game_id_resolver
@@ -425,5 +443,3 @@ def allslots(game_id: str, user: User):
                 ret[_station] = ['free'] * max_slots
 
     return ret
-
-

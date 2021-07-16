@@ -79,7 +79,7 @@ def market_buy(request_object: dict, user: User):
             'market.inventory.' + item_name: item,  # New Item Inventory
             'storage.content.gold': user_gold,
             'storage.content.' + item_name: user_item_num + amount
-        })
+        }, is_bulk=True)
 
     return response
 
@@ -124,14 +124,14 @@ def market_update(user: User, effect_data: dict):
     user.update_game_data('data.market', {
         'due': next_duetime,
         'inventory': latest_inventory
-    })
+    }, is_bulk=True)
     _generate_market_update_event(user.get_id(), next_duetime).enqueue()
 
 
 @frontend_id_resolver('^data.market.inventory$')
 def full_update_on_market_update(user: User, data: dict, game_id: str):
     user.frontend_update('ui', {
-        'type': 'reload',
+        'type': 'reload_station',
         'station': 'market'
     })
 

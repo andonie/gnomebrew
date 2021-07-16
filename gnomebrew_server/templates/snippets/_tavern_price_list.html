@@ -1,0 +1,28 @@
+{#
+This snippet renders the tavern price list.
+Expects one set variable:
+
+* `prices` with the user's current tavern price list
+#}
+
+<table class="gb-table">
+    <thead>
+        <tr>
+            <th scope="col" title="Offer"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.tavern_offer') }}"></th>
+            <th scope="col" title="Cost"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.cost') }}"></th>
+            <th scope="col" colspan="2">Price Change</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for price_item in prices %}
+    {% with item = current_user.get('item.' + price_item) %}
+        <tr>
+            <td><img title="{{ item.name() }}" class="gb-icon" src="{{ url_for('get_icon', game_id=item.get_id()) }}"></td>
+            <td class="tavern-price">{{ prices[price_item] }}</td>
+            <td><input class="form-control price-selector" type="number" step="0.1" min="0" value="{{prices[price_item]}}" id="data.tavern.prices.{{ price_item }}"></td>
+            <td><button class="btn btn-light" onclick="set_price('{{ price_item }}', 'station.tavern-warning', this)">Set</button></td>
+        </tr>
+    {% endwith %}
+    {% endfor %}
+    </tbody>
+</table>

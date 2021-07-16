@@ -1,0 +1,38 @@
+body {
+    font-family: "DotGothic16";
+    background: #E7BF8B;
+    color: #5E484F;
+    scrollbar-color: #5E484F #E7BF8B;
+    overflow-x: hidden;
+}
+
+h3 {
+    font-family: 'Press Start 2P';
+    font-size: 1.3em;
+    color: #A63E42;
+}
+
+h4 {
+    font-family: 'Press Start 2P';
+    font-size: 0.9em;
+}
+
+.station {
+    background: #BE8251;
+    border-radius: 5px;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+}
+
+.navbar .gb-brand {
+    font-family: 'Press Start 2P';
+    color: #A63E42;
+}
+
+
+/* Formatting Stuff */
+
+.row-margin-05 {
+    margin-top: 0.5em;
+}
+

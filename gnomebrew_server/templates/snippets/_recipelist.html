@@ -8,34 +8,34 @@
         {% for recipe in recipe_list %}
         {% with recipe_data = recipe.get_json() %}
         <tr title="{{ recipe_data.description }}">
-            <td><img class="gb-icon" src="{{ url_for('static_res', res='default.png') }}"></td>
             <td>
-                <h4>{{ recipe_data.name }}</h4>
-                <div class="">{{ recipe.describe_outcome() }}</div>
+                <div class="icon-heading">
+                    <img class="gb-icon" src="{{ url_for('get_icon', game_id=recipe_data.game_id) }}">
+                    <h4>{{ recipe_data.name }}</h4>
+                    <div class="gb-outcome">{{ recipe.describe_outcome()|safe }}</div>
+                </div>
+                <div class="gb-cost">
+                    {% for cost_item in recipe_data.cost %}
+                    {% with cost_item_entity = current_user.get('item.' + cost_item) %}
+                        <div class="gb-cost-item" title="{{ cost_item_entity.name() }}">
+                            <img class="gb-icon-sm" src="{{ url_for('get_icon', game_id=cost_item_entity.get_id()) }}">
+                            {{ recipe_data.cost[cost_item] }}
+                        </div>
+                    {% endwith %}
+                    {% endfor %}
+                        <div class="gb-cost-item" title="Crafting Time">
+                            <img class="gb-icon-sm" src="{{ url_for('get_icon', game_id='special.time') }}">
+                            {{ recipe_data.base_time }} s
+                        </div>
+                    {% if recipe_data.slots != 1 %}
+                        <div class="gb-cost-item" title="Slots Needed">
+                            {{ recipe_data.slots }}
+                            slots
+                        </div>
+                    {% endif %}
+                </div>
             </td>
-            <td>
-                <table class="gb-cost-table"><tbody>
-                {% for cost_item in recipe_data.cost %}
-                    <tr>
-                        <td>{{ recipe_data.cost[cost_item] }}</td>
-                        {% with cost_item_entity = current_user.get('item.' + cost_item) %}
-                        <td>{{ cost_item_entity.name() }}</td>
-                        {% endwith %}
-                    </tr>
-                {% endfor %}
-                    <tr>
-                        <td>{{ recipe_data.base_time }} s</td>
-                        <td>Crafting Time</td>
-                    </tr>
-                {% if recipe_data.slots != 1 %}
-                    <tr>
-                        <td>{{ recipe_data.slots }}</td>
-                        <td>slots are needed</td>
-                    </tr>
-                {% endif %}
-                </tbody></table>
-            </td>
-            <td><button class="" onclick="execute_recipe('{{ recipe_data.game_id }}', '{{ error_log_id }}', this)">{{ button_content or 'Make' }}</button></td>
+            <td><button class="btn btn-light" onclick="execute_recipe('{{ recipe_data.game_id }}', '{{ error_log_id }}', this)">{{ button_content or 'Make' }}</button></td>
         </tr>
         {% endwith %}
         {% endfor %}

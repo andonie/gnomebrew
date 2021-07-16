@@ -6,21 +6,20 @@
     <thead>
         <tr>
             <th scope="col"></th>
-            <th scope="col"></th>
-            <th scope="col">stock</th>
-            <th scope="col">gold</th>
-            <th scope="col"></th>
+            <th scope="col" title="Stock"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.stock') }}"></th>
+            <th scope="col" title="Cost"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.cost') }}"></th>
+            <th scope="col" colspan="2">Buy</th>
         </tr>
     </thead>
     <tbody>
         {% for offer in offers %}
         {% with item = current_user.get('item.' + offer).get_json() %}
         <tr>
-            <td><img class="gb-icon" src="{{ url_for('static_res', res='default.png') }}"></td>
-            <td><span id="market.offer.{{ offer }}">{{ item.name }}</span></td>
+            <td><img title="{{ item.name }}" class="gb-icon" src="{{ url_for('get_icon', game_id=item.game_id) }}"></td>
             <td><span id="data.market.inventory.{{ offer }}.stock">{{ offers[offer].stock}}</span></td>
-            <td><span id="data.market.inventory.{{ offer }}.price">{{ offers[offer].price}}</span> gold</td>
-            <td><button class="" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this)">Buy</button></td>
+            <td><span id="data.market.inventory.{{ offer }}.price">{{ offers[offer].price}}</span></td>
+            <td><button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, false)">1</button></td>
+            <td><button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, true)">all</button></td>
         </tr>
         {% endwith %}
         {% endfor %}

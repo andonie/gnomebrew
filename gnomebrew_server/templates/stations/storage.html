@@ -3,25 +3,35 @@
 {% block station_body %}
 {{ super() }}
 <div class="description">
-    <div class="descriptor">Gold:</div>
-    <div class="description-value" id="data.storage.content.gold">{{ game_data.storage.content.gold }}</div>
+    <div class="descriptor"><img class="gb-icon" src="{{ url_for('get_icon', game_id='item.gold') }}"></div>
+    <div class="description-value" id="data.storage.content.gold">{{ shorten_num(game_data.storage.content.gold) }}</div>
 </div>
 <div class="description">
-    <div class="descriptor">Storage Capacity:</div>
-    <div class="description-value" id="attr.storage.max_capacity">{{ current_user.get('attr.storage.max_capacity') }}</div>
+    <div class="descriptor"><img class="gb-icon" src="{{ url_for('get_icon', game_id='attr.storage_capacity') }}"></div>
+    <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
+<input type="text" id="storage-filter" placeholder="Filter Storage">
 <div class="gb-table-wrap">
-    <table class="station-storage-content table table-sm table-hover gb-table">
+    <table class="station-storage-content table table-sm table-hover gb-table" id="storage-content">
         {% for material in game_data.storage.content %}
         {% if material != 'gold' %}
         {% set item = current_user.get('item.' + material) %}
-        <tr title="{{ item.description() }}">
-            <td class=""><img class="gb-icon" src="{{ url_for('static_res', res='default.png') }}"></td>
-            <td class="gb-table-desc"><h4>{{ item.name() }}</h4></td>
-            <td class="gb-table-value" id="data.storage.content.{{ material }}">{{ game_data.storage.content[material] }}</td>
+        <tr title="{{ item.description() }}" data-content="{{ item.name() }}">
+            <td class="" title="{{ item.name() }}"><img class="gb-icon" src="{{ url_for('get_icon', game_id=item.get_value('game_id')) }}"></td>
+            <td class="gb-table-value" id="data.storage.content.{{ material }}">{{ shorten_num(game_data.storage.content[material]) }}</td>
         </tr>
         {% endif %}
         {% endfor %}
     </table>
 </div>
+<script>
+add_startup(function() {
+    $('#storage-filter').on("keyup", function() {
+        var value = $(this).val().toLowerCase();
+        $('#storage-content tr').filter(function() {
+            $(this).toggle($(this).data('content').toLowerCase().indexOf(value) > -1);
+        });
+    });
+});
+</script>
 {% endblock %}

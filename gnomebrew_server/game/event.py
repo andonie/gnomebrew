@@ -6,6 +6,8 @@ from typing import Callable
 
 from gnomebrew_server import mongo
 import datetime
+
+from gnomebrew_server.game.static_data import Item
 from gnomebrew_server.game.user import User, load_user
 import threading
 
@@ -46,7 +48,7 @@ class EventThread(object):
 
             end_time = datetime.datetime.utcnow()
             #print(f'Total time: {(end_time - start_time).total_seconds() }')
-            sleep_time = (end_time - start_time).total_seconds() - _SLEEP_TIME
+            sleep_time = _SLEEP_TIME - (end_time - start_time).total_seconds()
             if sleep_time > 0:
                 try:
                     time.sleep(sleep_time)
@@ -166,18 +168,22 @@ def delta_inventory(user: User, effect_data: dict):
     :param user:            The user to execute on.
     :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
     """
-    user_inventory = user.get_inventory()
+    user_inventory = user.get('data.storage.content')
     max_capacity = user.get('attr.storage.max_capacity')
     inventory_update = dict()
     for material in effect_data:
         if material not in user_inventory:
-            inventory_update[material] = min(max_capacity, effect_data[material])
+            inventory_update['storage.content.' + material] = min(max_capacity, effect_data[material])
+            # The new item might be orderable. In that case --> Add it to the price list
+            item_object = Item.from_id('item.' + material)
+            if item_object.is_orderable():
+                inventory_update['tavern.prices.' + material] = item_object.get_value('base_value')
         elif material == 'gold':
             # Gold is an exception and can grow to infinity always:
-            inventory_update[material] = user_inventory[material] + effect_data[material]
+            inventory_update['storage.content.' + material] = user_inventory[material] + effect_data[material]
         else:
-            inventory_update[material] = min(max_capacity, user_inventory[material] + effect_data[material])
-    user.update_game_data('data.storage.content', inventory_update)
+            inventory_update['storage.content.' + material] = min(max_capacity, user_inventory[material] + effect_data[material])
+    user.update_game_data('data', inventory_update, is_bulk=True)
 
 
 @Event.register
@@ -202,6 +208,7 @@ def push_data(user: User, effect_data: dict):
             # Can fetch the list tail and knows this is the pushed change
             user.update_game_data(data_path, data)
 
+
 @Event.register
 def ui_update(user: User, effect_data:dict):
     """
@@ -210,3 +217,12 @@ def ui_update(user: User, effect_data:dict):
     :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
     """
     user.frontend_update('ui', effect_data)
+
+@Event.register
+def add_station(user: User, effect_data:dict):
+    """
+    Fired when a new station is to be added to a user's game data.
+    :param user:        a user
+    :param effect_data: effect data dict formatted as `effect_data['id'] = station_id`
+    """
+    pass

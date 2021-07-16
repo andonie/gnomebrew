@@ -1,5 +1,7 @@
 # Do not add the config files as they contain sensitive info:
 config/*
+# Do not add the icon files as they contain work that I probably can't put in a public repo
+ico/*
 
 # ++++++++++++++ START OF JetBrains Gitignore ++++++++++++++
 

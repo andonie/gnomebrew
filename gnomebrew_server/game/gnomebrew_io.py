@@ -67,6 +67,12 @@ class GameResponse(object):
             # Send UI update
             user.frontend_update('ui', self.ui)
 
+    def has_failed(self):
+        """
+        Returns whether or not this response has fail messages associated with it.
+        :return:    `True` if this is a fail response, else `False`
+        """
+        return self._data['type']=='fail' if 'type' in self._data else False
 
 TYPE_ERROR = GameResponse()
 TYPE_ERROR._data = {

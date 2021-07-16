@@ -11,7 +11,22 @@
 /* BUTTON */
 
 button {
-    min-width: 80px;
+    padding: 0px;
+}
+
+input {
+    background-color: #E7BF8B;
+    width: inherit;
+}
+
+/* PRICE SELECTOR */
+
+.price-selector {
+    max-width: 102px;
+}
+
+.tavern-price {
+    font-family: 'Press Start 2P';
 }
 
 /* SLOTS */
@@ -24,21 +39,27 @@ button {
 .slot-ext {
     position: relative;
     width: 100%;
-    background-color: lightgrey;
+    background-color: #E7BF8B;
     margin-bottom: 5px;
+    border-radius: 10px;
 }
 
 .slot-bar {
     height: 15px;
-    background-color: green;
+    background-color: #7DA0AC;
     width: 0%;
+    border-radius: 10px;
 }
+
+
+
 
 .slot-desc {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    font-size: 0.8em;
 }
 
 
@@ -57,12 +78,12 @@ button {
 /* GNOMEBREW TABLES */
 
 .gb-table-wrap {
-    overflow: scroll;
+    overflow-y: auto;
     max-height: 250px;
 }
 
 .gb-table {
-
+    margin-bottom: 0px;
 }
 
 .gb-table td, .gb-table th {
@@ -81,4 +102,79 @@ button {
 .gb-icon {
     max-width: 40px;
     margin: 5px;
+    min-width: 32px;
+    image-rendering: crisp-edges;
+}
+
+.gb-icon-sm {
+    width: 16px;
+}
+
+/* COST ITEMS */
+
+.gb-cost-item {
+    margin-right: 5px;
+    float: left;
+    background: #E7BF8B;
+    border-radius: 8px;
+    padding-inline: 4px;
+    margin-bottom: 2px;
+}
+
+.gb-cost-item img {
+    vertical-align: baseline;
+}
+
+.gb-cost-item:hover {
+    filter: brightness(85%);
+}
+
+.gb-outcome-descriptor {
+    float: left;
+    margin-right: 3px;
+}
+
+.gb-outcome-item {
+    margin-right: 5px;
+    float: left;
+    background: #7DA0AC;
+    border-radius: 8px;
+    padding-inline: 4px;
+    margin-bottom: 2px;
+}
+
+.gb-outcome-item img {
+    padding-top: 3px;
+}
+
+.gb-outcome-item:hover {
+    filter: brightness(115%);
+}
+
+
+/* ICON-TITLE BOX */
+
+.icon-heading {
+    overflow: auto;
+    margin-bottom: 1px;
+}
+
+.icon-heading img {
+    float: left;
+}
+
+.icon-heading h4 {
+    float: left;
+    margin-bottom: 0em;
+}
+
+
+/* STORAGE */
+
+.station-storage-content {
+    background: #E7BF8B;
+}
+
+.station-tavern-queue {
+    background: #E7BF8B;
 }

@@ -1,0 +1,43 @@
+{#  Requires a valid list of recipes set in variable recipe_list
+    Requires the id of the error logging element as error_log_id
+    If a variable button_content is set, it will be used as the content for the 'do recipe' button. If not set, it will
+    default to 'Make'.
+#}
+<table class="recipe-list table table-hover gb-table">
+    <tbody>
+        {% for recipe in recipe_list %}
+        {% with recipe_data = recipe.get_json() %}
+        <tr title="{{ recipe_data.description }}">
+            <td><img class="gb-icon" src="{{ url_for('get_icon', game_id=recipe_data.game_id) }}"></td>
+            <td>
+                <h4>{{ recipe_data.name }}</h4>
+                <div class="">{{ recipe.describe_outcome() }}</div>
+            </td>
+            <td>
+                <table class="gb-cost-table"><tbody>
+                {% for cost_item in recipe_data.cost %}
+                {% with cost_item_entity = current_user.get('item.' + cost_item) %}
+                    <tr title="{{ cost_item_entity.name() }}">
+                        <td><img class="gb-icon" src="{{ url_for('get_icon', game_id=cost_item_entity.get_id()) }}"></td>
+                        <td>{{ recipe_data.cost[cost_item] }}</td>
+                    </tr>
+                {% endwith %}
+                {% endfor %}
+                    <tr title="Crafting Time">
+                        <td><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.time') }}"></td>
+                        <td>{{ recipe_data.base_time }} s</td>
+                    </tr>
+                {% if recipe_data.slots != 1 %}
+                    <tr>
+                        <td>{{ recipe_data.slots }}</td>
+                        <td>slots are needed</td>
+                    </tr>
+                {% endif %}
+                </tbody></table>
+            </td>
+            <td><button class="btn btn-light" onclick="execute_recipe('{{ recipe_data.game_id }}', '{{ error_log_id }}', this)">{{ button_content or 'Make' }}</button></td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+    </tbody>
+</table>

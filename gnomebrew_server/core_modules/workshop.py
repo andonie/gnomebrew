@@ -48,6 +48,6 @@ def upgrade(user: User, effect_data: list):
     # Flush to Frontend: Update User Frontends
     for station in stations_to_update:
         user.frontend_update('ui', {
-            'type': 'reload',
+            'type': 'reload_station',
             'station': station
         })
