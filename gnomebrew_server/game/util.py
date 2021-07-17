@@ -117,7 +117,7 @@ def format_player_storage(storage_data: dict):
     The order of the keys is ordered by item main category. Within the category, the order is arbitrary.
     Also omits 'item.gold' since it has a special role in-game.
     """
-    ret = dict()
+    to_be_sorted = dict()
 
     for item in storage_data:
         if item == 'gold':
@@ -127,8 +127,13 @@ def format_player_storage(storage_data: dict):
         main_category: ItemCategory = next(filter(lambda cat: cat.is_main_category(),
                                                   map(lambda cat_str: ItemCategory.from_id('it_cat.' + cat_str),
                                                       item_object.get_value('categories'))))
-        if main_category not in ret:
-            ret[main_category] = dict()
-        ret[main_category].update({item_object: storage_data[item]})
+        if main_category not in to_be_sorted:
+            to_be_sorted[main_category] = dict()
+        to_be_sorted[main_category].update({item_object: storage_data[item]})
+
+    ret = dict()
+    for key in sorted(to_be_sorted.keys()):
+        # Insertion order is guaranteed iteration order. This way the Storage is rendered consistently.
+        ret[key] = to_be_sorted[key]
 
     return ret

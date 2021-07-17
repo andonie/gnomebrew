@@ -211,6 +211,7 @@ input {
     border-top-right-radius: 4px;
     padding-inline: 5px;
     margin-top: 5px;
+    display: flex;
 }
 
 .gb-storage-item {
@@ -223,6 +224,16 @@ input {
 
 .gb-storage-item:hover {
     filter: brightness(85%);
+}
+
+.st-cat-hidden {
+    -ms-transform: rotate(180deg); /* IE 9 */
+    transform: rotate(180deg);
+}
+
+.st-cat-indicator {
+    transition-duration: 0.4s;
+    margin-right: 5px;
 }
 
 .station-storage .gb-table-wrap {

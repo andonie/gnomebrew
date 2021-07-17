@@ -65,3 +65,13 @@ h4 {
 .gb-link {
     cursor: pointer;
 }
+
+/* GB-MODAL */
+
+.gb-modal {
+    color: #5E484F;
+}
+
+.gb-modal .modal-header {
+    font-family: 'Press Start 2P';
+}
