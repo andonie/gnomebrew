@@ -1,49 +1,42 @@
-<div class="station col-md-12" id="{{ station.game_id }}">
 {% set station_name = station.game_id.split('.')[1] %}
-{% block station_header %}
-<h3 id="{{ station.game_id }}-title" title="{{ station.description }}">{{ station.name }}</h3>
-<div class="station-warning" id="{{station.game_id }}-warning"></div>
-{% endblock %}
-{% if slots is not defined %}
-{% set slots = current_user.get('allslots') %}
-{% endif %}
-{% block slots %}
-{% if station_name in slots %}
-<div class="slots">
-    {% for slot in slots[station_name] %}
-<div class="slot-ext"
-     {% if slot=='free' %}
-     data-state="free"
-     data-due=""
-     data-since=""
-     {% else %}
-     data-state="occupied"
-     data-due="{{ slot.due.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
-     data-since="{{ slot.since.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
-     {% endif %}
-     id="{{station_name}}-slot-{{ loop.index }}">
-    <div class="slot-bar"></div>
-    <div class="slot-desc">
-        ...
+<div class="station col-md-12 station-{{ station_name }}" id="{{ station.game_id }}">
+    <div class="station-header">
+        {% block station_header %}
+        <h3 id="{{ station.game_id }}-title" title="{{ station.description }}">{{ station.name }}</h3>
+        <div class="station-warning" id="{{station.game_id }}-warning"></div>
+        {% endblock %}
     </div>
-</div>
-    {% endfor %}
-</div>
-{% endif %}
-
-
-{% endblock %}
-{% if game_data is not defined %}
-{% set game_data = current_user.get_game_data() %}
-{% endif %}
-{% block station_body %}
-{% endblock %}
-{% block station_recipes %}
-    {% set recipe_list = current_user.get('recipes.' + station_name) %}
-    {% if recipe_list %}
-        {% with error_log_id=station.game_id + '-warning' %}
-        {% include 'snippets/_recipelist.html' %}
-        {% endwith %}
+    {% if slots is not defined %}{% set slots = current_user.get('allslots') %}{% endif %}
+    {% block slots %}
+    {% if station_name in slots %}
+    <div class="slots">
+        {% for slot in slots[station_name] %}
+        <div class="slot-ext"
+             {% if slot=='free' %}
+             data-state="free"
+             data-due=""
+             data-since=""
+             {% else %}
+             data-state="occupied"
+             data-due="{{ slot.due.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
+             data-since="{{ slot.since.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
+             {% endif %}
+             id="{{station_name}}-slot-{{ loop.index }}">
+            <div class="slot-bar"></div>
+            <div class="slot-desc">...</div>
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
-{% endblock %}
+    {% endblock %}
+    {% if game_data is not defined %}{% set game_data = current_user.get_game_data() %}{% endif %}
+    {% block station_body %}{% endblock %}
+    {% block station_recipes %}
+        {% set recipe_list = current_user.get('recipes.' + station_name) %}
+        {% if recipe_list %}
+            {% with error_log_id=station.game_id + '-warning' %}
+            {% include 'snippets/_recipelist.html' %}
+            {% endwith %}
+        {% endif %}
+    {% endblock %}
 </div>

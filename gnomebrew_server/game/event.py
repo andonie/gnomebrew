@@ -3,6 +3,7 @@ This module manages events and event dispatching
 """
 import time
 from typing import Callable
+from traceback import print_tb
 
 from gnomebrew_server import mongo
 import datetime
@@ -41,7 +42,15 @@ class EventThread(object):
 
             for event_data in self.mongo.db.events.find(query):
                 # Do something
-                Event(mongo_data=event_data).execute()
+                try:
+                    Event(mongo_data=event_data).execute()
+                except Exception as err:
+                    # An error occured managing the event.
+                    # In this case, just log the traceback but still remove the event.
+                    print('--------------\nException in Event Thread:')
+                    print_tb(err.__traceback__)
+                    print('--------------')
+
                 remove_ids.append(event_data['_id'])
 
             self.mongo.db.events.remove({'_id': {'$in': remove_ids}})

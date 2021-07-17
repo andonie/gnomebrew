@@ -82,7 +82,8 @@ class User(UserMixin):
         'storage': {
             'content': {
                 'gold': 200,
-                'wood': 10
+                'wood': 10,
+                'grains': 500
             }
         },
         'tavern': {

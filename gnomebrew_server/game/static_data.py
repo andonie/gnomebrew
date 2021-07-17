@@ -388,6 +388,19 @@ class Item(StaticGameObject):
         """
         return self._data['orderable'] if 'orderable' in self._data else False
 
+    def item_order(self):
+        """
+        Returns a number that's used as the order of the item. Used to keep the storage organized
+        :return:    A number representing the order of this item.
+        """
+        if self.is_orderable():
+            # Orderable Items have the highest order
+            return 0
+        if 'categories' in self._data:
+            return 1 if 'mundane' in self._data['categories'] \
+                else 2 if 'material' in self._data['categories'] \
+                else 4
+
 
 # Internal References
 _STATIC_GAME_OBJECTS = dict()

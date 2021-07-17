@@ -1,54 +1,63 @@
-{% extends 'bootstrap/base.html' %}
+<html>
+    <head>
+        <title>{% block title %}{% if title %}{{ title }} - Gnomebrew{% else %}Gnomebrew{% endif %}{% endblock %}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        {% block styles %}
+        <link href="{{url_for('static_res', res='bootstrap.css')}}" rel="stylesheet">
+        {% if current_user.is_authenticated %}
+        <link rel="stylesheet" href="{{ url_for('static_res', res='gameplay.css') }}">
+        {% endif %}
+        <link rel="stylesheet" href="{{ url_for('static_res', res='gnomebrew.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static_res', res='custom-fonts.css') }}">
+        {% endblock %}
 
-{% block styles %}
-<link href="{{url_for('static_res', res='bootstrap.css')}}" rel="stylesheet">
-{% if current_user.is_authenticated %}
-<link rel="stylesheet" href="{{ url_for('static_res', res='gameplay.css') }}">
-{% endif %}
-<link rel="stylesheet" href="{{ url_for('static_res', res='gnomebrew.css') }}">
-<link rel="stylesheet" href="{{ url_for('static_res', res='custom-fonts.css') }}">
-{% endblock %}
-
-{% block title %}
-    {% if title %}{{ title }} - Gnomebrew{% else %}Gnomebrew{% endif %}
-{% endblock %}
-
-{% block navbar %}
-<nav class="navbar">
-    <a class="navbar-brand gb-brand" href="{{ url_for('index') }}">Gnomebrew</a>
-    <!--<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNavDropdown">-->
-        <ul class="navbar-nav mr-auto">
-            <li class="navbar-item active">
-                {% if current_user.is_authenticated %}
-                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                {% else %}
-                <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+    </head>
+    <body>
+        <script src="{{ url_for('static_res', res='gnomebrew-startup.js') }}"></script>
+        {% block navbar %}
+        <nav class="gb-navbar navbar sticky-top navbar-expand-sm">
+            {% block navbar_content %}
+            <a class="navbar-brand gb-brand" href="{{ url_for('index') }}">Gnomebrew</a>
+            <ul class="navbar-nav">
+                {% block navbar_extras %}{% endblock %}
+                <li class="navbar-item active">
+                    {% if current_user.is_authenticated %}
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    {% else %}
+                    <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    {% endif %}
+                </li>
+            </ul>
+            {% endblock %}
+        </nav>
+        {% endblock %}
+        <div class="gb-wrapper">
+            {% block sidebar_outer %}{% endblock %}
+            <div class="gb-main">
+                {% block content %}
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="container flashed">
+                {% for message in messages %}
+                    <div class="alert alert-warning alert-dismissible show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+                </div>
                 {% endif %}
-            </li>
-        </ul>
-    <!--</div>-->
-</nav>
-{% endblock %}
-
-{% block content %}
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-<div class="container flashed">
-{% for message in messages %}
-    <div class="alert alert-warning alert-dismissible show" role="alert">
-        {{ message }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </div>
-{% endfor %}
-</div>
-{% endif %}
-{% endwith %}
-<div class="container">
-{% block app_content %}{% endblock %}
-</div>
-{% endblock %}
+                {% endwith %}
+                <div class="container">
+                {% block app_content %}{% endblock %}
+                </div>
+                {% endblock %}
+            </div>
+        </div>
+        {% block scripts %}
+        <script src="{{ url_for('static_res', res='jquery-3.6.0.min.js') }}"></script>
+        <script src="{{ url_for('static_res', res='bootstrap.min.js') }}"></script>
+        {% endblock %}
+    </body>
+</html>

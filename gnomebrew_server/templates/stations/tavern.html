@@ -21,7 +21,7 @@
         <div class="description-value">{{ game_data.tavern.patrons|length }}</div>
     </div>
 </div>
-<a class="btn btn-light" data-toggle="collapse" href="#tavern-prices" role="button" aria-expanded="false" aria-controls="tavern-prices" id="price-toggle">Show Prices</a>
+<a class="btn btn-light" data-toggle="collapse" href="#tavern-prices" role="button" data-target="#tavern-prices" aria-expanded="false" aria-controls="tavern-prices" id="price-toggle">Show Prices</a>
 <div class="tavern-prices collapse gb-table-wrap" id="tavern-prices">
     {% with prices = game_data.tavern.prices %}
     {% include 'snippets/_tavern_price_list.html' %}

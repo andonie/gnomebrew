@@ -17,13 +17,6 @@ h4 {
     font-size: 0.9em;
 }
 
-.station {
-    background: #BE8251;
-    border-radius: 5px;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-}
-
 .navbar .gb-brand {
     font-family: 'Press Start 2P';
     color: #A63E42;
@@ -36,3 +29,39 @@ h4 {
     margin-top: 0.5em;
 }
 
+.gb-main {
+    width: 100%;
+}
+
+/* SIDEBAR */
+
+.gb-wrapper {
+    align-items: stretch;
+    display: flex;
+}
+
+.gb-sidebar {
+    position: fixed;
+    min-width: 250px;
+    max-width: 250px;
+    max-height: 92vh;
+    height: 92vh;
+    z-index: 100;
+    transition: all 0.3s;
+    padding: 10px;
+    background: #E7BF8B;
+}
+
+/* Toggle used to activate/deactivate the sidebar */
+.gb-sidebar.sb-toggle {
+    margin-left: -250px;
+}
+
+/* GB NAVBAR */
+.gb-navbar {
+    background: #E7BF8B;
+}
+
+.gb-link {
+    cursor: pointer;
+}

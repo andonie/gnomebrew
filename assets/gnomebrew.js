@@ -117,7 +117,7 @@ function reload_element(element_name) {
     $.post('/play/game_id/html.' + element_name).done(function(response) {
         element_to_reload = document.getElementById(element_name);
         element_to_reload.innerHTML = response;
-        animate_whole_ui(station_element);
+        animate_whole_ui(element_name);
     }).fail(function(response){
         global_error('Error while connecting to server!');
     });

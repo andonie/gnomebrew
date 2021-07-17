@@ -169,10 +169,28 @@ input {
 }
 
 
+.station {
+    background: #BE8251;
+    border-radius: 5px;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-bottom: 5px;
+}
+
 /* STORAGE */
 
 .station-storage-content {
     background: #E7BF8B;
+}
+
+.station-storage {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+}
+
+.station-storage .gb-table-wrap {
+    max-height: unset;
 }
 
 .station-tavern-queue {

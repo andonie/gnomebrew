@@ -1,7 +1,13 @@
 {% extends "stations/_station.html" %}
 
-{% block station_body %}
+{% block station_header %}
+<button type="button" class="close" id="storage-close-button" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+</button>
 {{ super() }}
+{% endblock %}
+
+{% block station_body %}
 <div class="description">
     <div class="descriptor"><img class="gb-icon" src="{{ url_for('get_icon', game_id='item.gold') }}"></div>
     <div class="description-value" id="data.storage.content.gold">{{ shorten_num(game_data.storage.content.gold) }}</div>
@@ -31,6 +37,9 @@ add_startup(function() {
         $('#storage-content tr').filter(function() {
             $(this).toggle($(this).data('content').toLowerCase().indexOf(value) > -1);
         });
+    });
+    $('#storage-close-button').on('click', function(event) {
+        $('#gb-sidebar').addClass('sb-toggle');
     });
 });
 </script>

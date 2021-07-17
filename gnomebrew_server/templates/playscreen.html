@@ -1,23 +1,39 @@
 {% extends 'base.html' %}
 
 {% block scripts %}
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+{{ super() }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-<script src="{{ url_for('static_res', res='bootstrap.min.js') }}"></script>
 <script src="{{ url_for('static_res', res='gnomebrew.js') }}"></script>
 <script src="{{ url_for('static_res', res='gnomebrew-ui.js') }}"></script>
 {% endblock %}
 
+{% block navbar_extras %}
+<script>
+add_startup(function() {
+    $('#storage-toggle').on('click', function(event) {
+        $('#gb-sidebar').toggleClass('sb-toggle');
+    });
+});
+</script>
+<li class="navbar-item">
+    <img class="nav-link gb-link gb-icon" src="{{ url_for('get_icon', game_id='special.storage') }}" href="#" id="storage-toggle"/>
+</li>
+{% endblock %}
+
+{% block sidebar_outer %}
+<div class="gb-sidebar sb-toggle" id="gb-sidebar">
+    {% block sidebar %}
+    {{ current_user.get('html.storage', game_data=user_data)|safe }}
+    {% endblock %}
+</div>
+{% endblock %}
 
 {% block app_content %}
-<script src="{{ url_for('static_res', res='gnomebrew-startup.js') }}"></script>
-
-
 <!-- TODO Change this to a more suitable station layout -->
 <div class="row row-margin-05">
     {% with user_stations = current_user.get_unlocked_station_list(),
         slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
-    {% for station in user_stations %}
+    {% for station in user_stations if station != 'storage' %}
     <div class="col-md-4">
         {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
     </div>
