@@ -17,24 +17,27 @@
     <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
 <input type="text" id="storage-filter" placeholder="Filter Storage">
-<div class="gb-table-wrap">
-    <table class="station-storage-content table table-sm table-hover gb-table" id="storage-content">
-        {% for material in game_data.storage.content %}
-        {% if material != 'gold' %}
-        {% set item = current_user.get('item.' + material) %}
-        <tr title="{{ item.description() }}" data-content="{{ item.name() }}">
-            <td class="" title="{{ item.name() }}"><img class="gb-icon" src="{{ url_for('get_icon', game_id=item.get_value('game_id')) }}"></td>
-            <td class="gb-table-value" id="data.storage.content.{{ material }}">{{ shorten_num(game_data.storage.content[material]) }}</td>
-        </tr>
-        {% endif %}
+<div class="gb-table-wrap storage-content" id="storage-content">
+    {% with category_table = format_player_storage(game_data.storage.content) %}
+    {% for item_category in category_table %}
+    <div class="gb-storage-category" data-toggle="collapse" data-target="#it_cat-{{ item_category.get_minimized_id() }}">{{ item_category.get_value('name') }}</div>
+    <div class="gb-storage-category-content collapse show" id="it_cat-{{ item_category.get_minimized_id() }}">
+        {% for item in category_table[item_category] %}
+        <div class="gb-storage-item" title="{{ item.description() }}" data-content="{{ item.name() }}">
+            <img class="gb-icon" title="{{ item.name() }}" src="{{ url_for('get_icon', game_id=item.get_value('game_id')) }}">
+            <div class="gb-storage-amount" id="data.storage.content.{{ item.get_minimized_id() }}">{{ shorten_num(category_table[item_category][item]) }}</div>
+        </div>
         {% endfor %}
-    </table>
+    </div>
+    {% endfor %}
+    {% endwith %}
 </div>
 <script>
 add_startup(function() {
     $('#storage-filter').on("keyup", function() {
         var value = $(this).val().toLowerCase();
-        $('#storage-content tr').filter(function() {
+        $('#storage-content .gb-storage-item').filter(function() {
+            console.log($(this).data('content').toLowerCase());
             $(this).toggle($(this).data('content').toLowerCase().indexOf(value) > -1);
         });
     });

@@ -189,6 +189,42 @@ input {
     max-height: inherit;
 }
 
+.storage-content {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+    background: #E7BF8B;
+    padding: 10px;
+}
+
+.gb-storage-category-content {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+}
+
+.gb-storage-category {
+    cursor: pointer;
+    background: #5E484F;
+    color: #E7BF8B;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding-inline: 5px;
+    margin-top: 5px;
+}
+
+.gb-storage-item {
+    display: flex;
+    background: #E7BF8B;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.gb-storage-item:hover {
+    filter: brightness(85%);
+}
+
 .station-storage .gb-table-wrap {
     max-height: unset;
 }

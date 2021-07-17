@@ -21,6 +21,3 @@ import gnomebrew_server.core_modules.workshop
 # Start Event Thread
 _EVENT_THREAD = EventThread(mongo_instance=mongo)
 _TAVERN_THREAD = TavernSimulationThread(mongo_instance=mongo)
-
-# Make Utility Functions available in template engine
-app.jinja_env.globals.update(shorten_num=shorten_num)

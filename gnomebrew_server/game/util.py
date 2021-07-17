@@ -3,8 +3,22 @@ Module for utility functions that are used in several modules of the game, such 
 """
 
 from numpy.random import default_rng
+from gnomebrew_server import app
+from typing import Callable
+from gnomebrew_server.game.static_data import ItemCategory, Item
 
 rng = default_rng()
+
+
+def global_jinja_fun(fun: Callable):
+    """
+    Annotation. Marks a function as available in Gnomebrew's Template engine.
+    :param fun: A function to be available in Gnomebrew's jinja instance.
+    """
+    kwarg = {
+        fun.__name__: fun
+    }
+    app.jinja_env.globals.update(**kwarg)
 
 
 def random_normal(**kwargs):
@@ -64,6 +78,7 @@ def random_uniform(**kwargs):
                        size=kwargs['size'] if 'size' in kwargs else None)
 
 
+@global_jinja_fun
 def shorten_num(val) -> str:
     """
     Number shortening code that works identical to JS implementation.
@@ -80,3 +95,40 @@ def shorten_num(val) -> str:
         val = "{:.2f}".format(val)
 
     return str(val) + (' ' + shortcodes[num_level] if num_level != 0 else '')
+
+
+@global_jinja_fun
+def format_player_storage(storage_data: dict):
+    """
+    Formats a player's storage data nicely.
+    :param storage_data: The value of `data.storage.content`
+    :return:    An 'ordered' dict that will contain dicts ordered by item categories (main categories only), e.g.
+    ```
+    {
+        <ItemCategory it_cat.mundane>: {
+            <Item water>: 100,
+            <Item simple_beer>: 200
+        },
+        <ItemCategory it_cat.material>: {
+            <Item wood>: 1
+        }
+    }
+    ```
+    The order of the keys is ordered by item main category. Within the category, the order is arbitrary.
+    Also omits 'item.gold' since it has a special role in-game.
+    """
+    ret = dict()
+
+    for item in storage_data:
+        if item == 'gold':
+            continue
+
+        item_object: Item = Item.from_id('item.' + item)
+        main_category: ItemCategory = next(filter(lambda cat: cat.is_main_category(),
+                                                  map(lambda cat_str: ItemCategory.from_id('it_cat.' + cat_str),
+                                                      item_object.get_value('categories'))))
+        if main_category not in ret:
+            ret[main_category] = dict()
+        ret[main_category].update({item_object: storage_data[item]})
+
+    return ret

@@ -37,6 +37,16 @@ class StaticGameObject(object):
     def get_id(self):
         return self._data['game_id']
 
+    def get_minimized_id(self):
+        """
+        Helper method used to generate a heuristic, human-readable id for a static game object **without dots**.
+        Trims the ID by only returning the ID after a string-split for dots on the second index, effectively removing
+        the object-category identifier.
+        Therefore, this ID is only guaranteed to be unique within the same class of static game objects.
+        :return:    A trimmed ID, e.g. turns `item.wood` into `wood` or `recipe.simple_beer` to `simple_beer`.
+        """
+        return self._data['game_id'].split('.')[1]
+
 
 class Recipe(StaticGameObject):
     """
@@ -402,6 +412,37 @@ class Item(StaticGameObject):
                 else 4
 
 
+class ItemCategory(StaticGameObject):
+    """
+    Item Category Wrapper Class
+    """
+
+    def __init__(self, mongo_data):
+        self._data = mongo_data
+
+    def __lt__(self, other):
+        """
+        Custom Implemented __lt__ method.
+        Used to ensure *consistent upgrade behavior* when applying several several Upgrades one after another:
+        Before executing Upgrade behavior, all existing upgrades are sorted in a list before folding it with reduce(...)
+        :param other:   Element to compare this to.
+        :return:        True if self<other. False if self>=other
+        """
+        # Upgrades are only comparable with each other
+        assert type(other) is ItemCategory
+        return self._data['cat_order'] < other._data['cat_order']
+
+    def __str__(self):
+        return f'<ItemCategory {self._data["game_id"]}>'
+
+    def is_main_category(self):
+        """
+        Returns `True`, if this object represents a main category. An item can have an arbitrary amount of categories,
+        but only belong into one main-category.
+        """
+        return self._data['is_main'] if 'is_main' in self._data else False
+
+
 # Internal References
 _STATIC_GAME_OBJECTS = dict()
 _RECIPES_BY_STATION = dict()
@@ -467,6 +508,10 @@ def update_static_data():
     global patron_order_list
     patron_order_list = filter(lambda item: item.is_orderable(), _ITEM_LIST)
     app.logger.info('Item Data Updated')
+
+    app.logger.info('Updating Item Category Data')
+    res.update(_fill_from_db(mongo.db.item_categories, lambda doc: ItemCategory(doc)))
+    app.logger.info('Item Category Data Updated')
 
     global _STATIC_GAME_OBJECTS
     _STATIC_GAME_OBJECTS = res
