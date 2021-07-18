@@ -1,5 +1,5 @@
 {% set station_name = station.game_id.split('.')[1] %}
-<div class="station col-md-12 station-{{ station_name }}" id="{{ station.game_id }}">
+<div class="station grid-item station-{{ station_name }}" id="{{ station.game_id }}">
     <div class="station-header">
         {% block station_header %}
         <h3 id="{{ station.game_id }}-title" title="{{ station.description }}">{{ station.name }}</h3>

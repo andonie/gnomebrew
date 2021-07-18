@@ -172,8 +172,7 @@ input {
 .station {
     background: #BE8251;
     border-radius: 5px;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
+    padding: 10px;
     margin-bottom: 5px;
 }
 
@@ -240,6 +239,29 @@ input {
     max-height: unset;
 }
 
+.grid-item.station-storage {
+    width: unset;
+}
+
+/* TAVERN */
+
 .station-tavern-queue {
     background: #E7BF8B;
+}
+
+/* MARKET */
+
+.market-offers td {
+    padding: 0px;
+    text-align: right;
+}
+
+.market-offers th {
+    padding: 5px;
+    text-align: center;
+}
+
+.market-offers button {
+    float: left;
+    margin-right: 5px;
 }

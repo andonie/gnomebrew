@@ -29,17 +29,12 @@ add_startup(function() {
 {% endblock %}
 
 {% block app_content %}
-<!-- TODO Change this to a more suitable station layout -->
-<div class="row row-margin-05">
-    {% with user_stations = current_user.get_unlocked_station_list(),
+{% with user_stations = current_user.get_unlocked_station_list(),
         slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
+<div class="grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 280, "gutter": 10}'>
     {% for station in user_stations if station != 'storage' %}
-    <div class="col-md-4">
-        {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
-    </div>
-    {% if loop.index is divisibleby 3 and not loop.last %}</div><div class="row row-margin-05">{% endif %}
-    {% if loop.last %}</div>{% endif %}
-
-{% endfor %}
+    {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
+    {% endfor %}
+</div>
 {% endwith %}
 {% endblock %}

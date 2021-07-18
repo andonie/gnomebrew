@@ -21,6 +21,8 @@ function startup_script() {
     socket.on('ui', handle_ui_req);
 
     fire_boot_list();
+    // After everything is set up, re-update the masonry grid to make sure everything looks nice
+    $('.grid').masonry();
 }
 
 $(document).ready(startup_script);
@@ -86,6 +88,8 @@ function handle_ui_req(data) {
             reload_element(data.element);
             break;
     }
+    // After any UI update, Masonry gets card blanche to update the grid
+    $('.grid').masonry();
 }
 
 function update_time_difference(success_callback) {

@@ -10,7 +10,6 @@
         <tr title="{{ recipe_data.description }}">
             <td>
                 <div class="icon-heading">
-                    <img class="gb-icon" src="{{ url_for('get_icon', game_id=recipe_data.game_id) }}">
                     <h4>{{ recipe_data.name }}</h4>
                     <div class="gb-outcome">{{ recipe.describe_outcome()|safe }}</div>
                 </div>

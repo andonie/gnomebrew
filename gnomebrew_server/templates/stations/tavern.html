@@ -35,6 +35,12 @@ add_startup(function () {
     $('#tavern-prices').on('hide.bs.collapse', function() {
         $('#price-toggle').html("Show Prices");
     });
+    $('#tavern-prices').on('shown.bs.collapse', function() {
+        $('.grid').masonry();
+    });
+    $('#tavern-prices').on('hidden.bs.collapse', function() {
+        $('.grid').masonry();
+    });
 });
 </script>
 {% endblock %}
