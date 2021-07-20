@@ -87,6 +87,12 @@ function handle_ui_req(data) {
         case 'reload_element':
             reload_element(data.element);
             break;
+        case 'event':
+            fetch_and_display_event();
+            break;
+        case 'add_station':
+            add_station(data.station);
+            break;
     }
     // After any UI update, Masonry gets card blanche to update the grid
     $('.grid').masonry();
@@ -112,6 +118,7 @@ function reload_station(station_name) {
         outer.innerHTML = response;
         station_element.innerHTML = outer.children[0].innerHTML;
         animate_whole_ui(station_element);
+        $('.grid').masonry();
     }).fail(function(response){
         global_error('Error while connecting to server!');
     });
@@ -122,8 +129,80 @@ function reload_element(element_name) {
         element_to_reload = document.getElementById(element_name);
         element_to_reload.innerHTML = response;
         animate_whole_ui(element_name);
+        $('.grid').masonry();
     }).fail(function(response){
         global_error('Error while connecting to server!');
+    });
+}
+
+function add_station(station_name) {
+    console.log('adding station: ' + station_name);
+    $.post('/play/game_id/html.' + station_name).done(function(response) {
+        //$('#station-grid').append(response);
+        //$('.grid').masonry();
+        $('#station-grid').append(response);
+        $('#station-grid').masonry('reloadItems');
+        $('#station-grid').masonry('layout');
+    }).fail(function(response){
+        global_error('Error while connecting to server!');
+    });
+}
+
+/* INGAME EVENT */
+
+function fetch_and_display_event() {
+    $.post('/play/game_id/html.ingame_event.next').done(function(response) {
+        if(response === '') {
+            // This should not happen. Reload should only be executed when an event awaits being displayed.
+            global_error('Could not fetch event content! Tell Mike about this.');
+            return;
+        }
+        document.getElementById('ingame_event').innerHTML = response
+        show_event_modal();
+    }).fail(function(response) {
+        global_error('Connection issue with Gnomebrew server.');
+    });
+}
+
+function show_event_modal() {
+    $('#gb-event-modal').modal({
+        backdrop: 'static',
+        keyboard: false
+    });
+}
+
+// Complete frontend shutdown logic for an ingame event modal
+function close_event_modal() {
+    var button = document.getElementById('gb-event-modal-button');
+    var button_text = button.innerHTML;
+
+    var request_object = {
+        type: 'event',
+        target: $('#gb-event-modal').data('target'),
+        input: {}
+    };
+
+    // If applicable, collect any and all inputs set by user
+    $('#gb-event-modal-inputs :input').each(function(index){
+        var id = $(this).data('id');
+        var val = $(this).val();
+        request_object.input[id] = val;
+    });
+
+    console.log('I have this request at the Ready: ' + JSON.stringify(request_object));
+
+    $.post('/play/request', request_object).done(function(response) {
+        if(response.type != 'success') {
+            error_msg('gb-event-modal-warning', response.fail_msg);
+            button.innerHTML = button_text;
+            return;
+        }
+        // Success! We now want to close the modal now
+        button.innerHTML = button_text;
+        $('#gb-event-modal').modal('hide');
+    }).fail(function(response) {
+        error_msg('gb-event-modal-warning', 'Failed trying to connect to Gnomebrew server.');
+        button.innerHTML = button_text;
     });
 }
 

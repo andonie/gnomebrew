@@ -13,24 +13,77 @@ import re
 from functools import reduce
 
 _GAME_ID_RESOLVERS = dict()
+_UPDATE_RESOLVERS = dict()
+_UPDATE_LISTENERS = dict()
 _USER_ASSERTIONS = list()
 _FRONTEND_DATA_RESOLVERS = dict()
 _HTML_GENERATOR_RESOLVERS = dict()
 _USR_CACHE = dict()
 
 
-def game_id_resolver(resolver: Callable):
+def get_resolver(type: str):
     """
-    Registers a function to resolve a game resource identifier
-    :param resolver:    The function to be called. `resolver.__name__` resolves identifiers that start with with
-                        this name. E.g. `def attr(...)` resolves `attr.<...>`. Function parameters to implement:
-                        * `user: User` user for which the ID is to be resolved
-                        * `game_id: str` full ID (incl. first part that's covered through the name)
+    Registers a function to resolve a game resource identifier.
+    :param type: The type of this resolver. A unique identifier for the first part of a game-id, e.g. `data`
+    :return: The registration wrapper. To be used as an annotation on a function that will serve as the `get` logic.
+    The function will resolve game_ids leading with `type` and is expected to have these parameters:
+    * `user: User` user for which the ID is to be resolved
+    * `game_id: str` full ID (incl. first part that's covered through the name)
     """
     global _GAME_ID_RESOLVERS
-    prefix = resolver.__name__
-    assert prefix not in _GAME_ID_RESOLVERS
-    _GAME_ID_RESOLVERS[prefix] = resolver
+    assert type not in _GAME_ID_RESOLVERS
+
+    def wrapper(fun: Callable):
+        _GAME_ID_RESOLVERS[type] = fun
+
+    return wrapper
+
+
+def update_resolver(type: str):
+    """
+    Used to register a function as an update resolver.
+    :param type:    The leading type of the update resolver, e.g. `data`.
+    :return:    The registration wrapper. Expects a function that takes:
+    * `user`: The firing user.
+    * `game_id`: A game id
+    * `update`: Update data given via the `update` function
+    * `**kwargs`
+    The function is expected to **return a dict** that maps game-ids to the new update values.
+    This marks the updates that are to be used for registered `frontend_id_resolver` s
+    """
+    global _UPDATE_RESOLVERS
+    assert type not in _UPDATE_RESOLVERS
+
+    def wrapper(fun: Callable):
+        _UPDATE_RESOLVERS[type] = fun
+
+    return wrapper
+
+
+def update_listener(game_id: str):
+    """
+    Registers a listener function that fires whenever a certain game_id is updated.
+    :param game_id: A game ID
+    :return:        A registration wrapper. Expects a function. Whenever the given `game_id` is updated via the
+                    `user.update(...)` function, all registered listeners will be informed by having their function
+                    called.
+                    The function should expect two parameters:
+
+                    * `user`: The user from which the update originated.
+                    * `update`: The update data
+                    The function should be 'lightweight', as - depending on the game id - it might be called quite
+                    often. Therefore, the function should only make time-intense calls (e.g. subsequent `get`/`update`
+                    calls) when strictly necessary. The function receives the update data directly as a paramter and
+                    that should be enough.
+    """
+    global _UPDATE_LISTENERS
+    if game_id not in _UPDATE_LISTENERS:
+        _UPDATE_LISTENERS[game_id] = list()
+
+    def wrapper(fun: Callable):
+        _UPDATE_LISTENERS[game_id].append(fun)
+
+    return wrapper
 
 
 def user_assertion(assertion_script: Callable):
@@ -78,28 +131,7 @@ def html_generator(html_id):
 
 
 class User(UserMixin):
-    STARTUP_GAMEDATA = {
-        'storage': {
-            'content': {
-                'gold': 200,
-                'wood': 10,
-                'grains': 500
-            }
-        },
-        'tavern': {
-            'queue': [],
-            'prices': {
-                'beer': 1
-            },
-            'patrons': 0
-        },
-        'brewery': {
-
-        },
-        'workshop': {
-            'upgrades': []
-        }
-    }
+    STARTUP_STATIONS = ['station.storage', 'station.well']
 
     """
     User Class for Gnomebrew.
@@ -162,13 +194,17 @@ class User(UserMixin):
         usr_data['pw_hash'] = generate_password_hash(pw)
         usr_data.update(additional_data)
 
-        # Instantiate with Starting data
-        usr_data['data'] = User.STARTUP_GAMEDATA
-
         # Write to DB to ensure persistence
         mongo.db.users.insert_one(usr_data)
 
-        return User(username)
+        # Create user handle
+        user = User(username)
+
+        # Instantiate with startup stations
+        for station_code in User.STARTUP_STATIONS:
+            Station.from_id(station_code).initialize_for(user)
+
+        return user
 
     # +++++++++++++++++++++ Game Interface Methods +++++++++++++++++++++
 
@@ -183,32 +219,34 @@ class User(UserMixin):
         assert id_type in _GAME_ID_RESOLVERS
         return _GAME_ID_RESOLVERS[id_type](user=self, game_id=game_id, **kwargs)
 
-    def update_game_data(self, path: str, update, **kwargs):
+    def update(self, game_id: str, update, **kwargs):
         """
         Updates Game Data to the database *and* broadcasts the data changes to potentially listening clients.
         Calling this function is the only way a game data should be updated, since this ensures integrity from database
         to frontend.
-        :param path:    User Data path, e.g. `data.storage.content'
+        :param game_id:    User Data path, e.g. `data.storage.content'
         :param update:  The update data
         :param kwargs:
 
         * `is_bulk`: If True, the update will be split the paths in keys
         * `command`: Default '$set' - mongo_db command to use for the update
+        * `suppress_frontend`: If this is set `True`, no frontend updates will be run.
         """
-        splits = path.split('.')
-        assert splits[0] == 'data'
-        if 'is_bulk' in kwargs and kwargs['is_bulk']:
-            # Update is a dict. We don't want delete the other entries in here
-            # Only for ONE layer though
-            command_content = dict()
-            for key in update:
-                command_content[path + '.' + key] = update[key]
-        else:
-            command_content = {path: update}
-        mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
-        mongo.db.users.update_one({"username": self.username}, {mongo_command: command_content})
-        # Also update the currently attached users.
-        self._data_update_to_frontends(command_content)
+        id_type = game_id.split('.')[0]
+        assert id_type in _UPDATE_RESOLVERS
+        res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
+
+        # If any update listeners are registered for this game ID, inform update listeners of the update
+        global _UPDATE_LISTENERS
+        for gid in res:
+            if gid in _UPDATE_LISTENERS:
+                for listener in _UPDATE_LISTENERS[gid]:
+                    listener(user=self,
+                             update=res)
+
+        if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
+            return
+        self._data_update_to_frontends(res)
 
     def _data_update_to_frontends(self, set_content):
         """
@@ -258,7 +296,7 @@ class User(UserMixin):
         return mongo.db.users.find_one({"username": self.username},
                                        {'data': 1, '_id': 0})['data']
 
-    def game_integrity_assetion(self):
+    def game_integrity_assertion(self):
         """
         Internal utility function.
         This script runs any game assertions that are registered.
@@ -282,7 +320,9 @@ def load_user(user_id):
     return User(user_id)
 
 
-@game_id_resolver
+# STANDARD RESOLVERS
+
+@get_resolver('data')
 def data(user: User, game_id: str, **kwargs):
     """
     Evaluates a game-data ID and returns the value
@@ -307,7 +347,7 @@ def data(user: User, game_id: str, **kwargs):
     return res
 
 
-@game_id_resolver
+@get_resolver('slots')
 def slots(game_id: id, user: User, **kwargs):
     """
     Calculates the amount of **available** slots for a station:
@@ -332,7 +372,7 @@ def slots(game_id: id, user: User, **kwargs):
     return max_slots
 
 
-@game_id_resolver
+@get_resolver('attr')
 def attr(game_id: str, user: User, **kwargs):
     """
     Evaluates an attribute for this user taking into account all unlocked upgrades.
@@ -359,8 +399,8 @@ def attr(game_id: str, user: User, **kwargs):
             raise AttributeError(f"Station does not have a base value {'.'.join(splits[2:])} and now default was set.")
 
     # Get all relevant Upgrades
-    upgrade_list = [Upgrade.from_id(x) for x in user.get('data.workshop.upgrades')]
-    upgrades: list[Upgrade] = sorted(filter(lambda x: x.relevant_for(game_id), upgrade_list))
+    upgrades = sorted(filter(lambda x: x.relevant_for(game_id),
+                             [Upgrade.from_id(x) for x in user.get('data.workshop.upgrades', default=[])]))
 
     # Apply upgrades in sorted order
     for upgrade in upgrades:
@@ -368,32 +408,33 @@ def attr(game_id: str, user: User, **kwargs):
     return val
 
 
-@game_id_resolver
+@get_resolver('station')
 def station(game_id: str, user: User):
     return Station.from_id(game_id)
 
 
-@game_id_resolver
+@get_resolver('recipe')
 def recipe(game_id: str, user: User):
     return Recipe.from_id(game_id)
 
 
-@game_id_resolver
+@get_resolver('recipes')
 def recipes(game_id: str, user: User):
     splits = game_id.split('.')
     assert len(splits) == 2
-    user_ws_data = user.get('data.workshop')
+    # Add default values to make the system not crap out before the workshop is unlocked
+    user_ws_data = user.get('data.workshop', default={'upgrades':[], 'finished_otr':[]})
     return [r for r in Recipe.get_recipes_by_station(splits[1]) if r.can_execute(user,
                                                                                  user_upgrades=user_ws_data['upgrades'],
                                                                                  user_otr=user_ws_data['finished_otr'])]
 
 
-@game_id_resolver
+@get_resolver('item')
 def item(game_id: str, user: User):
     return Item.from_id(game_id)
 
 
-@game_id_resolver
+@get_resolver('html')
 def html(game_id: str, user: User, **kwargs):
     splits = game_id.split('.')
     if game_id in _HTML_GENERATOR_RESOLVERS:
@@ -407,8 +448,7 @@ def html(game_id: str, user: User, **kwargs):
         return KeyError('This HTML request type was unknown.')
 
 
-
-@game_id_resolver
+@get_resolver('allslots')
 def allslots(game_id: str, user: User):
     """
     Get ALL current slot data in comprehensive dict format.
@@ -444,3 +484,21 @@ def allslots(game_id: str, user: User):
                 ret[_station] = ['free'] * max_slots
 
     return ret
+
+
+@update_resolver('data')
+def game_data_update(user: User, game_id: str, update, **kwargs):
+    splits = game_id.split('.')
+    assert splits[0] == 'data'
+    if 'is_bulk' in kwargs and kwargs['is_bulk']:
+        # Update is a dict. We don't want delete the other entries in here
+        # Only for ONE layer though
+        command_content = dict()
+        for key in update:
+            command_content[game_id + '.' + key] = update[key]
+    else:
+        command_content = {game_id: update}
+    mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
+    mongo.db.users.update_one({"username": user.username}, {mongo_command: command_content})
+    # Also update the currently attached users.
+    return command_content

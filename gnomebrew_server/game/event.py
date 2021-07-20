@@ -8,7 +8,7 @@ from traceback import print_tb
 from gnomebrew_server import mongo
 import datetime
 
-from gnomebrew_server.game.static_data import Item
+from gnomebrew_server.game.static_data import Item, Station
 from gnomebrew_server.game.user import User, load_user
 import threading
 
@@ -94,11 +94,9 @@ class Event(object):
                 for key, _ in self._data['effect'][effect_type].copy().items():
                     self._data['effect'][effect_type][key.replace('-', '.')] = self._data['effect'][effect_type].pop(key)
 
-        global _EVENT_FUNCTIONS
         for effect in self._data['effect']:
             # Call the registered handling function for the effect key
-            assert _EVENT_FUNCTIONS[effect]
-            _EVENT_FUNCTIONS[effect](user=user, effect_data=self._data['effect'][effect])
+            Event.execute_event_effect(user=user, effect_type=effect, effect_data=self._data['effect'][effect])
 
     def get_target_username(self):
         """
@@ -159,6 +157,18 @@ class Event(object):
         assert effect_callable.__name__ not in _EVENT_FUNCTIONS
         _EVENT_FUNCTIONS[effect_callable.__name__] = effect_callable
 
+    @staticmethod
+    def execute_event_effect(user: User, effect_type: str, effect_data: dict):
+        """
+        This function can be called to interpret and execute JSON effect data
+        :param user:            a user to execute the effect on.
+        :param effect_type:     The effect type (used in `Event.register`)
+        :param effect_data:     A dict representing the effect data JSON
+        """
+        global _EVENT_FUNCTIONS
+        _EVENT_FUNCTIONS[effect_type](user=user, effect_data=effect_data)
+
+
     def enqueue(self):
         """
         Registers this event with the event queue. This ensures that - once the event's due time happened - the event will
@@ -192,7 +202,7 @@ def delta_inventory(user: User, effect_data: dict):
             inventory_update['storage.content.' + material] = user_inventory[material] + effect_data[material]
         else:
             inventory_update['storage.content.' + material] = min(max_capacity, user_inventory[material] + effect_data[material])
-    user.update_game_data('data', inventory_update, is_bulk=True)
+    user.update('data', inventory_update, is_bulk=True)
 
 
 @Event.register
@@ -215,7 +225,7 @@ def push_data(user: User, effect_data: dict):
             data.append(item)
             # Update each item individually to ensure every frontend_id_resolver
             # Can fetch the list tail and knows this is the pushed change
-            user.update_game_data(data_path, data)
+            user.update(data_path, data)
 
 
 @Event.register
@@ -227,11 +237,20 @@ def ui_update(user: User, effect_data:dict):
     """
     user.frontend_update('ui', effect_data)
 
+
 @Event.register
-def add_station(user: User, effect_data:dict):
+def add_station(user: User, effect_data: dict):
     """
     Fired when a new station is to be added to a user's game data.
     :param user:        a user
     :param effect_data: effect data dict formatted as `effect_data['id'] = station_id`
     """
-    pass
+    # Load the respective station and initialize it for this user
+    station = Station.from_id(effect_data['station'])
+    station.initialize_for(user)
+
+    # Send the respective update to all active frontends
+    user.frontend_update('ui', {
+        'type': 'add_station',
+        'station': station.get_minimized_id()
+    })

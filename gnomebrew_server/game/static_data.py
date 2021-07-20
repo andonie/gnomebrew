@@ -9,7 +9,9 @@ etc.
 """
 import datetime
 import re
-from flask import url_for
+from typing import Callable
+
+from flask import url_for, render_template
 
 from gnomebrew_server import app, mongo
 from gnomebrew_server.game.gnomebrew_io import GameResponse
@@ -74,8 +76,6 @@ class Recipe(StaticGameObject):
         # Check if prerequisites are met
         ok = True
 
-
-
         # 1. Material Cost
         player_inventory = user.get('data.storage.content')
         if not all([x in player_inventory and player_inventory[x] >= self._data['cost'][x] for x in
@@ -109,7 +109,7 @@ class Recipe(StaticGameObject):
             for material in update_data:
                 update_data[material] = player_inventory[material] - update_data[material]
             if update_data:
-                user.update_game_data('data.storage.content', update_data, is_bulk=True)
+                user.update('data.storage.content', update_data, is_bulk=True)
 
             # (slots don't have to be discounted as they are logged via the eventqueue)
 
@@ -220,7 +220,7 @@ class Recipe(StaticGameObject):
             output += '<span class="gb-outcome-descriptor">Creates</span> '
             for item in self._data['result']['delta_inventory']:
                 output += f"""<div class="gb-outcome-item">
-                        <img class="gb-icon-sm" src="{ url_for('get_icon', game_id='item.' + item)}">
+                        <img class="gb-icon-sm" src="{url_for('get_icon', game_id='item.' + item)}">
                         {self._data['result']['delta_inventory'][item]}
                     </div>"""
 
@@ -254,8 +254,29 @@ class Station(StaticGameObject):
         pass
 
     def get_base_value(self, attr):
+        """
+        Used for `attr` evaluation. Technically this method is redundant since it's equivalent to `get_value` in
+        `StaticGameObject`. It stays in the code for now in case the `attr` evaluation gets more fancy.
+        """
         assert self._data[attr]
         return self._data[attr]
+
+    def initialize_for(self, user):
+        """
+        Initializes this station for a given user with the station's `init_data`.
+        :param user:    a user. We assume this user has not yet had data connected to this station.
+        """
+        # Add new station in user data with default values.
+        # Also ignore the frontend, since we will manually send an add_station update to the frontend.
+        user.update(f"data.{self._data['game_id'].split('.')[1]}", self._data['init_data'], suppress_frontend=True)
+
+        # If this station has an init-effect to be executed, do so now.
+        if 'init_effect' in self._data:
+            from gnomebrew_server.game.event import Event
+            for effect in self._data['init_effect']:
+                Event.execute_event_effect(user, effect_type=effect, effect_data=self._data['init_effect'][effect])
+
+
 
 
 class Upgrade(StaticGameObject):
@@ -343,7 +364,7 @@ class Upgrade(StaticGameObject):
         # Go Through the actual upgrade effect and check if something needs to be updated
         # Relevent regexes to check for
         regexes = [
-            re.compile(r'^attr\.(?P<station_name>\w+)\.slots$') # Changes in Slots should be UI updated
+            re.compile(r'^attr\.(?P<station_name>\w+)\.slots$')  # Changes in Slots should be UI updated
         ]
 
         for attribute in self._data['effect']:
@@ -375,7 +396,6 @@ class Upgrade(StaticGameObject):
         """
         if 'description' in self._data:
             return self._data['description']
-
 
 
 class Item(StaticGameObject):
@@ -448,7 +468,9 @@ _STATIC_GAME_OBJECTS = dict()
 _RECIPES_BY_STATION = dict()
 _RECIPE_LIST = list()
 _ITEM_LIST = list()
+ig_event_list = list()
 patron_order_list = list()
+
 
 def _fill_from_db(col, conversion_function):
     """
@@ -512,6 +534,22 @@ def update_static_data():
     app.logger.info('Updating Item Category Data')
     res.update(_fill_from_db(mongo.db.item_categories, lambda doc: ItemCategory(doc)))
     app.logger.info('Item Category Data Updated')
+
+    app.logger.info('Updating Ingame Event Data')
+    ig_event_list_copy = list()
+
+    from gnomebrew_server.game.ig_event import IngameEvent
+
+    def process_ig_event_data(doc):
+        ig_event_object = IngameEvent(doc)
+        ig_event_list_copy.append(ig_event_object)
+        return ig_event_object
+
+    res.update(_fill_from_db(mongo.db.ingame_events, process_ig_event_data))
+
+    global ig_event_list
+    ig_event_list = ig_event_list_copy
+    app.logger.info('Ingame Event Data Updated')
 
     global _STATIC_GAME_OBJECTS
     _STATIC_GAME_OBJECTS = res

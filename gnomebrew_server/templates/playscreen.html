@@ -29,9 +29,20 @@ add_startup(function() {
 {% endblock %}
 
 {% block app_content %}
+<div id="ingame_event">
+    {% if current_user.get('html.ingame_event.queue') %}
+    {{ current_user.get('html.ingame_event.next') | safe }}
+    <script>
+        add_startup(function () {
+            console.log('starting modal!');
+            show_event_modal();
+        });
+    </script>
+    {% endif %}
+</div>
 {% with user_stations = current_user.get_unlocked_station_list(),
         slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
-<div class="grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 280, "gutter": 10}'>
+<div class="grid" id="station-grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 300, "gutter": 5}'>
     {% for station in user_stations if station != 'storage' %}
     {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
     {% endfor %}

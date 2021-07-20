@@ -3,6 +3,7 @@
     <div class="station-header">
         {% block station_header %}
         <h3 id="{{ station.game_id }}-title" title="{{ station.description }}">{{ station.name }}</h3>
+        {% block station_subtitle %}{% endblock %}
         <div class="station-warning" id="{{station.game_id }}-warning"></div>
         {% endblock %}
     </div>

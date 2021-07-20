@@ -1,0 +1,42 @@
+{# Base class for visualizing Ingame Events
+Requires these variables set:
+ * `event` : The event data game object
+#}
+
+<div class="modal fade gb-modal" tabindex="-1" role="dialog" id="gb-event-modal" data-target="{{ event.get_id() }}">
+    <div class="modal-dialog gb-event-modal" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                {% block event_header %}
+                <h4 class="modal-title">{{ event.get_value('title') }}</h4>
+                {% if not event.has_inputs() %}
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                {% endif %}
+                {% endblock %}
+            </div>
+            <div class="modal-body">
+                <div class="station-warning" id="gb-event-modal-warning"></div>
+                {% block event_body %}
+                {{ event.render_body_text() | safe }}
+                {% if event.has_effects() %}
+                {{ event.render_effect_html() | safe }}
+                {% endif %}
+                {% if event.has_inputs() %}
+                <div id="gb-event-modal-inputs">
+                    {{ event.render_input_html() | safe }}
+                </div>
+                {% endif %}
+                {% endblock %}
+            </div>
+            <div class="modal-footer">
+                {% block event_footer %}
+                <button id="gb-event-modal-button" type="button" class="btn btn-secondary" onclick="close_event_modal()">
+                    {% if event.has_inputs() %}Confirm{% else %}OK{% endif %}
+                </button>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>

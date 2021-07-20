@@ -1,0 +1,22 @@
+{% extends "ig_event/effects/_effect.html" %}
+
+{% block effect_title %}
+{% if effect_data.values()|select("lessthan",0)|first %}
+Your inventory changed:
+{% else %}
+You gained {% if effect_data.values()|length > 1 %}some items{% else %}an item{% endif %}:
+{% endif %}
+{% endblock %}
+
+{% block effect_description %}
+{% for item_name in effect_data %}
+<table class="gb-table">
+{% with item_object = current_user.get('item.' + item_name) %}
+<tr class="gb-delta-inventory" title="{{ item_object.description() }}">
+    <td><img title="{{ item_object.name() }}" src="{{ url_for('get_icon', game_id=item_object.get_id()) }}" class="gb-icon"></td>
+    <td><div class="gb-delta-inventory-data">{{ shorten_num(effect_data[item_name]) }}</div></td>
+</tr>
+</table>
+{% endwith %}
+{% endfor %}
+{% endblock %}

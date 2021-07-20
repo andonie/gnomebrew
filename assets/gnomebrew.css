@@ -76,6 +76,35 @@ h4 {
     font-family: 'Press Start 2P';
 }
 
+.gb-modal .modal-content {
+    background-color: #5E484F;
+    color: #E7BF8B;
+}
+
+.gb-modal .modal-header {
+    border-bottom: 1px solid #E7BF8B;
+}
+
+.gb-modal-effect {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+.gb-modal-effect-content .gb-modal-
+
+.gb-delta-inventory {
+    max-width: 300px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.gb-delta-inventory-data {
+    font-family: 'Press Start 2P';
+    color: #E7BF8B;
+}
+
 /* MASONRY */
 .grid-item {
     width: 270px;

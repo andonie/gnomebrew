@@ -182,7 +182,7 @@ class Patron:
 
         # Add my order to the queue
         queue_data.append(order_data)
-        user.update_game_data('data.tavern.queue', queue_data)
+        user.update('data.tavern.queue', queue_data)
 
         # I will get impatient if my order is not handled within a timeframe.
         # -> Create timed event to handle this
@@ -198,7 +198,7 @@ class Patron:
         queue = user.get('data.tavern.queue')
 
         # Filter out any and all orders with the patron's id
-        user.update_game_data('data.tavern.queue', list(filter(lambda order: order['id'] != self._data['id'], queue)))
+        user.update('data.tavern.queue', list(filter(lambda order: order['id'] != self._data['id'], queue)))
 
         self.schedule_next_decision(user)
 
@@ -208,7 +208,7 @@ class Patron:
         :param user:    a user
         """
         # Remove Patron from Tavern Data
-        user.update_game_data('data.tavern.patrons.' + self._data['id'], {}, command='$unset')
+        user.update('data.tavern.patrons.' + self._data['id'], {}, command='$unset')
 
         # Remove the next step event that still exists
         mongo.db.events.delete_many({
@@ -295,6 +295,9 @@ class TavernSimulationThread(object):
         Utility function that helps iterate a list of ALL game users at the time of the game call
         """
         for document in self.mongo.db.users.find({}, {'username': 1, 'data.tavern': 1}):
+            if 'tavern' not in document['data']:
+                # A user could not have yet activated their tavern. Ignore those
+                continue
             yield load_user(document['username']), document['data']['tavern']
 
 
@@ -399,7 +402,7 @@ def patron_enter(user: User, effect_data: dict):
     # Add Patron to patron list
     tavern_data['patrons'][patron_uuid] = patron.get_data()
     # Write in the new patron
-    user.update_game_data('data.tavern.patrons.' + patron_uuid, patron.get_data())
+    user.update('data.tavern.patrons.' + patron_uuid, patron.get_data())
 
     # Patron enters --> First Decision
     patron.decision_step(user=user)
@@ -459,7 +462,7 @@ def decline_next(user: User):
         'effect.patron_impatient.id': next_order['id']
     })
 
-    user.update_game_data('data.tavern.queue', queue)
+    user.update('data.tavern.queue', queue)
 
     # The patron will now sit back down in the tavern
     # They will need to decide when to leave
@@ -528,7 +531,7 @@ def sell_to_next(user: User):
     }
     update_data.update(inventory_changes)
 
-    user.update_game_data('data', update_data, is_bulk=True)
+    user.update('data', update_data, is_bulk=True)
 
     # TODO: UI Updates
     response.succeess()
@@ -557,7 +560,7 @@ def set_price(request_object: dict, user: User):
         response.add_fail_msg('You cannot charge negative prices.')
         return response
 
-    user.update_game_data('data.tavern.prices.' + item, price)
+    user.update('data.tavern.prices.' + item, price)
 
     if old_price < price:
         # The price has increased. Are all queued patrons cool with this?
@@ -571,6 +574,10 @@ def set_price(request_object: dict, user: User):
     response.succeess()
     return response
 
+
+@frontend_id_resolver(r'^data\.tavern\.name$')
+def normal_update_for_tavern_name(user: User, data: dict, game_id: str):
+    user.frontend_update('update', data)
 
 @frontend_id_resolver(r'data\.tavern\.queue')
 def reload_tavern_on_queue_update(user: User, data: dict, game_id: str):

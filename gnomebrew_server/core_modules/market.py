@@ -75,7 +75,7 @@ def market_buy(request_object: dict, user: User):
         item['stock'] -= amount
         user_gold -= amount * item['price']
         user_item_num = int(user.get('data.storage.content.' + item_name, default=0))
-        user.update_game_data('data', {
+        user.update('data', {
             'market.inventory.' + item_name: item,  # New Item Inventory
             'storage.content.gold': user_gold,
             'storage.content.' + item_name: user_item_num + amount
@@ -121,7 +121,7 @@ def market_update(user: User, effect_data: dict):
     """
     latest_inventory = generate_new_inventory(user)
     next_duetime = datetime.utcnow() + timedelta(minutes=3)
-    user.update_game_data('data.market', {
+    user.update('data.market', {
         'due': next_duetime,
         'inventory': latest_inventory
     }, is_bulk=True)

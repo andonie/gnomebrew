@@ -1,5 +1,9 @@
 {% extends "stations/_station.html" %}
 
+{% block station_subtitle %}
+<h5 id="data.tavern.name">{% if game_data.tavern.name %}{{ game_data.tavern.name }}{% else %}your tavern{% endif %}</h5>
+{% endblock %}
+
 {% block station_body %}
 <table class="gb-table">
     <tbody>

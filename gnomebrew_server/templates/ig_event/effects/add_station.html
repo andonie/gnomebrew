@@ -1,0 +1,11 @@
+{% extends "ig_event/effects/_effect.html" %}
+
+{% block effect_title %}{% with station_object=current_user.get(effect_data.station) %}
+You have now access to the {{ station_object.get_value('name') }}:
+{% endwith %}{% endblock %}
+
+{% block effect_description %}
+{% with station_object=current_user.get(effect_data.station) %}
+<div class="gb-station-description">{{ station_object.get_value('description') }}</div>
+{% endwith %}
+{% endblock %}

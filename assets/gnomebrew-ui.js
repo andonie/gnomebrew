@@ -102,6 +102,10 @@ function global_error(error_msg) {
 }
 
 function error_msg(target_id, message) {
+    if(target_id === null) {
+        global_error(message);
+        return;
+    }
     var target = document.getElementById(target_id);
     if(target.style.opacity > 0) {
         // A fadeout is already running. Only append and leave be.

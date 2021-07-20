@@ -67,7 +67,7 @@ def evaluate(id: str):
 @app.route('/test/cheat')
 @login_required
 def cheat():
-    current_user.update_game_data('data.storage.content', {'gold': 4000})
+    current_user.update('data.storage.content', {'gold': 4000})
     return 'cheated!'
 
 

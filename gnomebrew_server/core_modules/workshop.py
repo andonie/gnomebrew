@@ -43,7 +43,7 @@ def upgrade(user: User, effect_data: list):
         stations_to_update.update(upgrade_object.stations_to_update())
 
     # Flush. Update Game Data
-    user.update_game_data('data.workshop.upgrades', user_upgrade_list)
+    user.update('data.workshop.upgrades', user_upgrade_list)
 
     # Flush to Frontend: Update User Frontends
     for station in stations_to_update:

@@ -8,7 +8,6 @@ from gnomebrew_server.game.util import shorten_num
 from gnomebrew_server.game.event import EventThread
 from gnomebrew_server.core_modules.tavern import TavernSimulationThread
 
-
 # Load in static data (Recipes, Stations, etc.)
 static_data.update_static_data()
 
