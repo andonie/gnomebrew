@@ -1,3 +1,19 @@
+// List of all IDs that are represented in cents rather than in usual values:
+cent_list = ['data.storage.content.gold'];
+cent_regexes = [/data[.]market[.]inventory[.][\w]+[.]price/i]
+
+function is_cent_id(id) {
+    if(cent_list.includes(id)) {
+        return true;
+    }
+    for(var regex of cent_regexes) {
+        if(regex.test(id)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Cosmetic Function To Make Big and small numbers look nice.
 function shorten_num(val) {
     var shortcodes = ['', 'K', 'M', 'MM'];
@@ -10,6 +26,11 @@ function shorten_num(val) {
         val = val.toFixed(2);
     }
     return val + ' ' + shortcodes[num_level];
+}
+
+// Cosmetic function to deal with values denoted in cents
+function shorten_cents(val) {
+    return shorten_num(val/100);
 }
 
 // Cosmetic Function To Make Times more digestible

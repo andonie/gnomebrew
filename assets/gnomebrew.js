@@ -54,10 +54,15 @@ function handle_update(data) {
             try {
                 value = data[id];
                 if(typeof value === "number") {
-                    value = shorten_num(value);
+                    if(is_cent_id(id)) {
+                        value = shorten_cents(value);
+                    } else {
+                        value = shorten_num(value);
+                    }
                 }
                 document.getElementById(id).innerHTML = value;
             } catch(error) {
+                console.log(error.name + ': ' + error.message);
                 // The ID could not be found.
                 // This might be intended, e.g. when a new storage item is added.
 
@@ -279,7 +284,7 @@ function set_price(item_id, error_target, trigger_element) {
     one_way_game_request({
         type: 'set_price',
         item: item_id,
-        price: document.getElementById('data.tavern.prices.' + item_id).value
+        price: parseFloat(document.getElementById('data.tavern.prices.' + item_id).value).toFixed(2)*100
     }, error_target, trigger_element)
 }
 

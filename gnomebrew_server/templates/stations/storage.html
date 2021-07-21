@@ -10,7 +10,7 @@
 {% block station_body %}
 <div class="description">
     <div class="descriptor"><img class="gb-icon" src="{{ url_for('get_icon', game_id='item.gold') }}"></div>
-    <div class="description-value" id="data.storage.content.gold">{{ shorten_num(game_data.storage.content.gold) }}</div>
+    <div class="description-value" id="data.storage.content.gold">{{ shorten_cents(game_data.storage.content.gold) }}</div>
 </div>
 <div class="description">
     <div class="descriptor"><img class="gb-icon" src="{{ url_for('get_icon', game_id='attr.storage_capacity') }}"></div>

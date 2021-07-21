@@ -18,13 +18,17 @@ Gnomebrew loads the config stored from the `GNOMEBREW_CONIFG` environment variab
 
 These config items are necessary:
 
-- `DB_ADDR`:
-- `DB_SPAC`
+* `SECRET_KEY`: For signing flask session cookies
+* `MONGO_URI`: URI for gnomebrew database
+* `STATIC_DIR`: Directory for static elements (css/js)
+* `ICO_DIR`: Icon directory with PNG files for game entities
+* `FONT_DIR`: Directory for fonts 
+
 
 ## Local Deploy
 
 The most basic way to run the server locally:
 
 ```bash
-export FLASK_APP=gnomebrew_server && flask run
+export FLASK_APP=gnomebrew_server && export GNOMEBREW_CONFIG=path/to/config/config.py && flask run
 ```

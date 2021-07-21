@@ -15,11 +15,8 @@
                 </div>
                 <div class="gb-cost">
                     {% for cost_item in recipe_data.cost %}
-                    {% with cost_item_entity = current_user.get('item.' + cost_item) %}
-                        <div class="gb-cost-item" title="{{ cost_item_entity.name() }}">
-                            <img class="gb-icon-sm" src="{{ url_for('get_icon', game_id=cost_item_entity.get_id()) }}">
-                            {{ shorten_num(recipe_data.cost[cost_item]) }}
-                        </div>
+                    {% with item = current_user.get('item.' + cost_item), amount=recipe_data.cost[cost_item] %}
+                    {% include 'snippets/_cost_item.html' %}
                     {% endwith %}
                     {% endfor %}
                         <div class="gb-cost-item" title="Crafting Time">

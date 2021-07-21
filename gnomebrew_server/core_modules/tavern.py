@@ -120,7 +120,7 @@ class Patron:
                                          patron=self,
                                          due_time=due_time).enqueue()
 
-    def order_fitness(self, user: User,  order: dict):
+    def order_fitness(self, user: User, order: dict):
         """
         Assigns a fitness value between 0 (absolutely don't want this) to 1 (I definitely want this) to an order.
         :param order:   An order
@@ -129,12 +129,9 @@ class Patron:
         """
         prices = user.get('data.tavern.prices')
         # Can I afford the order?
-        order_total = reduce(operator.add, map(lambda item: order[item]*prices[item], order))
+        order_total = reduce(operator.add, map(lambda item: order[item] * prices[item], order))
         if self._data['budget'] < order_total:
             return 0
-
-
-
 
     def decision_step(self, user: User):
         """
@@ -231,8 +228,6 @@ class Patron:
         :param price_change: a dict with all changed prices formatted `price_change[item_id] = new_price`
         """
 
-
-
     @staticmethod
     def generate_random():
         """
@@ -243,7 +238,7 @@ class Patron:
         # Generate a name
         data['name'] = choice(Patron.names['first']) + ' ' + choice(Patron.names['last'])
         # Budget is standardized independent of upgrade status of user. Budget will be modified upon patron entry
-        data['budget'] = random_normal(min=1, max=10)
+        data['budget'] = random_normal(min=15, max=100)
         # TODO more cool patron things
 
         return Patron(data)
@@ -578,6 +573,7 @@ def set_price(request_object: dict, user: User):
 @frontend_id_resolver(r'^data\.tavern\.name$')
 def normal_update_for_tavern_name(user: User, data: dict, game_id: str):
     user.frontend_update('update', data)
+
 
 @frontend_id_resolver(r'data\.tavern\.queue')
 def reload_tavern_on_queue_update(user: User, data: dict, game_id: str):

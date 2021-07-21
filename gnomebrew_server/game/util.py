@@ -78,7 +78,6 @@ def random_uniform(**kwargs):
                        size=kwargs['size'] if 'size' in kwargs else None)
 
 
-@global_jinja_fun
 def shorten_num(val) -> str:
     """
     Number shortening code that works identical to JS implementation.
@@ -95,6 +94,16 @@ def shorten_num(val) -> str:
         val = "{:.2f}".format(val)
 
     return str(val) + (' ' + shortcodes[num_level] if num_level != 0 else '')
+
+
+def shorten_cents(val) -> str:
+    """
+    Number display for a unit that's being stored in **cents** rather than in whole units.
+    This is relevant for gold
+    :param val:     a value in cents
+    :return:        a shortened version of the given `val`, displayed similarly to `shorten_num`
+    """
+    return shorten_num(val / 100)
 
 
 @global_jinja_fun
@@ -137,3 +146,7 @@ def format_player_storage(storage_data: dict):
         ret[key] = to_be_sorted[key]
 
     return ret
+
+
+global_jinja_fun(shorten_num)
+global_jinja_fun(shorten_cents)

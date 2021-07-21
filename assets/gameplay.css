@@ -258,6 +258,10 @@ input {
     background: #E7BF8B;
 }
 
+.tavern-prices {
+    margin-top: 16px;
+}
+
 /* MARKET */
 
 .market-offers td {

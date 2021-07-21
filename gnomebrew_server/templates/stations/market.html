@@ -16,8 +16,8 @@
         {% with item = current_user.get('item.' + offer).get_json() %}
         <tr>
             <td><img title="{{ item.name }}" class="gb-icon" src="{{ url_for('get_icon', game_id=item.game_id) }}"></td>
-            <td><span id="data.market.inventory.{{ offer }}.stock">{{ offers[offer].stock}}</span></td>
-            <td><span id="data.market.inventory.{{ offer }}.price">{{ offers[offer].price}}</span></td>
+            <td><span id="data.market.inventory.{{ offer }}.stock">{{ shorten_num(offers[offer].stock) }}</span></td>
+            <td><span id="data.market.inventory.{{ offer }}.price">{{ shorten_cents(offers[offer].price) }}</span></td>
             <td>
                 <button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, false)">1</button>
                 <button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, true)">all</button>
