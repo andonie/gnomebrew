@@ -10,14 +10,15 @@
         <link rel="stylesheet" href="{{ url_for('static_res', res='gnomebrew.css') }}">
         <link rel="stylesheet" href="{{ url_for('static_res', res='custom-fonts.css') }}">
         {% endblock %}
+        <link rel="shortcut icon" type="image/jpg" href="{{ url_for('static_res', res='favicon.ico') }}"/>
 
     </head>
     <body>
         <script src="{{ url_for('static_res', res='gnomebrew-startup.js') }}"></script>
         {% block navbar %}
         <nav class="gb-navbar navbar sticky-top navbar-expand-sm">
-            {% block navbar_content %}
             <a class="navbar-brand gb-brand" href="{{ url_for('index') }}">Gnomebrew</a>
+            {% block navbar_content %}
             <ul class="navbar-nav">
                 {% block navbar_extras %}{% endblock %}
                 <li class="navbar-item active">

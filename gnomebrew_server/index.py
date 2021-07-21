@@ -3,7 +3,7 @@ This file manages the basic '/' view and generic views
 """
 
 from gnomebrew_server import app
-from flask import render_template, send_from_directory
+from flask import render_template, send_from_directory, redirect, url_for
 from flask_login import login_required
 from os.path import isfile
 
@@ -35,6 +35,12 @@ def get_icon(game_id: str):
     else:
         # If Icon does not exist (yet), send default img
         return send_from_directory(app.config['ICO_DIR'], 'default.png')
+
+
+@app.route('/favicon.ico')
+def favicon_forward():
+    return redirect(url_for('static_res', res='favicon.ico'))
+
 
 @app.route('/fonts/<font_name>')
 def get_font(font_name: str):

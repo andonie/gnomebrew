@@ -17,39 +17,14 @@
     <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
 <input type="text" id="storage-filter" placeholder="Filter Storage">
-<div class="gb-table-wrap storage-content" id="storage-content">
-    {% with category_table = format_player_storage(game_data.storage.content) %}
-    {% for item_category in category_table %}
-    <div class="gb-storage-category" data-toggle="collapse" data-target="#it_cat-{{ item_category.get_minimized_id() }}">
-        <div class="st-cat-indicator" id="col-ind-{{ item_category.get_minimized_id() }}">v</div>
-        <div>{{ item_category.get_value('name') }}</div>
-        <script>
-        add_startup(function() {
-            $('#it_cat-{{ item_category.get_minimized_id() }}').on("hide.bs.collapse", function() {
-                $('#col-ind-{{ item_category.get_minimized_id() }}').addClass("st-cat-hidden");
-            });
-            $('#it_cat-{{ item_category.get_minimized_id() }}').on("show.bs.collapse", function() {
-                $('#col-ind-{{ item_category.get_minimized_id() }}').removeClass("st-cat-hidden");
-            });
-        });
-        </script>
-    </div>
-    <div class="gb-storage-category-content collapse show" id="it_cat-{{ item_category.get_minimized_id() }}">
-        {% for item in category_table[item_category] %}
-        <div class="gb-storage-item" title="{{ item.description() }}" data-content="{{ item.name() }}">
-            <img class="gb-icon" title="{{ item.name() }}" src="{{ url_for('get_icon', game_id=item.get_value('game_id')) }}">
-            <div class="gb-storage-amount" id="data.storage.content.{{ item.get_minimized_id() }}">{{ shorten_num(category_table[item_category][item]) }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endfor %}
-    {% endwith %}
+<div class="gb-table-wrap storage-content" id="storage.content">
+    {% with content=game_data.storage.content %}{% include "snippets/_storage_content.html" %}{% endwith %}
 </div>
 <script>
 add_startup(function() {
     $('#storage-filter').on("keyup", function() {
         var value = $(this).val().toLowerCase();
-        $('#storage-content .gb-storage-item').filter(function() {
+        $('#storage\\.content .gb-storage-item').filter(function() {
             console.log($(this).data('content').toLowerCase());
             $(this).toggle($(this).data('content').toLowerCase().indexOf(value) > -1);
         });

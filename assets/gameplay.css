@@ -1,4 +1,13 @@
 
+
+/* HEADER */
+
+.gold-indicator {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
 /* STATION DATA */
 
 .station-warning {
@@ -252,7 +261,7 @@ input {
 /* MARKET */
 
 .market-offers td {
-    padding: 0px;
+    padding: 5px;
     text-align: right;
 }
 

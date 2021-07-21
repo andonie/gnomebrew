@@ -343,7 +343,7 @@ def data(user: User, game_id: str, **kwargs):
         if 'default' in kwargs:
             return kwargs['default']
         else:
-            raise KeyError
+            raise KeyError(f'Cannot find: {game_id}')
     return res
 
 

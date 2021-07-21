@@ -58,9 +58,16 @@ function handle_update(data) {
                 }
                 document.getElementById(id).innerHTML = value;
             } catch(error) {
+                // The ID could not be found.
+                // This might be intended, e.g. when a new storage item is added.
 
-                // If any error happens, reload the entire DIV.
-                // Errors should NOT happen.
+                // Check for such cases:
+                if(id.startsWith('data.storage.content')) {
+                    // Intended case: A new storage element is added and I don't have it yet.
+                    // Consequently, I want to reload the storage content entirely.
+                    reload_element('storage.content');
+                    return;
+                }
 
                 console.error('Unable to handle: ' + JSON.stringify(data))
 

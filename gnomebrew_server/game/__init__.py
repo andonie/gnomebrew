@@ -12,9 +12,10 @@ from gnomebrew_server.core_modules.tavern import TavernSimulationThread
 static_data.update_static_data()
 
 # Load all Game Modules
-import gnomebrew_server.core_modules.market
-import gnomebrew_server.core_modules.tavern
-import gnomebrew_server.core_modules.workshop
+game_module_names = ['gnomebrew_server.core_modules.market', 'gnomebrew_server.core_modules.tavern',
+                     'gnomebrew_server.core_modules.workshop', 'gnomebrew_server.core_modules.storage']
+
+game_modules = list(map(__import__, game_module_names))
 
 
 # Start Event Thread

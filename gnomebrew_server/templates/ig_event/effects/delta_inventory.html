@@ -8,6 +8,8 @@ You gained {% if effect_data.values()|length > 1 %}some items{% else %}an item{%
 {% endif %}
 {% endblock %}
 
+{% block effect_class %}gb-modal-delta-inventory-wrap{% endblock %}
+
 {% block effect_description %}
 {% for item_name in effect_data %}
 <table class="gb-table">

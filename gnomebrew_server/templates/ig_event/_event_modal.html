@@ -20,13 +20,13 @@ Requires these variables set:
                 <div class="station-warning" id="gb-event-modal-warning"></div>
                 {% block event_body %}
                 {{ event.render_body_text() | safe }}
-                {% if event.has_effects() %}
-                {{ event.render_effect_html() | safe }}
-                {% endif %}
                 {% if event.has_inputs() %}
                 <div id="gb-event-modal-inputs">
                     {{ event.render_input_html() | safe }}
                 </div>
+                {% endif %}
+                {% if event.has_effects() %}
+                {{ event.render_effect_html() | safe }}
                 {% endif %}
                 {% endblock %}
             </div>

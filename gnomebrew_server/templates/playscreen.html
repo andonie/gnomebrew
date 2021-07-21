@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% set game_data = current_user.get_game_data() %}
+
 {% block scripts %}
 {{ super() }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
@@ -23,7 +25,7 @@ add_startup(function() {
 {% block sidebar_outer %}
 <div class="gb-sidebar sb-toggle" id="gb-sidebar">
     {% block sidebar %}
-    {{ current_user.get('html.storage', game_data=user_data)|safe }}
+    {{ current_user.get('html.storage', game_data=game_data)|safe }}
     {% endblock %}
 </div>
 {% endblock %}
@@ -41,10 +43,10 @@ add_startup(function() {
     {% endif %}
 </div>
 {% with user_stations = current_user.get_unlocked_station_list(),
-        slots=current_user.get('allslots'), user_data = current_user.get_game_data() %}
+        slots=current_user.get('allslots') %}
 <div class="grid" id="station-grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 300, "gutter": 5}'>
     {% for station in user_stations if station != 'storage' %}
-    {{ current_user.get('html.' + station, slots=slots, game_data=user_data)|safe }}
+    {{ current_user.get('html.' + station, slots=slots, game_data=game_data)|safe }}
     {% endfor %}
 </div>
 {% endwith %}

@@ -54,6 +54,13 @@ class IngameEvent(StaticGameObject):
         assert fun.__name__ not in IngameEvent._req_resolvers
         IngameEvent._req_resolvers[fun.__name__] = fun
 
+    def __str__(self):
+        """
+        String conversion function. For debugging.
+        :return:    A string that contains the game ID of the ingame event object
+        """
+        return f"<IngameEvent {self._data['game_id']}>"
+
     @staticmethod
     def input_validator(fun: Callable):
         """
@@ -98,21 +105,31 @@ class IngameEvent(StaticGameObject):
             self._requirement_checks.append(basic_check)
 
             # Create an update listener that fires whenever the respective Game-ID changed
-            # The listener
-            def on_update(user: User, update: dict):
-                if basic_check(user, value=update[target_game_id]) and self._data['game_id'] not in user.get(
-                        'ingame_event.finished'):
-                    self._check_and_fire_if_ready(user)
+            update_listener(target_game_id)(self._generate_update_listener(basic_check=basic_check,
+                                                                           target_game_id=target_game_id))
 
-            # Add the listener function as an update listener on the respective game id
-            update_listener(target_game_id)(on_update)
+    def _generate_update_listener(self, basic_check: Callable, target_game_id: str):
+        """
+        Generator function to create a listener function associated with this Ingame Event.
+        Wrapping the creation of a listener turned out to be necessary since local variable madness happened
+        with multiple requirements during `__init__`.
+        :param basic_check:        The basic check function (returning a Boolean)
+        :param target_game_id:      The target game ID. This is the ID the listener will listen to.
+        :return:                    The ready-to-use listener function.
+        """
+        def on_update(user: User, update: dict):
+            if basic_check(user, value=update[target_game_id]) and self._data['game_id'] not in user.get(
+                    'ingame_event.finished'):
+                self._check_and_fire_if_ready(user)
+
+        return on_update
 
     def _check_and_fire_if_ready(self, user: User):
         """
         This function tests if this event is appropriate to fire NOW. If it is, it fires the event now.
         :param user:    a user to test for
         """
-        if self.requirements_met(user) and \
+        if self.requirements_met(user) and self._data['game_id'] not in user.get('ingame_event.queued') and\
                 (not self.is_one_time() or self._data['game_id'] not in user.get('ingame_event.finished')):
             # This event is due to fire!
             self.enqueue(user)

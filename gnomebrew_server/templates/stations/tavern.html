@@ -1,7 +1,8 @@
 {% extends "stations/_station.html" %}
 
 {% block station_subtitle %}
-<h5 id="data.tavern.name">{% if game_data.tavern.name %}{{ game_data.tavern.name }}{% else %}your tavern{% endif %}</h5>
+<h5 id="data.tavern.name"></h5>
+{% if game_data.tavern.name %}{{ game_data.tavern.name }}{% else %}your tavern{% endif %}
 {% endblock %}
 
 {% block station_body %}
