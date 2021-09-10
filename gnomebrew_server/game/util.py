@@ -1,6 +1,7 @@
 """
 Module for utility functions that are used in several modules of the game, such as random numbers.
 """
+import datetime
 
 from numpy.random import default_rng
 from gnomebrew_server import app
@@ -8,6 +9,8 @@ from typing import Callable
 from gnomebrew_server.game.static_data import ItemCategory, Item
 
 rng = default_rng()
+
+FUZZY_DEVIATION_PERCENTAGE = 0.05
 
 
 def global_jinja_fun(fun: Callable):
@@ -36,7 +39,7 @@ def random_normal(**kwargs):
     # Define Median and std deviation
     if 'min' and 'max' in kwargs:
         median = (kwargs['min'] + kwargs['max']) / 2
-        std_deviation = (kwargs['min'] + kwargs['max']) / 6
+        std_deviation = (kwargs['max'] - kwargs['min']) / 6
     elif 'median' and 'std_deviation' in kwargs:
         median = kwargs['median']
         std_deviation = kwargs['std_deviation']
@@ -47,7 +50,7 @@ def random_normal(**kwargs):
     size = kwargs['size'] if 'size' in kwargs else 1
     result = rng.normal(loc=median, scale=std_deviation, size=size)
 
-    if 'min' or 'max' in kwargs:
+    if 'min' in kwargs or 'max' in kwargs:
         # It happens rarely, but sometimes values are beyond 3 standard deviations.
         # To ensure 'min' and 'max' hold, we map
         if 'max' not in kwargs:
@@ -76,6 +79,24 @@ def random_uniform(**kwargs):
     return rng.uniform(low=kwargs['min'] if 'min' in kwargs else 0,
                        high=kwargs['max'] if 'max' in kwargs else 1,
                        size=kwargs['size'] if 'size' in kwargs else None)
+
+
+def fuzzify(num, deviation=FUZZY_DEVIATION_PERCENTAGE):
+    """
+    Creates some random noise. Takes
+    :param num: A number to fuzzify.
+    :param deviation:   Standard deviation expressed as percentage of median
+    :return:    A random normally distributed number with `median=num` and a standard deviation of `5%` unless specified
+                differently
+    """
+    return random_normal(median=num, std_deviation=num * deviation)
+
+
+def is_weekday() -> bool:
+    """
+    :return: `True` when today is a weekday (Mon/Tue/Wed/Thu/Fri), otherwise `False` (Sat/Sun).
+    """
+    return datetime.datetime.utcnow().weekday() < 5
 
 
 def shorten_num(val) -> str:
