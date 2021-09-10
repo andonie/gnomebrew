@@ -23,6 +23,13 @@ h4 {
 }
 
 
+.nongame-content {
+    background: #C4A47A;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+
 /* Formatting Stuff */
 
 .row-margin-05 {

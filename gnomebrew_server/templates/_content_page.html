@@ -1,0 +1,22 @@
+{# Template for general text and usability outside of Gnomebrew's Gameplay #}
+
+{% extends 'base.html' %}
+
+{% block scripts %}
+{{ super() }}
+{% endblock %}
+
+{% block navbar_extras %}
+{% endblock %}
+
+{% block sidebar_outer %}
+<div class="gb-sidebar">
+    {% block ng_sidebar %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block app_content %}
+<div class="nongame-content">
+    {% block ng_content %}{% endblock %}
+</div>
+{% endblock %}

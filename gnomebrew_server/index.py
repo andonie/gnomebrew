@@ -45,3 +45,9 @@ def favicon_forward():
 @app.route('/fonts/<font_name>')
 def get_font(font_name: str):
     return send_from_directory(app.config['FONT_DIR'], font_name)
+
+
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')

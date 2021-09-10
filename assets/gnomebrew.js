@@ -284,7 +284,7 @@ function set_price(item_id, error_target, trigger_element) {
     one_way_game_request({
         type: 'set_price',
         item: item_id,
-        price: parseFloat(document.getElementById('data.tavern.prices.' + item_id).value).toFixed(2)*100
+        price: Math.round(parseFloat(document.getElementById('data.tavern.prices.' + item_id).value).toFixed(2)*100)
     }, error_target, trigger_element)
 }
 
