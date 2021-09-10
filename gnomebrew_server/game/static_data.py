@@ -406,6 +406,9 @@ class Item(StaticGameObject):
     def __init__(self, mongo_data):
         self._data = mongo_data
 
+    def __str__(self):
+        return f"<Item {self._data['name']} -- {self._data=}>"
+
     def name(self):
         return self._data['name']
 
@@ -416,7 +419,7 @@ class Item(StaticGameObject):
         """
         Returns `True` if patrons can order this item.
         """
-        return self._data['orderable'] if 'orderable' in self._data else False
+        return True if 'orderable' in self._data else False
 
     def item_order(self):
         """
@@ -430,6 +433,36 @@ class Item(StaticGameObject):
             return 1 if 'mundane' in self._data['categories'] \
                 else 2 if 'material' in self._data['categories'] \
                 else 4
+
+    def personality_adjust(self, personality: dict) -> float:
+        """
+        Applies a personality to this (*orderable*) item and returns a the % personality adjust.
+        This percentage represents how an items desirability and demand is affected by patron personality.
+        :param personality: A patron's personality JSON stored as `dict`
+        :return:            The % change due to personality adjust, NOT the multiplication factor.
+                            i.e. multiply by **1 +** `personality_adjust` to get the adjusted demand/desire
+        """
+        if 'orderable' not in self._data:
+            raise AssertionError(f"This item ({self}) is not orderable.")
+        if 'personality_adjust' not in self._data['orderable']:
+            # This item has no personality adjustment-data. No action.
+            return 1
+
+        adjust_val = 0
+        for adjustment in self._data['orderable']['personality_adjust']:
+            if adjustment in personality:
+                adjust_val += self._data['orderable']['personality_adjust'][adjustment] * personality[adjustment]
+
+        return adjust_val
+
+    def determine_fair_price(self, user) -> float:
+        """
+        Determines the 'fair' price for this item.
+        :param user:    Executing user.
+        :return:        A number representing this item's fair price considering the item's intrinsic value and
+                        possible user upgrades.
+        """
+        return self._data['base_value'] * user.get('attr.tavern.price_acceptance', default=1)
 
 
 class ItemCategory(StaticGameObject):
@@ -528,7 +561,7 @@ def update_static_data():
     global _ITEM_LIST
     _ITEM_LIST = item_list
     global patron_order_list
-    patron_order_list = filter(lambda item: item.is_orderable(), _ITEM_LIST)
+    patron_order_list = list(filter(lambda item: item.is_orderable(), _ITEM_LIST))
     app.logger.info('Item Data Updated')
 
     app.logger.info('Updating Item Category Data')
