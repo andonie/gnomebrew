@@ -1,0 +1,17 @@
+{# Display a single form. Expects:
+ # * `title`:  Title of the form to be displayed
+ # * `form`: The WTF form to be displayed
+ #}
+
+{% extends 'snippets/_content_page.html' %}
+
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block ng_content %}
+    <h1>{{ title }}</h1>
+    <div class="row">
+        <div class="col-md-4">
+            {{ wtf.quick_form(form) }}
+        </div>
+    </div>
+{% endblock %}

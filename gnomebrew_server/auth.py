@@ -3,7 +3,7 @@ Manages authentication and user creation (login/logout/create)
 """
 
 from gnomebrew_server import app, forms
-from gnomebrew_server.game import user
+from gnomebrew_server.game.user import User, load_user
 from flask_login import login_user, current_user, logout_user, login_required
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
@@ -17,7 +17,7 @@ def login():
     form = forms.LoginForm()
     if form.validate_on_submit():
         # Do Login
-        _usr = user.load_user(form.username.data)
+        _usr = load_user(form.username.data)
         if _usr is None:
             flash(f'No user with name {form.username.data} found')
             return redirect(url_for('login'))
@@ -37,7 +37,7 @@ def login():
 
     else:
         # Show Login Page
-        return render_template('login.html', form=form)
+        return render_template('single_form.html', form=form, title="Login")
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -47,19 +47,17 @@ def register():
     form = forms.RegistrationForm()
     if form.validate_on_submit():
         # Valid Form Submitted
-        flash("You're successfully registered.")
-        pass
+        assert form.password.data == form.password2.data
+        user = User.create_user(form.username.data, form.password.data)
+        login_user(user, remember=form.remember_me.data)
+        flash("Welcome to Gnomebrew! You're successfully registered.")
+        return redirect(url_for('index'))
     else:
         # Show Register Page
-        return render_template('register.html', form=form)
+        return render_template('single_form.html', form=form, title="Register")
+
 
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('index'))
-
-
-@app.route('/settings')
-@login_required
-def settings():
-    return 'settings.'

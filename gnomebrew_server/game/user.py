@@ -131,8 +131,6 @@ def html_generator(html_id):
 
 
 class User(UserMixin):
-    STARTUP_STATIONS = ['station.storage', 'station.well']
-
     """
     User Class for Gnomebrew.
     Models all relevant data to play and modify a user's play data.
@@ -176,13 +174,23 @@ class User(UserMixin):
     def get_id(self):
         return self.username
 
+    def is_operator(self):
+        """
+        :return: `True`, if this user is marked as operator and such has access to administrative game features.
+                 Otherwise, `False`.
+        """
+        res = mongo.db.users.find_one({"username": self.get_id()}, {'operator': 1})
+        try:
+            return res['operator']
+        except KeyError:
+            return False
+
     @staticmethod
-    def create_user(username: str, pw: str, additional_data: dict):
+    def create_user(username: str, pw: str):
         """
         This process creates a new user entity in the Gnomebrew Game.
         :param username:    Username. Must be free.
         :param pw:          Password (unhashed). Will be stored is hashed format.
-        :param additional_data: Dict containining additional data.
         :return:            Reference to a user object representing the generated user.
         """
         # Ensure that username does not exist already
@@ -192,17 +200,14 @@ class User(UserMixin):
         usr_data = dict()
         usr_data['username'] = username
         usr_data['pw_hash'] = generate_password_hash(pw)
-        usr_data.update(additional_data)
 
         # Write to DB to ensure persistence
         mongo.db.users.insert_one(usr_data)
 
         # Create user handle
         user = User(username)
-
-        # Instantiate with startup stations
-        for station_code in User.STARTUP_STATIONS:
-            Station.from_id(station_code).initialize_for(user)
+        from gnomebrew_server.admin import reset_game_data
+        reset_game_data(user)
 
         return user
 

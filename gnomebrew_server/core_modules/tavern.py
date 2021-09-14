@@ -220,9 +220,6 @@ class Patron:
         budget_count = self._data['budget']
         desire_threshold = AVG_DESIRE_THRESHOLD * user.get('attr.tavern.desire_threshold_factor', default=1)
 
-        print(f"Decision of {self._data['name']}:")
-        print(f"{wish_list=}")
-        print(f"thirst:\t{thirst}\n")
 
         for wish in wish_list:
             item_name = wish['item'].get_minimized_id()
@@ -248,6 +245,12 @@ class Patron:
                     'item': item_name,
                     'amount': amount
                 })
+
+        print(f"Decision of {self._data['name']}:")
+        print(f"{wish_list=}")
+        print(f"thirst:\t{thirst}")
+        print(f"budget:\t{self._data['budget']} down to {budget_count}")
+        print(f"orders: {order_list}\n\n")
 
         if not order_list:
             # My order list is empty. I can't afford/don't want anything. Let's leave.
@@ -810,7 +813,7 @@ def set_price(request_object: dict, user: User):
     tavern_data = user.get('data.tavern')
     prices = tavern_data['prices']
 
-    item, price = request_object['item'], float(request_object['price'])
+    item, price = request_object['item'], int(request_object['price'])
     old_price = prices[item]
     if item not in prices:
         response.add_fail_msg('ERROR - Tell Mike about this.')
