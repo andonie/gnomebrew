@@ -27,13 +27,15 @@ Execute a test suite for a target:
         <h5>Parameters:</h5>
         <div id="gb-admin-all-parameters">
                 {% for suite in tests %}
-                <table class="gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-parameters">
+                <table class="gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-table-head">
+                    <tbody>
                     {% for parameter in suite.get_parameters() %}
-                    <tr class="gb-admin-parameter">
+                    <tr class="gb-admin-parameter {{ suite.get_id() }}-parameter">
                         <td class="gb-parameter-name">{{ parameter }}</td>
                         <td><input type="text" class="form-control" id="{{ suite.get_id() }}-{{ parameter }}"></td>
                     </tr>
                     {% endfor %}
+                    </tbody>
                 </table>
                 {% endfor %}
         </div>
@@ -62,20 +64,19 @@ function execute_test(source) {
     var request_data = {};
     request_data.type = 'execute_test';
     request_data.test_id = helper_get_selected_test_id();
-    $("#" + request_data.test_id + "-parameters > tr").each(function () {
+    $("." + request_data.test_id + "-parameter").each(function () {
         var parameter_name = $(this).children('.gb-parameter-name').text();
         request_data[parameter_name] = $("#" + request_data.test_id + "-" + parameter_name).val();
     });
-    console.log(request_data);
     two_way_game_request(request_data, source, "gb-admin-output-console");
 }
 
 add_startup(function() {
     $('#gb-admin-routine-select').change(function (event) {
-        $('#gb-admin-all-parameters > table').removeClass("gb-multi-visible");
-        $('#gb-admin-description > div').removeClass("gb-multi-visible");
+        $('.gb-multi-list').removeClass("gb-multi-visible");
         var test_id = helper_get_selected_test_id();
-        $('#' + test_id + '-parameters').addClass("gb-multi-visible");
+        console.log('fixing ' + test_id + '-parameters');
+        $('#' + test_id + '-table-head').addClass("gb-multi-visible");
         $('#' + test_id + '-description').addClass("gb-multi-visible");
     });
 });

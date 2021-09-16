@@ -16,7 +16,7 @@ static_data.update_static_data()
 # Load all Game Modules
 _game_module_names = ['gnomebrew_server.core_modules.market', 'gnomebrew_server.core_modules.tavern',
                      'gnomebrew_server.core_modules.workshop', 'gnomebrew_server.core_modules.storage',
-                     'gnomebrew_server.game.game_statistics', 'gnomebrew_server.game.testing']
+                     'gnomebrew_server.game.game_statistics', 'gnomebrew_server.game.testing', 'gnomebrew_server.admin']
 
 game_modules = list(map(__import__, _game_module_names))
 
