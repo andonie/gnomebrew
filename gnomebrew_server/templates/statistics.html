@@ -1,0 +1,9 @@
+{% extends 'snippets/_content_page.html' %}
+
+{% block ng_content %}
+<h4>Game Statistics</h4>
+
+{% with statistics = current_user.generate_statistics() %}
+{% endwith %}
+
+{% endblock %}

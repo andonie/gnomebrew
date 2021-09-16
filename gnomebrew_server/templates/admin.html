@@ -1,6 +1,90 @@
 {% extends 'snippets/_content_page.html' %}
 
+{% block scripts %}
+{% set include_interactive = True %}
+{{ super() }}
+{% endblock %}
+
 {% block ng_content %}
-<h4>This is content</h4>
-<p>More funky content right here, folks!</p>
+<h3>Test Suites</h3>
+Execute a test suite for a target:
+
+<div class="row">
+    <div class="col"></div>
+</div>
+{% with tests = GET_TEST_SUITES() %}
+
+<div style="display:flex; flex-direction: row">
+    <h5>Routine:</h5>
+    <select class="form-select form-select-lg" aria-label="Select Routine To Execute" id="gb-admin-routine-select">
+        {% for suite in tests %}
+        <option {% if loop.first %}selected{% endif %} value="{{ suite.get_id() }}">{{ suite.get_name() }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="row">
+    <div class="col">
+        <h5>Parameters:</h5>
+        <div id="gb-admin-all-parameters">
+                {% for suite in tests %}
+                <table class="gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-parameters">
+                    {% for parameter in suite.get_parameters() %}
+                    <tr class="gb-admin-parameter">
+                        <td class="gb-parameter-name">{{ parameter }}</td>
+                        <td><input type="text" class="form-control" id="{{ suite.get_id() }}-{{ parameter }}"></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% endfor %}
+        </div>
+    </div>
+    <div class="col">
+        <h5>Description:</h5>
+        <div id="gb-admin-description">
+            {% for suite in tests %}
+            <div class="gb-admin-description-field gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-description">
+                {{ suite.get_description()|safe }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+<button class="btn btn-light" onclick="execute_test(this)">Run</button>
+<script>
+
+function helper_get_selected_test_id() {
+    return $('#gb-admin-routine-select').find(':selected').prop('value');
+}
+
+function execute_test(source) {
+    var request_data = {};
+    request_data.type = 'execute_test';
+    request_data.test_id = helper_get_selected_test_id();
+    $("#" + request_data.test_id + "-parameters > tr").each(function () {
+        var parameter_name = $(this).children('.gb-parameter-name').text();
+        request_data[parameter_name] = $("#" + request_data.test_id + "-" + parameter_name).val();
+    });
+    console.log(request_data);
+    two_way_game_request(request_data, source, "gb-admin-output-console");
+}
+
+add_startup(function() {
+    $('#gb-admin-routine-select').change(function (event) {
+        $('#gb-admin-all-parameters > table').removeClass("gb-multi-visible");
+        $('#gb-admin-description > div').removeClass("gb-multi-visible");
+        var test_id = helper_get_selected_test_id();
+        $('#' + test_id + '-parameters').addClass("gb-multi-visible");
+        $('#' + test_id + '-description').addClass("gb-multi-visible");
+    });
+});
+</script>
+<div id="gb-admin-output-console">
+</div>
+
+
+
+
+{% endwith %}
 {% endblock %}

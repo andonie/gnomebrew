@@ -7,6 +7,7 @@ from numpy.random import default_rng
 from gnomebrew_server import app
 from typing import Callable
 from gnomebrew_server.game.static_data import ItemCategory, Item
+from markdown import markdown
 
 rng = default_rng()
 
@@ -167,6 +168,16 @@ def format_player_storage(storage_data: dict):
         ret[key] = to_be_sorted[key]
 
     return ret
+
+
+@global_jinja_fun
+def format_markdown(input: str) -> str:
+    """
+    Basic markdown formatter for access in templates.
+    :param input:   Input string formatted in markdown
+    :return:        Output string formatted as HTML
+    """
+    return markdown(input)
 
 
 global_jinja_fun(shorten_num)

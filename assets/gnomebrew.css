@@ -146,3 +146,34 @@ h4 {
         width: 90vw;
     }
 }
+
+
+/* Admin Interface */
+.gb-multi-list {
+    display: none;
+}
+
+.gb-multi-list.gb-multi-visible {
+    display: flex;
+}
+
+#gb-admin-output-console {
+    min-height: 12em;
+    margin-top: 10px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #5E484F;
+    color: #E7BF8B;
+}
+
+.gb-admin-description-field {
+    flex-direction: column;
+}
+
+.gb-admin-parameter {
+    margin-right: 5px;
+}
+
+#gb-admin-description code {
+    color: #A63E42;
+}

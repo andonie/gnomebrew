@@ -246,6 +246,38 @@ function one_way_game_request(request_data, error_target, trigger_element) {
     });
 }
 
+// Wrapper for all Game requests that do print output
+function two_way_game_request(request_data, trigger_element, output_id) {
+    trigger_element.disabled = true;
+    var html_before = trigger_element.innerHTML;
+    if(html_before.length < 3) {
+        trigger_element.innerHTML = '.';
+    } else {
+        trigger_element.innerHTML = '...';
+    }
+
+    var reset_element = function(){
+        trigger_element.disabled = false;
+        trigger_element.innerHTML = html_before;
+    };
+
+    $.post('/play/request', request_data).done(function(response){
+        var output = "";
+        if (response.log != null) {
+            output = response.log + '<br/>'
+        }
+        response.log;
+        if(response.type != 'success') {
+            output += response.fail_msg;
+        }
+        document.getElementById(output_id).innerHTML = output;
+        reset_element();
+    }).fail(function() {
+        document.getElementById(output_id).innerHTML = 'Error connecting to the Gnomebrew server.';
+        reset_element();
+    });
+}
+
 // Execute Recipe by ID and update the UI
 function execute_recipe(recipe_id, error_target, trigger_element) {
     one_way_game_request({

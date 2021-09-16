@@ -128,12 +128,14 @@ class Recipe(StaticGameObject):
                     'station': self._data['station']
                 }
 
+            # Enqueue the update event that triggers on recipe completion
             event.Event.generate_event_from_recipe_data(target=user.get_id(),
                                                         result=result,
                                                         due_time=due_time,
                                                         slots=self._data['slots'],
                                                         station=self._data['station'],
                                                         recipe_id=self._data['game_id']).enqueue()
+
             response.succeess()
             response.set_ui_update({
                 'type': 'slot',
@@ -141,6 +143,7 @@ class Recipe(StaticGameObject):
                 'since': datetime.datetime.utcnow().strftime('%d %b %Y %H:%M:%S') + ' GMT',
                 'station': self._data['station']
             })
+
 
         return response
 

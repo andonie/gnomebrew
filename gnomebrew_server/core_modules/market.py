@@ -8,21 +8,31 @@ from gnomebrew_server.play import request_handler
 from gnomebrew_server.game.gnomebrew_io import GameResponse
 from gnomebrew_server import mongo
 from gnomebrew_server.game.static_data import Item
+from gnomebrew_server.game.util import random_normal
 from datetime import datetime, timedelta
 from random import random
 from numpy import random
 
+# Gameplay Dial Constants
+
+# Minimum/Maximum of Budget RNG component
+MARKETING_RNG_MEDIAN = 75
+MARKETING_RNG_STD_DEVIATION = 20
 
 # Market Game Mechanics
 
 def generate_new_inventory(user: User):
     """
-    Generates a fresh inventory for a given user, taking into account any and all upgrades they might have made.
+    Generates a fresh inventory for a given user, taking into account all internal paramaters as well as
+    any and all upgrades they might have made.
     :param user:
     :return:
     """
     # Get List of Items that are technically available in market
     possible_items = user.get('attr.market.available_items', default=['grains', 'wood'])
+
+    # Identify this iteration's available funds
+    market_budget = generate_procurement_budget(user)
 
     new_inventory = dict()
 
@@ -36,6 +46,17 @@ def generate_new_inventory(user: User):
 
     return new_inventory
 
+def generate_procurement_budget(user: User) -> float:
+    """
+    Generates a market cycle budget for this user.
+    :param user:    a user.
+    :return:        An amount of value this market is willing to spend this procurement cycle at max.
+    """
+    # RNG Factor
+    rng_factor = random_normal(median=MARKETING_RNG_MEDIAN, std_deviation=MARKETING_RNG_STD_DEVIATION)
+    # Revenue Factor Calculation
+
+    return rng_factor * user.get('attr.market.budget_factor', default=1)
 
 @request_handler
 def market_buy(request_object: dict, user: User):

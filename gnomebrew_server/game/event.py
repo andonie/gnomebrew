@@ -243,7 +243,7 @@ def add_station(user: User, effect_data: dict):
     """
     Fired when a new station is to be added to a user's game data.
     :param user:        a user
-    :param effect_data: effect data dict formatted as `effect_data['id'] = station_id`
+    :param effect_data: effect data dict formatted as `effect_data['station'] = station_id`
     """
     # Load the respective station and initialize it for this user
     station = Station.from_id(effect_data['station'])

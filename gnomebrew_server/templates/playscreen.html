@@ -3,10 +3,9 @@
 {% set game_data = current_user.get_game_data() %}
 
 {% block scripts %}
+{% with include_interactive = True %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-<script src="{{ url_for('static_res', res='gnomebrew.js') }}"></script>
-<script src="{{ url_for('static_res', res='gnomebrew-ui.js') }}"></script>
+{% endwith %}
 {% endblock %}
 
 {% block navbar_extras %}

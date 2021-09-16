@@ -18,6 +18,28 @@ class GameResponse(object):
         self._data = dict()
         self.ui = None  # Used for SocketIO ui stream updates
 
+    def append_into(self, other_response):
+        """
+        Receives another `GamesResponse` and adds its inputs into this instances overall response data. After executing
+        this response will contain the `log`, 'type' and `fail_msg` of the given response.
+        :param other_response:  Another `GameResponse` object
+        """
+        # Add together logs and fail messages
+        if 'fail_msg' in other_response._data:
+            self._data['type'] = 'fail'
+            if 'fail_msg' not in self._data:
+                self._data['fail_msg'] = other_response._data['fail_msg']
+            else:
+                self._data['fail_msg'] += '\n' + other_response._data['fail_msg']
+
+        if 'log' in other_response._data:
+            if 'log' not in self._data:
+                self._data['log'] = other_response._data['log']
+            else:
+                self._data['log'] += '\n' + other_response._data['log']
+
+
+
     def add_fail_msg(self, msg: str) -> None:
         """
         Adds a message to illustrate why the player request failed.
@@ -27,10 +49,20 @@ class GameResponse(object):
         :param msg: The error message to be added.
         """
         if 'fail_msg' in self._data:
-            self._data['fail_msg'] += ' -- ' + msg
+            self._data['fail_msg'] += '<br/>' + msg
         else:
             self._data['fail_msg'] = msg
         self._data['type'] = 'fail'
+
+    def log(self, log: str):
+        """
+        Adds to the log message of this game response.
+        :param log: A string to be added to the log.
+        """
+        if 'log' in self._data:
+            self._data['log'] += '<br/>' + log
+        else:
+            self._data['log'] = log
 
     def to_json(self) -> dict:
         """

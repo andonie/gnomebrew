@@ -48,8 +48,8 @@ def update_resolver(type: str):
     * `game_id`: A game id
     * `update`: Update data given via the `update` function
     * `**kwargs`
-    The function is expected to **return a dict** that maps game-ids to the new update values.
-    This marks the updates that are to be used for registered `frontend_id_resolver` s
+    The function is expected to **return a dict** which's keys are the updated elements.
+    This marks the updates that are to be used for registered `frontend_id_resolver`s
     """
     global _UPDATE_RESOLVERS
     assert type not in _UPDATE_RESOLVERS
@@ -301,14 +301,15 @@ class User(UserMixin):
         return mongo.db.users.find_one({"username": self.username},
                                        {'data': 1, '_id': 0})['data']
 
-    def game_integrity_assertion(self):
+    @staticmethod
+    def game_integrity_assertions(user):
         """
         Internal utility function.
-        This script runs any game assertions that are registered.
+        Runs any game assertions that are registered in game on a given user.
         :raise: Raises an `AssertionError` if anything about the user's data is not functional.
         """
         for assertion in _USER_ASSERTIONS:
-            assertion(self)
+            assertion(user)
 
 
 @login_manager.user_loader
@@ -336,19 +337,18 @@ def data(user: User, game_id: str, **kwargs):
     :return:    The value of this game data (KeyError if it does not exist)
     """
     splits = game_id.split('.')
-    # Correct first split to correspond with JSON data model
     res = mongo.db.users.find_one({"username": user.get_id()}, {game_id: 1, '_id': 0})
     assert res
     try:
         for split in splits:
             res = res[split]
-    except KeyError:
+    except KeyError as e:
         # A key error means the resource is not (yet) written in the user data.
         # If the 'default' kwarg is used, instead of an error, return the default value
         if 'default' in kwargs:
             return kwargs['default']
         else:
-            raise KeyError(f'Cannot find: {game_id}')
+            raise e
     return res
 
 
@@ -428,7 +428,7 @@ def recipes(game_id: str, user: User):
     splits = game_id.split('.')
     assert len(splits) == 2
     # Add default values to make the system not crap out before the workshop is unlocked
-    user_ws_data = user.get('data.workshop', default={'upgrades':[], 'finished_otr':[]})
+    user_ws_data = user.get('data.workshop', default={'upgrades': [], 'finished_otr': []})
     return [r for r in Recipe.get_recipes_by_station(splits[1]) if r.can_execute(user,
                                                                                  user_upgrades=user_ws_data['upgrades'],
                                                                                  user_otr=user_ws_data['finished_otr'])]
@@ -504,6 +504,6 @@ def game_data_update(user: User, game_id: str, update, **kwargs):
     else:
         command_content = {game_id: update}
     mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
-    mongo.db.users.update_one({"username": user.username}, {mongo_command: command_content})
+    mongo.db.users.update_one({"username": user.get_id()}, {mongo_command: command_content})
     # Also update the currently attached users.
     return command_content
