@@ -20,6 +20,7 @@ from gnomebrew_server.game.util import random_normal, random_uniform, is_weekday
 from gnomebrew_server.play import request_handler
 from gnomebrew_server.game.gnomebrew_io import GameResponse
 from gnomebrew_server import mongo
+from gnomebrew_server.game.testing import application_test
 
 from random import choice
 from datetime import datetime, timedelta
@@ -116,6 +117,12 @@ class Patron:
     def name(self):
         return self._data['name']
 
+    def is_enqueued(self):
+        """
+        :return: `True`, if the patron is currently waiting to be served.
+        """
+        pass
+
     def adapt_to(self, user: User):
         """
         Applies a given user's upgrades to the data of this patron. Called when the patron enters a tavern
@@ -181,35 +188,9 @@ class Patron:
         order_list = []
 
         # I'm managing my order preferences here
-        wish_list = []
-
         # Take a look at the menu. Assign a perceived value to each item and create a wish-list
         # sorted by my desire to buy
-
-        for item in [Item.from_id(f'item.{it_id}') for it_id in prices]:
-            saturation = self.calculate_individual_saturation_factor(item, user)
-            fair_price = item.determine_fair_price(user)
-            personality_adjust = 1 + item.personality_adjust(self._data['personality']) * user.get(
-                'attr.tavern.personality_flex', default=1)
-            current_price = prices[item.get_minimized_id()]
-            result = {
-                'desire': self.generate_desire_for(orderable_item=item,
-                                                   current_price=current_price,
-                                                   user=user,
-                                                   saturation=saturation,
-                                                   fair_price=fair_price,
-                                                   personality_adjust=personality_adjust),
-                'demand': self.generate_demand_for(orderable_item=item,
-                                                   current_price=current_price,
-                                                   user=user,
-                                                   saturation=saturation,
-                                                   fair_price=fair_price,
-                                                   personality_adjust=personality_adjust),
-                'item': item
-            }
-            wish_list.append(result)
-
-        wish_list = sorted(wish_list, key=lambda d: d['desire'])
+        wish_list = self.generate_wish_list(user, prices)
 
         # I am motivated to order. Let's go:
         # Go through my wish list in descending order of preference and start ordering
@@ -245,12 +226,6 @@ class Patron:
                     'item': item_name,
                     'amount': amount
                 })
-
-        print(f"Decision of {self._data['name']}:")
-        print(f"{wish_list=}")
-        print(f"thirst:\t{thirst}")
-        print(f"budget:\t{self._data['budget']} down to {budget_count}")
-        print(f"orders: {order_list}\n\n")
 
         if not order_list:
             # My order list is empty. I can't afford/don't want anything. Let's leave.
@@ -387,6 +362,41 @@ class Patron:
         wait_in_s *= personality_influence
         return timedelta(seconds=wait_in_s)
 
+    def generate_wish_list(self, user, prices):
+        """
+        Shorthand Subroutine for the `decision_step`. In there, a wish-list is generated that reviews a user's price
+        list and assigns a generated value for `desire` and `demand`.
+        :param user:        a user.
+        :param prices:      the user's price list to use for the wish list
+        :return:            A list of `dict` objects ordered by their `desire` value, containing generated `desire`
+                            and `demand` values as well as the its name `item`.
+        """
+        wish_list = []
+        for item in [Item.from_id(f'item.{it_id}') for it_id in prices]:
+            saturation = self.calculate_individual_saturation_factor(item, user)
+            fair_price = item.determine_fair_price(user)
+            personality_adjust = 1 + item.personality_adjust(self._data['personality']) * user.get(
+                'attr.tavern.personality_flex', default=1)
+            current_price = prices[item.get_minimized_id()]
+            result = {
+                'desire': self.generate_desire_for(orderable_item=item,
+                                                   current_price=current_price,
+                                                   user=user,
+                                                   saturation=saturation,
+                                                   fair_price=fair_price,
+                                                   personality_adjust=personality_adjust),
+                'demand': self.generate_demand_for(orderable_item=item,
+                                                   current_price=current_price,
+                                                   user=user,
+                                                   saturation=saturation,
+                                                   fair_price=fair_price,
+                                                   personality_adjust=personality_adjust),
+                'item': item
+            }
+            wish_list.append(result)
+
+        return sorted(wish_list, key=lambda d: d['desire'])
+
     def generate_desire_for(self, orderable_item: Item, current_price: float, user: User, **kwargs) -> float:
         """
         Helper function. Assigns a perceived value to an **orderable** item.
@@ -416,7 +426,6 @@ class Patron:
             denominator = 2
         base_value = denominator / (4 * saturation_factor)
 
-        print(f"Base Desire is {base_value}, {personality_adjust=}")
 
         # Apply Personality shift
         return min(1, max(0, base_value * personality_adjust))
@@ -510,6 +519,12 @@ class Patron:
     @staticmethod
     def generate_patron_list(num_patrons: int = _PATRONS_PER_CYCLE) -> list:
         return [Patron.generate_random() for x in range(num_patrons)]
+
+    def get_next_decision_time(self):
+        """
+        Shows when the next decision of this patron would be made
+        """
+
 
 
 class TavernSimulationThread(object):
@@ -902,3 +917,26 @@ def render_tavern_prices(user: User):
     """
     return render_template('snippets/_tavern_price_list.html',
                            prices=user.get('data.tavern.prices'))
+
+
+## Application Testing / Admin Interface
+
+@application_test(name='Wish List')
+def tavern_overview(username: str):
+    """
+    Reveals the calculated wish list for all patrons.
+    """
+    response = GameResponse()
+    user = load_user(username)
+    if not user:
+        response.add_fail_msg(f"Username {username} not found.")
+        return response
+    patrons = map(Patron, user.get('data.tavern.patrons').values())
+    for patron in patrons:
+        wish_list = patron.generate_wish_list(user, user.get('data.tavern.prices'))
+        response.log(f"{patron.name()} ({patron.get_data()['budget']} gold):")
+        for item in wish_list:
+            response.log(f"{item['item'].get_minimized_id()} == Desire: {item['desire']} - Demand: {item['demand']}")
+        response.log('')
+
+    return response

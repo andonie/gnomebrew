@@ -22,7 +22,7 @@ Execute a test suite for a target:
         {% endfor %}
     </select>
 </div>
-<div class="row">
+<div class="row gb-admin-test-suite-panel">
     <div class="col">
         <h5>Parameters:</h5>
         <div id="gb-admin-all-parameters">
@@ -68,7 +68,20 @@ function execute_test(source) {
         var parameter_name = $(this).children('.gb-parameter-name').text();
         request_data[parameter_name] = $("#" + request_data.test_id + "-" + parameter_name).val();
     });
-    two_way_game_request(request_data, source, "gb-admin-output-console");
+    two_way_game_request(request_data, source, "gb-admin-output-console", function(response) {
+        var output = "";
+        if (response.log != null) {
+            output = response.log + '<br/>'
+        }
+        response.log;
+        if(response.type != 'success') {
+            output += response.fail_msg;
+        }
+        console.log(response);
+        document.getElementById("gb-admin-output-console").innerHTML = output;
+        document.getElementById("gb-admin-completion-time").innerHTML = "completed in " + response.params.exec_time;
+
+    });
 }
 
 add_startup(function() {
@@ -81,8 +94,11 @@ add_startup(function() {
     });
 });
 </script>
-<div id="gb-admin-output-console">
+<div id="gb-admin-output-dashboard" style="display:flex;flex-direction:row">
+    <div id="gb-admin-success-indicator"></div>
+    <div id="gb-admin-completion-time"></div>
 </div>
+<div id="gb-admin-output-console"></div>
 
 
 

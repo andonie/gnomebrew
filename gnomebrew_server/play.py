@@ -63,6 +63,7 @@ def evaluate_game_id(game_id: str):
     :param game_id: Game-ID to be requested.
     :return:        The result of the Game-ID being requested.
     """
+    print(f"!!! I just received {game_id}!")
     return current_user.get(game_id)
 
 # SOCKET IO

@@ -272,9 +272,6 @@ class User(UserMixin):
                     found_match = True
                     _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path)
                     break
-            if not found_match:
-                # No Regex matched the update path. Instead do the default
-                self.frontend_update('update', individual_data)
 
     def frontend_update(self, update_type: str, update_data: dict):
         """

@@ -247,7 +247,7 @@ function one_way_game_request(request_data, error_target, trigger_element) {
 }
 
 // Wrapper for all Game requests that do print output
-function two_way_game_request(request_data, trigger_element, output_id) {
+function two_way_game_request(request_data, trigger_element, output_id, success_logic) {
     trigger_element.disabled = true;
     var html_before = trigger_element.innerHTML;
     if(html_before.length < 3) {
@@ -262,15 +262,7 @@ function two_way_game_request(request_data, trigger_element, output_id) {
     };
 
     $.post('/play/request', request_data).done(function(response){
-        var output = "";
-        if (response.log != null) {
-            output = response.log + '<br/>'
-        }
-        response.log;
-        if(response.type != 'success') {
-            output += response.fail_msg;
-        }
-        document.getElementById(output_id).innerHTML = output;
+        success_logic(response);
         reset_element();
     }).fail(function() {
         document.getElementById(output_id).innerHTML = 'Error connecting to the Gnomebrew server.';

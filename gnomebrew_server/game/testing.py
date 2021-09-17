@@ -8,6 +8,7 @@ from gnomebrew_server.game.util import global_jinja_fun
 from gnomebrew_server.play import request_handler
 from gnomebrew_server.game.gnomebrew_io import GameResponse
 from markdown import markdown
+from datetime import datetime
 
 
 class TestSuite:
@@ -83,12 +84,15 @@ def execute_test(request_object: dict, user: User):
         response.add_fail_msg("You are not authorized to execute tests.")
         return response
 
+    start = datetime.now()
     try:
         suite: TestSuite = _test_suites[request_object.pop('test_id')]
     except KeyError as e:
         response.add_fail_msg(f"Did not find the test ID:<br/>{str(e)}")
+    end = datetime.now()
 
     response.append_into(suite.run_test(**request_object))
+    response.set_parameter('exec_time', str(end-start))
 
     # No failed test means success in request
     if 'type' not in response.to_json() or response.to_json()['type'] != 'fail':

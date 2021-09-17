@@ -38,6 +38,12 @@ class GameResponse(object):
             else:
                 self._data['log'] += '\n' + other_response._data['log']
 
+        # Add together parameters
+        if 'params' in other_response._data:
+            if 'params' not in self._data:
+                self._data['params'] = other_response._data['params']
+            else:
+                self._data['params'].update(other_response._data['params'])
 
 
     def add_fail_msg(self, msg: str) -> None:
@@ -63,6 +69,16 @@ class GameResponse(object):
             self._data['log'] += '<br/>' + log
         else:
             self._data['log'] = log
+
+    def set_parameter(self, param: str, value):
+        """
+        Sets a response parameter.
+        :param param:   The id of the parameter to set.
+        :param value:   The parameter's new value
+        """
+        if 'params' not in self._data:
+            self._data['params'] = dict()
+        self._data['params'][param] = value
 
     def to_json(self) -> dict:
         """

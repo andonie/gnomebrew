@@ -177,3 +177,7 @@ h4 {
 #gb-admin-description code {
     color: #A63E42;
 }
+
+.gb-admin-test-suite-panel {
+    min-height: 15em;
+}
