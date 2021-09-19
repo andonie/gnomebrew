@@ -42,16 +42,18 @@ class EventThread(object):
 
             for event_data in self.mongo.db.events.find(query):
                 # Do something
+                event = Event(mongo_data=event_data)
                 try:
-                    Event(mongo_data=event_data).execute()
+                    event.execute()
                 except Exception as err:
                     # An error occured managing the event.
                     # In this case, just log the traceback but still remove the event.
                     print('--------------\nException in Event Thread:')
-                    print_tb(err.__traceback__)
+                    # print_tb(err)
                     print('--------------')
 
-                remove_ids.append(event_data['_id'])
+                if event.is_remove_on_trigger():
+                    remove_ids.append(event_data['_id'])
 
             self.mongo.db.events.remove({'_id': {'$in': remove_ids}})
 
@@ -96,7 +98,7 @@ class Event(object):
 
         for effect in self._data['effect']:
             # Call the registered handling function for the effect key
-            Event.execute_event_effect(user=user, effect_type=effect, effect_data=self._data['effect'][effect])
+            Event.execute_event_effect(user=user, effect_type=effect, effect_data=self._data['effect'][effect], source=self)
 
     def get_target_username(self):
         """
@@ -111,6 +113,12 @@ class Event(object):
         :return:
         """
         pass
+
+    def is_remove_on_trigger(self) -> bool:
+        """
+        :return: `True` if this event is removed after it triggers (default case). Otherwise `False`.
+        """
+        return not self._data['locked'] if 'locked' in self._data else True
 
     def set_due_time(self, due_time: datetime.datetime):
         self._data['due_time'] = due_time
@@ -145,7 +153,7 @@ class Event(object):
         return Event(data)
 
     @staticmethod
-    def register(effect_callable: Callable):
+    def register_effect(effect_callable: Callable):
         """
         Registers an event effect handling function.
         :param effect_id:       The effect ID stored in the event queue
@@ -158,15 +166,17 @@ class Event(object):
         _EVENT_FUNCTIONS[effect_callable.__name__] = effect_callable
 
     @staticmethod
-    def execute_event_effect(user: User, effect_type: str, effect_data: dict):
+    def execute_event_effect(user: User, effect_type: str, effect_data: dict, **kwargs):
         """
         This function can be called to interpret and execute JSON effect data
         :param user:            a user to execute the effect on.
         :param effect_type:     The effect type (used in `Event.register`)
         :param effect_data:     A dict representing the effect data JSON
+        :keyword source:        Can be undefined. If a timed event triggered this effect, the triggering event object
+                                is `source`.
         """
         global _EVENT_FUNCTIONS
-        _EVENT_FUNCTIONS[effect_type](user=user, effect_data=effect_data)
+        _EVENT_FUNCTIONS[effect_type](user=user, effect_data=effect_data, **kwargs)
 
 
     def enqueue(self):
@@ -180,7 +190,7 @@ class Event(object):
 
 # Some Builtin Event Handling
 
-@Event.register
+@Event.register_effect
 def delta_inventory(user: User, effect_data: dict):
     """
     Event execution for a change in inventory data.
@@ -205,7 +215,7 @@ def delta_inventory(user: User, effect_data: dict):
     user.update('data', inventory_update, is_bulk=True)
 
 
-@Event.register
+@Event.register_effect
 def push_data(user: User, effect_data: dict):
     """
     Event execution for an arbitrary push (list append) of data.
@@ -228,7 +238,7 @@ def push_data(user: User, effect_data: dict):
             user.update(data_path, data)
 
 
-@Event.register
+@Event.register_effect
 def ui_update(user: User, effect_data:dict):
     """
     Event execution for a user ui update
@@ -238,7 +248,7 @@ def ui_update(user: User, effect_data:dict):
     user.frontend_update('ui', effect_data)
 
 
-@Event.register
+@Event.register_effect
 def add_station(user: User, effect_data: dict):
     """
     Fired when a new station is to be added to a user's game data.

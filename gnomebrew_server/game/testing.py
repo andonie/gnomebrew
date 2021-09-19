@@ -126,11 +126,14 @@ def user_assertions(username: str):
         response.add_fail_msg(f"Username {username} not found.")
         return response
 
+    success = False
     try:
         User.game_integrity_assertions(user)
+        success = True
     except AssertionError as e:
         response.add_fail_msg(str(e))
-    finally:
+
+    if success:
         response.log("All Assertions were successful.")
         response.succeess()
 

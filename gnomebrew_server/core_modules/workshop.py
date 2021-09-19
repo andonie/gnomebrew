@@ -22,7 +22,7 @@ def ignore_workshop_data_updates(user: User, data: dict, game_id: str):
     pass # Do nothing on the data-write. The event method takes care of this after upgrade
 
 
-@Event.register
+@Event.register_effect
 def upgrade(user: User, effect_data: list):
     """
     Event execution for an upgrade.

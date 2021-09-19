@@ -98,7 +98,7 @@ def get_statistical_data(user: User, game_id: str, **kwargs):
     return result
 
 
-@Event.register
+@Event.register_effect
 def apply_statistics(user: User, effect_data: dict):
     """
     Applies basic (/default) statistics updates for a user when fired.

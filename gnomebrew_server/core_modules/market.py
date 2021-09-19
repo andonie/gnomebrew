@@ -113,7 +113,9 @@ def assert_market_update_queued(user: User):
     :param user:    A user
     :raise: `AssertionError` if there's no queued update for a market inventory update for the user.
     """
-    assert mongo.db.events.find_one({'target': user.get_id(), 'type': 'market'})
+    result = mongo.db.events.find_one({'target': user.get_id(), 'type': 'market'})
+    if result is None:
+        raise AssertionError(f"{user.get_id()} has no market event data!")
 
 
 def _generate_market_update_event(target: str, due_time: datetime):
@@ -132,13 +134,13 @@ def _generate_market_update_event(target: str, due_time: datetime):
     return Event(data)
 
 
-@Event.register
-def market_update(user: User, effect_data: dict):
+@Event.register_effect
+def market_update(user: User, effect_data: dict, **kwargs):
     """
     Updates a user's inventory
     :param user:        User targeted by the update.
     :param effect_data: Inconsequential, as market_update does everything internally.
-    :return:
+    :keyword source     Should always be set.
     """
     latest_inventory = generate_new_inventory(user)
     next_duetime = datetime.utcnow() + timedelta(minutes=3)
@@ -146,6 +148,7 @@ def market_update(user: User, effect_data: dict):
         'due': next_duetime,
         'inventory': latest_inventory
     }, is_bulk=True)
+    #kwargs['source'].
     _generate_market_update_event(user.get_id(), next_duetime).enqueue()
 
 

@@ -9,6 +9,7 @@ import datetime
 import time
 from functools import reduce
 from math import floor, ceil, log
+from typing import Callable
 
 from flask import render_template
 
@@ -50,62 +51,17 @@ class Patron:
     Patron class
     """
 
-    # A list of Fantasy names to generate patron names
-    # Thanks to:
-    # https://student-tutor.com/blog/200-iconic-fantasy-last-names-for-your-next-bestseller/
-    # https://medium.com/@barelyharebooks/a-master-list-of-300-fantasy-names-characters-towns-and-villages-47c113f6a90b
-    names = {
-        'male': [
-            'Lydan', 'Syrin', 'Ptorik', 'Joz', 'Varog', 'Gethrod', 'Hezra', 'Feron', 'Ophni', 'Colborn', 'Fintis',
-            'Gatlin', 'Jinto', 'Hagalbar', 'Krinn', 'Lenox', 'Revvyn', 'Hodus', 'Dimian', 'Paskel', 'Kontas',
-            'Weston', 'Azamarr', 'Jather', 'Tekren', 'Jareth', 'Adon', 'Zaden', 'Eune', 'Graff', 'Tez', 'Jessop',
-            'Gunnar', 'Pike', 'Domnhar', 'Baske', 'Jerrick', 'Mavrek', 'Riordan', 'Wulfe', 'Straus', 'Tyvrik',
-            'Henndar', 'Favroe', 'Whit', 'Jaris', 'Renham', 'Kagran', 'Lassrin', 'Vadim', 'Arlo', 'Quintis',
-            'Vale', 'Caelan', 'Yorjan', 'Khron', 'Ishmael', 'Jakrin', 'Fangar', 'Roux', 'Baxar', 'Hawke',
-            'Gatlen', 'Michael',
-            'Barak', 'Nazim', 'Kadric', 'Paquin', 'Kent', 'Moki', 'Rankar', 'Lothe', 'Ryven', 'Clawsen', 'Pakker',
-            'Embre', 'Cassian', 'Verssek', 'Dagfinn', 'Ebraheim', 'Nesso', 'Eldermar', 'Rivik', 'Rourke',
-            'Barton'],
-        'female': [
-            'Hemm', 'Sarkin', 'Blaiz', 'Talon', 'Agro', 'Zagaroth', 'Turrek', 'Esdel', 'Lustros', 'Zenner',
-            'Baashar', 'Dagrod', 'Gentar', 'Syrana', 'Resha', 'Varin', 'Wren', 'Yuni', 'Talis', 'Kessa',
-            'Magaltie', 'Aeris', 'Desmina',
-            'Krynna', 'Asralyn', 'Herra', 'Pret', 'Kory', 'Afia', 'Tessel', 'Rhiannon', 'Zara', 'Jesi', 'Belen',
-            'Rei', 'Ciscra', 'Temy', 'Renalee', 'Estyn', 'Maarika', 'Lynorr', 'Tiv', 'Annihya', 'Semet',
-            'Tamrin', 'Antia', 'Reslyn', 'Basak', 'Vixra', 'Pekka', 'Xavia', 'Beatha', 'Yarri', 'Liris',
-            'Sonali', 'Razra', 'Soko', 'Maeve', 'Everen', 'Yelina', 'Morwena', 'Hagar', 'Palra', 'Elysa', 'Sage',
-            'Ketra', 'Lynx', 'Agama', 'Thesra', 'Tezani', 'Ralia', 'Esmee', 'Heron', 'Naima', 'Rydna', 'Sparrow',
-            'Baakshi', 'Ibera', 'Phlox', 'Dessa', 'Braithe', 'Taewen', 'Larke', 'Silene', 'Phressa', 'Esther',
-            'Anika', 'Rasy', 'Harper', 'Indie', 'Vita', 'Drusila', 'Minha', 'Surane', 'Lassona', 'Merula', 'Kye',
-            'Jonna', 'Lyla', 'Zet', 'Orett', 'Naphtalia', 'Turi', 'Rhays', 'Shike', 'Hartie', 'Beela', 'Leska',
-            'Vemery', 'Lunex', 'Fidess', 'Tisette', 'Lisa'],
-        'nonbinary': [
-            'Clay', 'Linden', 'Rhun', 'Lennox', 'Billie', 'Robin', 'Les', 'Nic', 'Sage', 'Teagan'
-        ],
-        'last': [
-            'Atwater', 'Agassi', 'Apatow', 'Akagawa', 'Averescu', 'Arrington', 'Agrippa', 'Aiken', 'Albertson',
-            'Alexander', 'Amado', 'Anders', 'Ashsorrow', 'Humblecut', 'Ashbluff', 'Marblemaw', 'Armas', 'Akka',
-            'Aoki', 'Aldrich', 'Apak', 'Alinsky', 'Desai', 'Darby', 'Draper', 'Dwyer', 'Dixon', 'Danton',
-            'Desmith', 'Ditka', 'Dominguez', 'Decker', 'Dobermann', 'Dunlop', 'Dumont', 'Dandridge', 'Diamond', '',
-            'Dukas', 'Agnello', 'Alterio', 'Bidbury', 'Botkin', 'Benoit', 'Biddercombe', 'Baldwin', 'Bennett',
-            'Bourland', 'Boadle', 'Bender', 'Best', 'Bobshaw', 'Bersa', 'Belt', 'Bourn', 'Barke', 'Beebe', 'Banu',
-            'Bozzelli', 'Bogaerts', 'Blanks', 'Evert', 'Eastwood', 'Elway', 'Eslinger', 'Ellerbrock', 'Eno',
-            'Endo', 'Etter', 'Ebersol', 'Everson', 'Esapa', 'Ekker', 'Escobar', 'Eggleston', 'Ermine', 'Erickson',
-            'Keller', 'Kessler', 'Kobayashi', 'Klecko', 'Kicklighter', 'Kidder', 'Kershaw', 'Kaminsky', 'Kirby',
-            'Keene', 'Kenny', 'Keogh', 'Kipps', 'Kendrick', 'Kuang', 'Fairchild', 'October', 'Vespertine',
-            'Fellowes', 'Omen', 'Willow', 'Gannon', 'Presto', 'Windward', 'Grell', 'Powers', 'Wixx', 'Halliwell',
-            'Quellings', 'Xanthos', 'Hightower', 'Quill', 'Xenides', 'Idlewind', 'Rast', 'Chamillet',
-            'Bougaitelet', 'Hallowswift', 'Coldsprinter', 'Winddane', 'Yarrow', 'Illfate', 'Riddle', 'Yew',
-            'Jacaranda', 'Yearwood', 'Yellen', 'Yaeger', 'Yankovich', 'Yamaguchi', 'Yarborough', 'Youngblood',
-            'Yanetta', 'Yadao', 'Winchell', 'Winters', 'Walsh', 'Whalen', 'Watson', 'Wooster', 'Woodson',
-            'Winthrop', 'Wall', 'Sacredpelt', 'Rapidclaw', 'Hazerider', 'Shadegrove', 'Wight', 'Webb', 'Woodard',
-            'Wixx', 'Wong', 'Whesker', 'Yale', 'Yasumoto', 'Yates', 'Younger', 'Yoakum', 'York', 'Rigby', 'Zaba',
-            'Surrett', 'Swiatek', 'Sloane', 'Stapleton', 'Seibert', 'Stroud', 'Strode', 'Stockton', 'Scardino',
-            'Spacek', 'Spieth', 'Stitchen', 'Stiner', 'Soria', 'Saxon', 'Shields', 'Stelly', 'Steele',
-            'Chanassard', 'Ronchessac', 'Boneflare', 'Monsterbelly', 'Truthbelly', 'Sacredmore', 'Malfoy', 'Moses',
-            'Moody', 'Morozov', 'Mason', 'Metcalf', 'McGillicutty', 'Montero', 'Molinari', 'Marsh', 'Moffett',
-            'McCabe', 'Manus', 'Malenko', 'Mullinax', 'Morrissey', 'Mantooth', 'Kucharczk', 'Andonie']
-    }
+    ## FUNDAMENTALS
+
+    @staticmethod
+    def from_id(uuid, user: User):
+        """
+        Returns a patron from a specific user.
+        :param user:    a user
+        :param uuid:    a UUID
+        :return:        A patron corresponding to the given UUID on the given user. `None` if not existing
+        """
+        return Patron(user.get(f"data.tavern.patrons.{uuid}"))
 
     def __init__(self, data: dict):
         # Generate Patron Base Attributes Randomly:
@@ -114,14 +70,20 @@ class Patron:
     def get_data(self):
         return self._data
 
+    def get_id(self):
+        """
+        Returns the unique ID for this patron. Assumes the patron has already been assigned a user. Otherwise breaks
+        """
+        return self._data['id']
+
     def name(self):
         return self._data['name']
 
-    def is_enqueued(self):
+    def get_state(self):
         """
-        :return: `True`, if the patron is currently waiting to be served.
+        :return: The patron's current state, such as `ordering`, `sitting`, or `drinking`
         """
-        pass
+        return self._data['state']
 
     def adapt_to(self, user: User):
         """
@@ -141,7 +103,7 @@ class Patron:
         self._data['id'] = uuid
         return uuid
 
-    def add_to_tab(self, order: list, user: User):
+    def add_to_tab(self, order: dict, user: User):
         """
         Adds an order to this patron's tab.
         The order amounts will be logged in the patron's corresponding `tab` value. If no such value exists yet,
@@ -150,42 +112,96 @@ class Patron:
         :param order:   Order data that has been **successfully** served, e.g. [{'item': 'beer', 'amount': 5}]
         """
         to_update = dict()
-        for order_item in order:
-            if order_item['item'] not in self._data['tab']:
+        for item in order:
+            if item not in self._data['tab']:
                 # Doesn't exist yet in tab. Just set to current order
-                to_update[order_item['item']] = order_item['amount']
+                to_update[item] = order[item]
             else:
                 # Already exists in tab. Add new value to update dict
-                to_update[order_item['item']] = self._data['tab'][order_item['item']] + order_item['amount']
+                to_update[item] = self._data['tab'][item] + order[item]
         user.update(f"data.tavern.patrons.{self._data['id']}.tab", to_update, is_bulk=True)
 
-    def schedule_next_decision(self, user: User):
+    def reset_next_decision_step(self, user: User):
         """
-        Schedules the next `decision_step` for this patron.
+        Resets the timing for the patron's next decision step.
+        """
+        if self._data['state'] == 'ordering':
+            delta = self.generate_wait_time()
+        elif self._data['state'] == 'thinking':
+            delta = self.generate_think_time()
+        elif self._data['state'] == 'sitting':
+            delta = self.generate_sit_time()
+        elif self._data['state'] == 'drinking':
+            delta = self.generate_drink_time()
+        else:
+            raise Exception(
+                f"Patron {self._data['name']} is not in any valid state to reset decision ({self._data['state']})")
+
+        # Do not remove event from DB. Instead, just re-set the `due` value
+        mongo.db.events.update_one({'target': user.get_id(), 'effect.patron_next_step.id': self._data['id']},
+                                   {'$set': {'due_time': datetime.utcnow() + delta}})
+
+    def give_bonus_item(self, item: Item, user: User):
+        """
+        Calculates the (possible) effect of an item when given as a free gift to a patron.
+        :param user:    target user
+        :param item:    The item to be gifted. If `item` a `gift_effect` data, a special effect might be applied. In
+                        all other cases, nothing happens.
+        """
+        if 'gift_effect' not in item.get_json():
+            # No effect to speak of. Nothing happens.
+            return
+        gift_effect_data = item.get_json()['gift_effect']
+
+        for effect in gift_effect_data:
+            Patron._gift_effect_lookup[effect['type']](effect_data=effect, patron=self, user=user)
+
+    def leave_tavern(self, user: User):
+        """
+        Leaves the tavern forever.
         :param user:    a user
         """
-        # When will I make my next decision step?
-        due_time = datetime.utcnow() + timedelta(
-            seconds=random_normal(min=120, max=user.get('attr.tavern.patron_decision_time', default=60 * 15)))
-        _generate_patron_next_step_event(target=user.get_id(),
-                                         patron=self,
-                                         due_time=due_time).enqueue()
+        # Remove Patron from Tavern Data
+        user.update('data.tavern.patrons.' + self._data['id'], {}, command='$unset')
 
-    def decision_step(self, user: User):
+        # Remove the next step event that still exists
+        mongo.db.events.delete_one({
+            'target': user.get_id(),
+            'effect.patron_next_step.id': self._data['id']
+        })
+
+        # Delete Raw Data to make sure this object is unusable
+        del self._data
+
+    ## STATE TRANSITION
+
+    def run_next_step(self, user: User):
         """
-        This function lets the patron run one decision step. A decision step assumes that the patron is not enqueued and
-        inside the tavern.
-        The decision step results in one of these three options:
-        
-        1. The patron stays seated in the tavern but doesn't order.
-        2. The patron enters the queue with an order.
-        3. The patron leaves the tavern.
+        This function is called whenever this patron's next-step event triggers.
+        Performs the next step for the patron based on state and user.
+        :param user:    a user
+        """
+        if self._data['state'] in {'thinking', 'sitting'}:
+            self.order_decision(user)
+        elif self._data['state'] in {'ordering', 'drinking'}:
+            self._data['state'] = 'sitting'
+            self.reset_next_decision_step(user)
+        else:
+            raise Exception(
+                f"Patron {self._data['name']} does not have a valid state to decide their next step from: {self._data['data']}")
+
+    def order_decision(self, user: User):
+        """
+        This function lets the patron run the basic decision process on what to order next and appropriately deals with
+        the results:
+        1. patron places an order or
+        2. patron leaves the tavern
         
         :param user:    a user
         """
         prices = user.get('data.tavern.prices')
         # I'm noting down my orders here
-        order_list = []
+        order_dict = dict()
 
         # I'm managing my order preferences here
         # Take a look at the menu. Assign a perceived value to each item and create a wish-list
@@ -200,7 +216,6 @@ class Patron:
 
         budget_count = self._data['budget']
         desire_threshold = AVG_DESIRE_THRESHOLD * user.get('attr.tavern.desire_threshold_factor', default=1)
-
 
         for wish in wish_list:
             item_name = wish['item'].get_minimized_id()
@@ -222,82 +237,29 @@ class Patron:
                 thirst -= amount * (
                         orderable_data['thirst_reduction'] * user.get('attr.tavern.thirst_reduction_mul',
                                                                       default=1))
-                order_list.append({
-                    'item': item_name,
-                    'amount': amount
-                })
+                order_dict[item_name] = amount
 
-        if not order_list:
+        if not order_dict:
             # My order list is empty. I can't afford/don't want anything. Let's leave.
             self.leave_tavern(user)
             return
 
         # I have finished my order list. Time to enqueue!
-        self.enter_queue(user, {
-            'id': self._data['id'],
-            'order': order_list
-        })
+        self.place_order(user, order_dict)
 
-    def enter_queue(self, user: User, order_data: dict):
+    def place_order(self, user: User, order_data: dict):
         """
-        Enrolls this patron in the tavern queue, if possible
-        :param order_data:      Data of the order to be added.
-        :param user:    a user
+        Changes this patron's state to `ordering` and places the given data as their order.
+        :param user:        a user
+        :param order_data:  order data to be given to user.
         """
-        queue_data = user.get('data.tavern.queue')
+        # Set state to ordering, both on DB and in here
+        self._data['state'] = 'ordering'
+        self._data['order'] = order_data
+        user.update(f"data.tavern.patrons.{self._data['id']}.state", 'ordering')
+        self.reset_next_decision_step()
 
-        # Add my order to the queue
-        queue_data.append(order_data)
-        user.update('data.tavern.queue', queue_data)
-
-        # I will get impatient if my order is not handled within a timeframe.
-        # -> Create timed event to handle this
-        # Calculate the time at which the patron is impatient
-
-        due_time = datetime.utcnow() + self.generate_wait_time(user)
-        seconds = random_normal(min=120, max=user.get('attr.tavern.patron_patience', default=1200))
-        _generate_patron_impatient_event(target=user.get_id(), patron=self, due_time=due_time).enqueue()
-
-    def leave_queue(self, user: User):
-        """
-        Removes the patron from the user's tavern queue.
-        """
-        queue = user.get('data.tavern.queue')
-
-        # Filter out any and all orders with the patron's id
-        user.update('data.tavern.queue', list(filter(lambda order: order['id'] != self._data['id'], queue)))
-
-        self.schedule_next_decision(user)
-
-    def leave_tavern(self, user: User):
-        """
-        Leaves the tavern forever.
-        :param user:    a user
-        """
-        # Remove Patron from Tavern Data
-        user.update('data.tavern.patrons.' + self._data['id'], {}, command='$unset')
-
-        # Remove the next step event that still exists
-        mongo.db.events.delete_many({
-            'target': user.get_id(),
-            '$or': [{'effect.patron_next_step.id': self._data['id']}, {'effect.patron_impatient.id': self._data['id']}]
-        })
-
-        # Delete Raw Data to make sure this object is unusable
-        del self._data
-
-    def reconsider_order(self, user: User, price_change: dict):
-        """
-        Called if the patron is currently queued and one of the items they're standing in line for has changed price
-        (only called if the price increased compared to previously).
-        Depending on circumstances (budget, willingness, etc.) the patron will either:
-
-        1. Stay in queue or
-        2. Leave the queue and get seated again in the tavern, scheduling a next decision.
-        :param user:    a user
-        :param price_change: a dict with all changed prices formatted `price_change[item_id] = new_price`
-        """
-        pass
+    ## PATRON INTERNAL CALCULATIONS
 
     @staticmethod
     def _saturation_factor_formula(num_item, saturation_factor) -> float:
@@ -361,6 +323,18 @@ class Patron:
                                  user.get('attr.tavern.personality_flex', default=1)) + 1
         wait_in_s *= personality_influence
         return timedelta(seconds=wait_in_s)
+
+    def generate_think_time(self, user: User) -> timedelta:
+        # TODO: Implement nicely
+        return self.generate_wait_time()
+
+    def generate_sit_time(self, user: User) -> timedelta:
+        # TODO: Implement nicely
+        return self.generate_wait_time()
+
+    def generate_drink_time(self, user: User) -> timedelta:
+        # TODO: Implement nicely
+        return self.generate_wait_time()
 
     def generate_wish_list(self, user, prices):
         """
@@ -426,7 +400,6 @@ class Patron:
             denominator = 2
         base_value = denominator / (4 * saturation_factor)
 
-
         # Apply Personality shift
         return min(1, max(0, base_value * personality_adjust))
 
@@ -483,6 +456,177 @@ class Patron:
         return base_thirst * personality_influence * user.get('attr.tavern.thirst_multiplier',
                                                               default=1) / saturation_factor
 
+    ## PLAYER TRANSACTIONS
+
+    def decline(self, user: User):
+        """
+        Declines and sends back the patron in front of the queue
+        :param user:    a user
+        """
+        response = GameResponse()
+
+        if self._data['state'] != 'ordering':
+            response.add_fail_msg(f"{self.name()} is not ordering.")
+            return response
+
+        # State Transition
+        self._data['state'] = 'sitting'
+        self.reset_next_decision_step(user)
+
+        response.succeess()
+        return response
+
+    def sell(self, user: User, **kwargs):
+        """
+        Sells to the next patron in front of the queue, if possible
+        :param self:  the patron to sell to
+        :param user:    a user
+        :keyword bonus_item: The (shortened) ID of the item that's given to the patron as a bonus in the hopes for a
+                            positive effect
+        """
+        tavern_data = user.get('data.tavern')
+        response = GameResponse()
+
+        # Check if selected patron is currently ordering
+        if self._data['state'] != 'ordering':
+            response.add_fail_msg(f"{self.name()} is not ordering.")
+            return response
+
+        target_order: dict = self._data['order']
+
+        # Gifting Items Feature
+        if 'bonus_item' in kwargs:
+            bonus_item : Item = Item.from_id(f"item.{kwargs['bonus_item']}")
+            current_storage = user.get(f"data.storage.content.{bonus_item.get_minimized_id()}")
+            if current_storage < 1:
+                response.add_fail_msg(f"Missing 1 {bonus_item.name()} in storage.")
+            else:
+                # Apply everything now before main data is loaded:
+                self.give_bonus_item(bonus_item)
+                user.update(f"data.storage.content.{bonus_item.get_minimized_id()}", current_storage-1)
+
+        # Check if enough of the required product is in storage
+        storage = user.get('data.storage.content')
+        for item in target_order:
+            if storage[item] < target_order[item]:
+                response.add_fail_msg(
+                    f"Missing {target_order[item] - storage[item]} {Item.from_id(f'item.{item}').name()} in storage.")
+
+        if response.has_failed():
+            return response
+
+        # All Checks are passed. Serve the patron now:
+
+        # Update all user data with the transaction result
+        user_gold = storage['gold']
+        inventory_changes = dict()
+        order_total = 0
+        for item in target_order:
+            # Calculate the new user gold you're making with this transaction
+            order_total += target_order[item] * tavern_data['prices'][item]
+
+            # Calculate the inventory changes
+            inventory_changes[f"storage.content.{item}"] = storage[item] - target_order[item]
+
+        # All Update Data for the DB except for Patron Tab, which has been done before in `add_to_tab`
+        # Could technically be optimized, should this become an issue.
+        update_data = {
+            'storage.content.gold': user_gold + order_total,
+            'tavern.queue': tavern_data['queue'],
+            'tavern.patrons.' + target_order['id'] + '.budget': self.get_data()['budget'] - order_total
+        }
+        update_data.update(inventory_changes)
+
+        user.update('data', update_data, is_bulk=True)
+
+        # The patron gets the beers accounted for in their tab
+        self.add_to_tab(target_order, user)
+        # State transition
+        self._data['state'] = 'drinking'
+        self.reset_next_decision_step(user)
+
+        response.succeess()
+        return response
+
+    def reconsider_ordering(self, user: User):
+        """
+        Resets this patron state and sets them into the 'thinking' state.
+        """
+        self._data['state'] = 'thinking'
+        self.reset_next_decision_step(user)
+
+    ## CLASS ATTRIBUTES AND PATRON GENERATION
+
+    # A list of Fantasy names to generate patron names
+    # Thanks to:
+    # https://student-tutor.com/blog/200-iconic-fantasy-last-names-for-your-next-bestseller/
+    # https://medium.com/@barelyharebooks/a-master-list-of-300-fantasy-names-characters-towns-and-villages-47c113f6a90b
+    names = {
+        'male': [
+            'Lydan', 'Syrin', 'Ptorik', 'Joz', 'Varog', 'Gethrod', 'Hezra', 'Feron', 'Ophni', 'Colborn', 'Fintis',
+            'Gatlin', 'Jinto', 'Hagalbar', 'Krinn', 'Lenox', 'Revvyn', 'Hodus', 'Dimian', 'Paskel', 'Kontas',
+            'Weston', 'Azamarr', 'Jather', 'Tekren', 'Jareth', 'Adon', 'Zaden', 'Eune', 'Graff', 'Tez', 'Jessop',
+            'Gunnar', 'Pike', 'Domnhar', 'Baske', 'Jerrick', 'Mavrek', 'Riordan', 'Wulfe', 'Straus', 'Tyvrik',
+            'Henndar', 'Favroe', 'Whit', 'Jaris', 'Renham', 'Kagran', 'Lassrin', 'Vadim', 'Arlo', 'Quintis',
+            'Vale', 'Caelan', 'Yorjan', 'Khron', 'Ishmael', 'Jakrin', 'Fangar', 'Roux', 'Baxar', 'Hawke',
+            'Gatlen', 'Michael',
+            'Barak', 'Nazim', 'Kadric', 'Paquin', 'Kent', 'Moki', 'Rankar', 'Lothe', 'Ryven', 'Clawsen', 'Pakker',
+            'Embre', 'Cassian', 'Verssek', 'Dagfinn', 'Ebraheim', 'Nesso', 'Eldermar', 'Rivik', 'Rourke',
+            'Barton'],
+        'female': [
+            'Hemm', 'Sarkin', 'Blaiz', 'Talon', 'Agro', 'Zagaroth', 'Turrek', 'Esdel', 'Lustros', 'Zenner',
+            'Baashar', 'Dagrod', 'Gentar', 'Syrana', 'Resha', 'Varin', 'Wren', 'Yuni', 'Talis', 'Kessa',
+            'Magaltie', 'Aeris', 'Desmina',
+            'Krynna', 'Asralyn', 'Herra', 'Pret', 'Kory', 'Afia', 'Tessel', 'Rhiannon', 'Zara', 'Jesi', 'Belen',
+            'Rei', 'Ciscra', 'Temy', 'Renalee', 'Estyn', 'Maarika', 'Lynorr', 'Tiv', 'Annihya', 'Semet',
+            'Tamrin', 'Antia', 'Reslyn', 'Basak', 'Vixra', 'Pekka', 'Xavia', 'Beatha', 'Yarri', 'Liris',
+            'Sonali', 'Razra', 'Soko', 'Maeve', 'Everen', 'Yelina', 'Morwena', 'Hagar', 'Palra', 'Elysa', 'Sage',
+            'Ketra', 'Lynx', 'Agama', 'Thesra', 'Tezani', 'Ralia', 'Esmee', 'Heron', 'Naima', 'Rydna', 'Sparrow',
+            'Baakshi', 'Ibera', 'Phlox', 'Dessa', 'Braithe', 'Taewen', 'Larke', 'Silene', 'Phressa', 'Esther',
+            'Anika', 'Rasy', 'Harper', 'Indie', 'Vita', 'Drusila', 'Minha', 'Surane', 'Lassona', 'Merula', 'Kye',
+            'Jonna', 'Lyla', 'Zet', 'Orett', 'Naphtalia', 'Turi', 'Rhays', 'Shike', 'Hartie', 'Beela', 'Leska',
+            'Vemery', 'Lunex', 'Fidess', 'Tisette', 'Lisa'],
+        'nonbinary': [
+            'Clay', 'Linden', 'Rhun', 'Lennox', 'Billie', 'Robin', 'Les', 'Nic', 'Sage', 'Teagan'
+        ],
+        'last': [
+            'Atwater', 'Agassi', 'Apatow', 'Akagawa', 'Averescu', 'Arrington', 'Agrippa', 'Aiken', 'Albertson',
+            'Alexander', 'Amado', 'Anders', 'Ashsorrow', 'Humblecut', 'Ashbluff', 'Marblemaw', 'Armas', 'Akka',
+            'Aoki', 'Aldrich', 'Apak', 'Alinsky', 'Desai', 'Darby', 'Draper', 'Dwyer', 'Dixon', 'Danton',
+            'Desmith', 'Ditka', 'Dominguez', 'Decker', 'Dobermann', 'Dunlop', 'Dumont', 'Dandridge', 'Diamond', '',
+            'Dukas', 'Agnello', 'Alterio', 'Bidbury', 'Botkin', 'Benoit', 'Biddercombe', 'Baldwin', 'Bennett',
+            'Bourland', 'Boadle', 'Bender', 'Best', 'Bobshaw', 'Bersa', 'Belt', 'Bourn', 'Barke', 'Beebe', 'Banu',
+            'Bozzelli', 'Bogaerts', 'Blanks', 'Evert', 'Eastwood', 'Elway', 'Eslinger', 'Ellerbrock', 'Eno',
+            'Endo', 'Etter', 'Ebersol', 'Everson', 'Esapa', 'Ekker', 'Escobar', 'Eggleston', 'Ermine', 'Erickson',
+            'Keller', 'Kessler', 'Kobayashi', 'Klecko', 'Kicklighter', 'Kidder', 'Kershaw', 'Kaminsky', 'Kirby',
+            'Keene', 'Kenny', 'Keogh', 'Kipps', 'Kendrick', 'Kuang', 'Fairchild', 'October', 'Vespertine',
+            'Fellowes', 'Omen', 'Willow', 'Gannon', 'Presto', 'Windward', 'Grell', 'Powers', 'Wixx', 'Halliwell',
+            'Quellings', 'Xanthos', 'Hightower', 'Quill', 'Xenides', 'Idlewind', 'Rast', 'Chamillet',
+            'Bougaitelet', 'Hallowswift', 'Coldsprinter', 'Winddane', 'Yarrow', 'Illfate', 'Riddle', 'Yew',
+            'Jacaranda', 'Yearwood', 'Yellen', 'Yaeger', 'Yankovich', 'Yamaguchi', 'Yarborough', 'Youngblood',
+            'Yanetta', 'Yadao', 'Winchell', 'Winters', 'Walsh', 'Whalen', 'Watson', 'Wooster', 'Woodson',
+            'Winthrop', 'Wall', 'Sacredpelt', 'Rapidclaw', 'Hazerider', 'Shadegrove', 'Wight', 'Webb', 'Woodard',
+            'Wixx', 'Wong', 'Whesker', 'Yale', 'Yasumoto', 'Yates', 'Younger', 'Yoakum', 'York', 'Rigby', 'Zaba',
+            'Surrett', 'Swiatek', 'Sloane', 'Stapleton', 'Seibert', 'Stroud', 'Strode', 'Stockton', 'Scardino',
+            'Spacek', 'Spieth', 'Stitchen', 'Stiner', 'Soria', 'Saxon', 'Shields', 'Stelly', 'Steele',
+            'Chanassard', 'Ronchessac', 'Boneflare', 'Monsterbelly', 'Truthbelly', 'Sacredmore', 'Malfoy', 'Moses',
+            'Moody', 'Morozov', 'Mason', 'Metcalf', 'McGillicutty', 'Montero', 'Molinari', 'Marsh', 'Moffett',
+            'McCabe', 'Manus', 'Malenko', 'Mullinax', 'Morrissey', 'Mantooth', 'Kucharczk', 'Andonie']
+    }
+
+    # Lookup to be used for executing gift effects on patrons.
+    _gift_effect_lookup = dict()
+
+    @staticmethod
+    def gift_effect(fun: Callable):
+        """
+        Indicates an effect for giftable items.
+        A giftable effect can affect a patron after gifting the respective item.
+        :param fun: A function expecting a patron and the effect data.
+        """
+        assert fun.__name__ not in Patron._gift_effect_lookup
+        Patron._gift_effect_lookup[fun.__name__] = fun
+
     @staticmethod
     def generate_random():
         """
@@ -520,12 +664,144 @@ class Patron:
     def generate_patron_list(num_patrons: int = _PATRONS_PER_CYCLE) -> list:
         return [Patron.generate_random() for x in range(num_patrons)]
 
-    def get_next_decision_time(self):
-        """
-        Shows when the next decision of this patron would be made
-        """
+
+## PATRON TIMED GAME EVENTS
+
+def _generate_patron_enter_event(target: str, patron: Patron, due_time: datetime):
+    """
+    Generates a fresh event that starts generates a new market offer listing once it fires.
+    :param patron:  The Patron who will enter
+    :param target:  user ID target
+    :param due_time: due time (server UTC) at which the event fires
+    """
+    data = dict()
+    data['target'] = target
+    data['type'] = 'tavern'
+    data['effect'] = dict()
+    data['effect']['patron_enter'] = patron.get_data()
+    data['due_time'] = due_time
+    data['station'] = 'tavern'
+    return Event(data)
 
 
+def _generate_patron_next_step_event(target: str, patron: Patron, due_time: datetime):
+    data = dict()
+    data['target'] = target
+    data['type'] = 'tavern'
+    data['effect'] = dict()
+    p_data = patron.get_data()
+    data['effect']['patron_next_step'] = {
+        'id': p_data['id']
+    }
+    data['due_time'] = due_time
+    data['station'] = 'tavern'
+    return Event(data)
+
+
+@Event.register_effect
+def patron_next_step(user: User, effect_data: dict):
+    """
+    Fires when a patron is due to decide what to do next. Initiates a state change.
+    :param user:    A user
+    :param effect_data: Effect data details
+    """
+    # Get the targetted patron and execute their decision step routine
+    patron: Patron = Patron(user.get('data.tavern.patrons.' + effect_data['id']))
+    patron.run_next_step(user)
+
+
+@Event.register_effect
+def patron_enter(user: User, effect_data: dict):
+    """
+    Fires when a patron enters the tavern.
+    :param user:        the user
+    :param effect_data: effect data details
+    """
+    tavern_data = user.get('data.tavern')
+
+    # Check if pub is full
+    if len(tavern_data['patrons']) >= tavern_data['capacity']:
+        # The Tavern is full. Patron cannot enter
+        return
+
+    # Generate Patron and apply user upgrade modifications
+    patron = Patron(effect_data)
+    patron_uuid = patron.adapt_to(user)
+
+    # Add Patron to patron list
+    tavern_data['patrons'][patron_uuid] = patron.get_data()
+    # Write in the new patron
+    user.update('data.tavern.patrons.' + patron_uuid, patron.get_data())
+
+    # Patron enters --> First Decision
+    patron.order_decision(user=user)
+
+
+## PATRON GAME REQUESTS
+
+
+@request_handler
+def serve(request_object: dict, user: User):
+    """
+    Handles a game request from the user to serve the next patron.
+    :param request_object:  Contains `action`. Can be:
+                            * `sell` to sell
+                            * `decline` to send away
+    :param user:            A user
+    """
+    target = Patron.from_id(request_object['target'], user)
+    if request_object['what_do'] == 'sell':
+        return target.sell(user)
+    elif request_object[''] == 'decline':
+        return target.decline(user)
+    elif request_object['what_do'] == 'bonus':
+        return target.sell(user, bonus_item=request_object['bonus_item'])
+    else:
+        raise Exception(f"Unknown request object format: {request_object['what_do']=}")
+
+
+@request_handler
+def set_price(request_object: dict, user: User):
+    """
+    For a user to change the pricing of a beer.
+    :param request_object:  Contains the request data.
+    :param user:            a user
+    """
+    response = GameResponse()
+
+    tavern_data = user.get('data.tavern')
+    prices = tavern_data['prices']
+
+    item, price = request_object['item'], int(request_object['price'])
+    if item not in prices:
+        response.add_fail_msg('ERROR - Tell Mike about this.')
+        return response
+
+    if price < 0:
+        response.add_fail_msg("You cannot charge negative prices. This is how you go out of business!")
+        return response
+
+    user.update('data.tavern.prices.' + item, price)
+
+    for patron in tavern_data['patrons']:
+        if tavern_data['patrons'][patron]['state'] == 'ordering':
+            # All patrons that are currently ordering now reconsider their order
+            Patron(tavern_data['patrons'][patron]).reconsider_ordering(user)
+
+    response.succeess()
+    return response
+
+
+## Patron Gift Effects:
+
+@Patron.gift_effect
+def reveal_personality(effect_data: dict, patron: Patron, user: User):
+    """
+    Reveal the personality of the patron with a certain probability.
+    """
+
+
+## BACKEND
 
 class TavernSimulationThread(object):
     """
@@ -593,277 +869,11 @@ def _process_user(user: User, tavern_data: dict, patron_list: list):
                                      due_time=now + timedelta(seconds=entry_delay)).enqueue()
 
 
-def _generate_patron_enter_event(target: str, patron: Patron, due_time: datetime):
-    """
-    Generates a fresh event that starts generates a new market offer listing once it fires.
-    :param patron:  The Patron who will enter
-    :param target:  user ID target
-    :param due_time: due time (server UTC) at which the event fires
-    """
-    data = dict()
-    data['target'] = target
-    data['type'] = 'tavern'
-    data['effect'] = dict()
-    data['effect']['patron_enter'] = patron.get_data()
-    data['due_time'] = due_time
-    data['station'] = 'tavern'
-    return Event(data)
-
-
-def _generate_patron_impatient_event(target: str, patron: Patron, due_time: datetime):
-    data = dict()
-    data['target'] = target
-    data['type'] = 'tavern'
-    data['effect'] = dict()
-    p_data = patron.get_data()
-    data['effect']['patron_impatient'] = {
-        'id': p_data['id']
-    }
-    data['due_time'] = due_time
-    data['station'] = 'tavern'
-    return Event(data)
-
-
-def _generate_patron_next_step_event(target: str, patron: Patron, due_time: datetime):
-    data = dict()
-    data['target'] = target
-    data['type'] = 'tavern'
-    data['effect'] = dict()
-    p_data = patron.get_data()
-    data['effect']['patron_next_step'] = {
-        'id': p_data['id']
-    }
-    data['due_time'] = due_time
-    data['station'] = 'tavern'
-    return Event(data)
-
-
-@Event.register
-def patron_next_step(user: User, effect_data: dict):
-    """
-    Fires when a patron is due to decide what to do next.
-    :param user:    A user
-    :param effect_data: Effect data details
-    """
-    # Get the targetted patron
-    try:
-        patron: Patron = Patron(user.get('data.tavern.patrons.' + effect_data['id']))
-    except KeyError:
-        # The patron could not be found
-        logging.error(f'Patron with data {effect_data} could not be found!')
-        return
-    patron.decision_step(user)
-
-
-@Event.register
-def patron_enter(user: User, effect_data: dict):
-    """
-    Fires when a patron enters the tavern.
-    :param user:        the user
-    :param effect_data: effect data details
-    """
-    tavern_capacity = user.get('attr.tavern.capacity')
-    tavern_data = user.get('data.tavern')
-
-    # Check if pub is full
-    if len(tavern_data['patrons']) >= tavern_capacity:
-        # The Tavern is full. Patron cannot enter
-        return
-
-    # Generate Patron and apply user upgrade modifications
-    patron = Patron(effect_data)
-    patron_uuid = patron.adapt_to(user)
-
-    # Add Patron to patron list
-    tavern_data['patrons'][patron_uuid] = patron.get_data()
-    # Write in the new patron
-    user.update('data.tavern.patrons.' + patron_uuid, patron.get_data())
-
-    # Patron enters --> First Decision
-    patron.decision_step(user=user)
-
-
-@Event.register
-def patron_impatient(user: User, effect_data: dict):
-    """
-    Handles a `patron_impatient` event.
-    :param user:        Target User
-    :param effect_data: Effect Data
-    """
-    # Get the targeted patron
-    patron: Patron = Patron(user.get('data.tavern.patrons.' + effect_data['id']))
-
-    # Patrons leaves the queue
-    patron.leave_queue(user)
-
-    # The patron also leaves the tavern
-    patron.leave_tavern(user)
-
-
-@request_handler
-def serve_next(request_object: dict, user: User):
-    """
-    Handles a game request from the user to serve the next patron.
-    :param request_object:  Contains `action`. Can be:
-                            * `sell` to sell
-                            * `decline` to send away
-    :param user:            A user
-    """
-
-    if request_object['what_do'] == 'sell':
-        return sell_to_next(user)
-    else:
-        return decline_next(user)
-
-
-def decline_next(user: User):
-    """
-    Declines and sends back the patron in front of the queue
-    :param user:    a user
-    """
-    response = GameResponse()
-    tavern_data = user.get('data.tavern')
-    queue = tavern_data['queue']
-    if not queue:
-        # queue is empty
-        response.add_fail_msg('Noone to serve in queue.')
-        return response
-
-    next_order = queue.pop(0)
-
-    # Every queued patron has an impatience-event waiting. Make sure to remove it now
-    mongo.db.events.delete_one({
-        'target': user.get_id(),
-        'effect.patron_impatient.id': next_order['id']
-    })
-
-    user.update('data.tavern.queue', queue)
-
-    # The patron will now sit back down in the tavern
-    # They will need to decide when to leave
-    Patron(tavern_data['patrons'][next_order['id']]).schedule_next_decision(user)
-
-    response.succeess()
-    return response
-
-
-def sell_to_next(user: User):
-    """
-    Sells to the next patron in front of the queue, if possible
-    :param user:    a user
-    """
-    tavern_data = user.get('data.tavern')
-    response = GameResponse()
-
-    # Check if there's someone waiting to be served
-    if len(tavern_data['queue']) == 0:
-        response.add_fail_msg('Noone to serve in queue.')
-        return response
-
-    # Get next order in Queue
-    next_order = tavern_data['queue'][0]
-
-    # Check if enough of the required product is in storage
-    storage = user.get('data.storage.content')
-    for order in next_order['order']:
-        if storage[order['item']] < order['amount']:
-            response.add_fail_msg(f"Not enough {Item.from_id('item.' + order['item']).name()} in storage.")
-
-    if response.has_failed():
-        return response
-
-    # All Checks are passed. Serve the patron now:
-
-    # Take the order out of the queue
-    tavern_data['queue'].pop(0)
-
-    # Every queued patron has an impatience-event waiting. Make sure to remove it now
-    mongo.db.events.delete_one({
-        'target': user.get_id(),
-        'effect.patron_impatient.id': next_order['id']
-    })
-
-    # The patron will now sit back down in the tavern to have a drink.
-    # They will need to decide when to leave
-    # Also make sure the patron tracks their consumption
-    patron_to_serve = Patron(tavern_data['patrons'][next_order['id']])
-    patron_to_serve.schedule_next_decision(user)
-    patron_to_serve.add_to_tab(next_order['order'], user)
-
-    # Update all user data with the transaction result
-    user_gold = storage['gold']
-    inventory_changes = dict()
-    order_total = 0
-    for order in next_order['order']:
-        # Calculate the new user gold you're making with this transaction
-        order_total += order['amount'] * tavern_data['prices'][order['item']]
-
-        # Calculate the inventory changes
-        inventory_changes['storage.content.' + order['item']] = storage[order['item']] - order['amount']
-
-    patron_budget = tavern_data['patrons'][next_order['id']]['budget']
-    update_data = {
-        'storage.content.gold': user_gold + order_total,
-        'tavern.queue': tavern_data['queue'],
-        'tavern.patrons.' + next_order['id'] + '.budget': patron_budget - order_total
-    }
-    update_data.update(inventory_changes)
-
-    user.update('data', update_data, is_bulk=True)
-
-    # TODO: UI Updates
-    response.succeess()
-    return response
-
-
-@request_handler
-def set_price(request_object: dict, user: User):
-    """
-    For a user to change the pricing of a beer.
-    :param request_object:  Contains the request data.
-    :param user:            a user
-    """
-    response = GameResponse()
-
-    tavern_data = user.get('data.tavern')
-    prices = tavern_data['prices']
-
-    item, price = request_object['item'], int(request_object['price'])
-    old_price = prices[item]
-    if item not in prices:
-        response.add_fail_msg('ERROR - Tell Mike about this.')
-        return response
-
-    if price < 0:
-        response.add_fail_msg("You cannot charge negative prices. This is how you go out of business!")
-        return response
-
-    user.update('data.tavern.prices.' + item, price)
-
-    if old_price < price:
-        # The price has increased. Are all queued patrons cool with this?
-        for patron_order in tavern_data['queue']:
-            # Is this order relevant for the price update?
-            if any(filter(lambda o: o['item'] == item, patron_order['order'])):
-                # Generate the patron object to handle the decision
-                patron = Patron(tavern_data['patrons'][patron_order['id']])
-                patron.reconsider_order(user=user, price_change={item: price})
-
-    response.succeess()
-    return response
-
+## FRONTEND DATA
 
 @frontend_id_resolver(r'^data\.tavern\.name$')
 def normal_update_for_tavern_name(user: User, data: dict, game_id: str):
     user.frontend_update('update', data)
-
-
-@frontend_id_resolver(r'data\.tavern\.queue')
-def reload_tavern_on_queue_update(user: User, data: dict, game_id: str):
-    user.frontend_update('ui', {
-        'type': 'reload_element',
-        'element': 'tavern.queue'
-    })
 
 
 @frontend_id_resolver(r'data\.tavern\.prices')
@@ -884,30 +894,6 @@ def ignore_tavern_data(user: User, data: dict, game_id: str):
     pass  # Ignore Tavern Data. UI updates for tavern data are managed during processing logic
 
 
-@user_assertion
-def all_enqueued_have_impatient_event(user: User):
-    # Get order queue
-    queue = user.get('data.tavern.queue')
-
-    for order in queue:
-        assert mongo.db.events.count_documents({
-            'effect.patron_impatient.id': order['id']
-        }, limit=1) != 0
-
-
-@html_generator('html.tavern.queue')
-def render_patron_queue(user: User):
-    """
-    Generates up-to-date HTML that represents the patron queue.
-    :param user:    a user
-    :return:        HTML for the patron-queue
-    """
-    tavern_data = user.get('data.tavern')
-    return render_template('snippets/_patron_queue.html',
-                           patrons=tavern_data['patrons'],
-                           queue=tavern_data['queue'])
-
-
 @html_generator('html.tavern-prices')
 def render_tavern_prices(user: User):
     """
@@ -919,7 +905,48 @@ def render_tavern_prices(user: User):
                            prices=user.get('data.tavern.prices'))
 
 
+## ASSERTIONS
+
+@user_assertion
+def all_enqueued_have_impatient_event(user: User):
+    # Get order queue
+    queue = user.get('data.tavern.queue')
+
+    for order in queue:
+        assert mongo.db.events.count_documents({
+            'effect.patron_impatient.id': order['id']
+        }, limit=1) != 0
+
+
 ## Application Testing / Admin Interface
+
+
+@application_test(name="Tavern DB Cleanup")
+def tavern_db_cleanup(username: str):
+    """
+    Cleans up all tavern data for a user given by `username`.
+    All patrons will be removed from the tavern alongside all database traces.
+    """
+    response = GameResponse()
+    user = load_user(username)
+    if not user:
+        response.add_fail_msg(f"Username {username} not found.")
+
+    patrons = map(Patron, user.get('data.tavern.patrons').values())
+    mongo.db.events.delete_many({'target': username})
+
+    for patron in patrons:
+        res = mongo.db.events.delete_many({
+            'target': user.get_id(),
+            '$or': [{'effect.patron_next_step.id': patron.get_id()}, {'effect.patron_impatient.id': patron.get_id()}]
+        })
+        response.log(f"Removed {patron.name()}: {res} patron events.")
+
+    user.update('data.tavern.patrons', {})
+    response.log("Removed patrons from tavern data.")
+
+    return response
+
 
 @application_test(name='Wish List')
 def tavern_overview(username: str):

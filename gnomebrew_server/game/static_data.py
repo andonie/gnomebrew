@@ -20,6 +20,10 @@ from bisect import bisect_left
 
 
 class StaticGameObject(object):
+
+    def __init__(self, data):
+        self._data = data
+
     @staticmethod
     def from_id(game_id):
         """
@@ -60,7 +64,7 @@ class Recipe(StaticGameObject):
         Intialize the Recipe
         :param mongo_data: data stored in Mongo Database sans game and Mongo ID
         """
-        self._data = mongo_data
+        super().__init__(mongo_data)
 
     def check_and_execute(self, user) -> GameResponse:
         """
@@ -143,7 +147,6 @@ class Recipe(StaticGameObject):
                 'since': datetime.datetime.utcnow().strftime('%d %b %Y %H:%M:%S') + ' GMT',
                 'station': self._data['station']
             })
-
 
         return response
 
@@ -246,7 +249,7 @@ class Station(StaticGameObject):
     """
 
     def __init__(self, mongo_data):
-        self._data = mongo_data
+        super().__init__(mongo_data)
 
     def generate_html(self, user):
         """
@@ -280,12 +283,10 @@ class Station(StaticGameObject):
                 Event.execute_event_effect(user, effect_type=effect, effect_data=self._data['init_effect'][effect])
 
 
-
-
 class Upgrade(StaticGameObject):
 
     def __init__(self, mongo_data):
-        self._data = mongo_data
+        super().__init__(mongo_data)
 
     def apply_to(self, val, game_id: str):
         """
@@ -407,7 +408,7 @@ class Item(StaticGameObject):
     """
 
     def __init__(self, mongo_data):
-        self._data = mongo_data
+        super().__init__(mongo_data)
 
     def __str__(self):
         return f"<Item {self._data['name']} -- {self._data=}>"
@@ -474,7 +475,7 @@ class ItemCategory(StaticGameObject):
     """
 
     def __init__(self, mongo_data):
-        self._data = mongo_data
+        super().__init__(mongo_data)
 
     def __lt__(self, other):
         """
@@ -506,6 +507,15 @@ _RECIPE_LIST = list()
 _ITEM_LIST = list()
 ig_event_list = list()
 patron_order_list = list()
+
+
+
+## Managing Static Data Objects
+
+# Lookup table with fully qualified game IDs as keys for all static objects
+_static_lookup_total = dict()
+# Lookup table splittered cleanly by object class
+_static_lookup_tiered = dict()
 
 
 def _fill_from_db(col, conversion_function):
