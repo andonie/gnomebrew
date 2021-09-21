@@ -1,0 +1,22 @@
+{#
+This snippet renders a list of patrons for the user including user information and possible actions.
+Expects set variables:
+
+* `patrons` as a list of patron data.
+#}
+
+<div class="gb-patron-list">
+    {% for patron in patrons %}
+    <div class="gb-patron">
+        <div class="gb-patron-state">
+            <img class="gb-icon" src="{{ icon('') }}"
+        </div>
+        <div class="gb-patron-details">
+            <h6>{{ patron.name() }}</h6>
+        </div>
+        <div class="gb-patron-insight-button">
+            <button></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>

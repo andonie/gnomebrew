@@ -1,0 +1,114 @@
+{% extends 'snippets/_content_page.html' %}
+
+{% block scripts %}
+{% set include_interactive = True %}
+{{ super() }}
+{% endblock %}
+
+{% block ng_content %}
+<h3>Test Suites</h3>
+Execute a test suite for a target:
+
+<div class="row">
+    <div class="col"></div>
+</div>
+
+
+<div style="display:flex; flex-direction: row">
+    <h5>Routine:</h5>
+    <select class="form-select form-select-lg" aria-label="Select Routine To Execute" id="gb-admin-routine-select">
+        {% with category_lookup = GET_TEST_SUITE_CATEGORY_LOOKUP() %}
+        {% for category in category_lookup %}
+        <optgroup label="{{ category }}">
+            {% for suite in category_lookup[category] %}
+            <option {% if loop.first %}selected{% endif %} value="{{ suite.get_id() }}">{{ suite.get_name() }}</option>
+            {% endfor %}
+        </optgroup>
+        {% endfor %}
+        {% endwith %}
+    </select>
+</div>
+{% with tests = GET_TEST_SUITES_LIST() %}
+<div class="row gb-admin-test-suite-panel">
+    <div class="col">
+        <h5>Parameters:</h5>
+        <div id="gb-admin-all-parameters">
+                {% for suite in tests %}
+                <table class="gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-table-head">
+                    <tbody>
+                    {% for parameter in suite.get_parameters() %}
+                    <tr class="gb-admin-parameter {{ suite.get_id() }}-parameter">
+                        <td class="gb-parameter-name">{{ parameter }}</td>
+                        <td><input type="text" class="form-control" id="{{ suite.get_id() }}-{{ parameter }}"></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% endfor %}
+        </div>
+    </div>
+    <div class="col">
+        <h5>Description:</h5>
+        <div id="gb-admin-description">
+            {% for suite in tests %}
+            <div class="gb-admin-description-field gb-multi-list {% if loop.first %}gb-multi-visible{% endif %}" id="{{ suite.get_id() }}-description">
+                {{ suite.get_description()|safe }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+<button class="btn btn-light" onclick="execute_test(this)">Run</button>
+<script>
+
+function helper_get_selected_test_id() {
+    return $('#gb-admin-routine-select').find(':selected').prop('value');
+}
+
+function execute_test(source) {
+    var request_data = {};
+    request_data.type = 'execute_test';
+    request_data.test_id = helper_get_selected_test_id();
+    $("." + request_data.test_id + "-parameter").each(function () {
+        var parameter_name = $(this).children('.gb-parameter-name').text();
+        request_data[parameter_name] = $("#" + request_data.test_id + "-" + parameter_name).val();
+    });
+    two_way_game_request(request_data, source, "gb-admin-output-console", function(response) {
+        var output = "";
+        if (response.log != null) {
+            output = response.log + '<br/>'
+        }
+        response.log;
+        if(response.type != 'success') {
+            output += response.fail_msg;
+        }
+        console.log(response);
+        document.getElementById("gb-admin-output-console").innerHTML = output;
+        document.getElementById("gb-admin-completion-time").innerHTML = "completed in " + response.params.exec_time;
+
+    });
+}
+
+add_startup(function() {
+    $('#gb-admin-routine-select').change(function (event) {
+        $('.gb-multi-list').removeClass("gb-multi-visible");
+        var test_id = helper_get_selected_test_id();
+        console.log('fixing ' + test_id + '-parameters');
+        $('#' + test_id + '-table-head').addClass("gb-multi-visible");
+        $('#' + test_id + '-description').addClass("gb-multi-visible");
+    });
+});
+</script>
+<div id="gb-admin-output-dashboard" style="display:flex;flex-direction:row">
+    <div id="gb-admin-success-indicator"></div>
+    <div id="gb-admin-completion-time"></div>
+</div>
+<div id="gb-admin-output-console"></div>
+
+
+
+
+{% endwith %}
+{% endblock %}

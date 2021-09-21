@@ -136,6 +136,16 @@ h4 {
     color: #E7BF8B;
 }
 
+/* TABS */
+
+.gb-tab {
+    display: none;
+}
+
+.gb-active-tab {
+    display: unset;
+}
+
 /* MASONRY */
 .grid-item {
     width: 300px;

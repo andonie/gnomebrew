@@ -25,10 +25,14 @@ These config items are necessary:
 * `FONT_DIR`: Directory for fonts 
 
 
+## Database:
+
+The game relies heavily on access to a MongoDB instance containing the game data. As of now, the database is managed completely outside this project until a later stage.
+
 ## Local Deploy
 
 The most basic way to run the server locally:
 
 ```bash
-export FLASK_APP=gnomebrew_server && export GNOMEBREW_CONFIG=path/to/config/config.py && flask run
+export FLASK_APP=gnomebrew && export GNOMEBREW_CONFIG=path/to/config/config.py && flask run
 ```
