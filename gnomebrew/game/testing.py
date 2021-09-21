@@ -95,7 +95,7 @@ def execute_test(request_object: dict, user: User):
 
     start = datetime.now()
     try:
-        suite: TestSuite = _test_suites_by_category[request_object.pop('test_id')]
+        suite: TestSuite = _test_suites_by_id[request_object.pop('test_id')]
     except KeyError as e:
         response.add_fail_msg(f"Did not find the test ID:<br/>{str(e)}")
     end = datetime.now()
