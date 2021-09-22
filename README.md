@@ -23,7 +23,7 @@ These config items are necessary:
 * `STATIC_DIR`: Directory for static elements (css/js)
 * `ICO_DIR`: Icon directory with PNG files for game entities
 * `FONT_DIR`: Directory for fonts 
-
+* `DATA_DIR`: Directory for static data (e.g. used for generation of strings)
 
 ## Database:
 
