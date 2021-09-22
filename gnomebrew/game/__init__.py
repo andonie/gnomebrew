@@ -1,28 +1,28 @@
 """
 Init module
 """
-from gnomebrew import mongo
-from gnomebrew.game.util import shorten_num
-from gnomebrew.game.event import EventThread
-from gnomebrew.game.play_modules.tavern import TavernSimulationThread
-from gnomebrew.game.objects.static_object import update_static_data
+from typing import Callable
 
-## SETUP
+
+_boot_routines = list()
+
+def boot_routine(fun: Callable):
+    """
+    Decorator to mark a function that's supposed to be **executed once as Gnomebrew starts up**.
+    :param fun: A function to be executed. Must run without parameters.
+    """
+    _boot_routines.append(fun)
+    return fun
 
 # Load all Game Modules
 _game_module_names = ['gnomebrew.game.objects', 'gnomebrew.game.play_modules',
-                      'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.ig_event']
+                      'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.static_data', 'gnomebrew.game.ig_event']
 
+# Load in Game Modules
 game_modules = list(map(__import__, _game_module_names))
 
-
-# Load in static data (Recipes, Stations, etc.) from MongoDB
-update_static_data()
-
-
-# Start Event Thread
-_EVENT_THREAD = EventThread(mongo_instance=mongo)
-_TAVERN_THREAD = TavernSimulationThread(mongo_instance=mongo)
+## Execute all boot routines
+for routine in _boot_routines:
+    routine()
 
 
-## API Providing:
