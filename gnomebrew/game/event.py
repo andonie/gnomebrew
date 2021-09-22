@@ -6,6 +6,7 @@ import traceback
 from typing import Callable
 
 from gnomebrew import mongo
+from gnomebrew.game import boot_routine
 import datetime
 
 from gnomebrew.game.user import User, load_user
@@ -247,3 +248,7 @@ def ui_update(user: User, effect_data: dict, **kwargs):
     """
     user.frontend_update('ui', effect_data)
 
+
+@boot_routine
+def start_event_thread():
+    EventThread(mongo_instance=mongo)

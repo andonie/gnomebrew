@@ -3,6 +3,9 @@ This module manages the game's in-loading
 """
 from typing import Type
 from gnomebrew import mongo
+from gnomebrew.game import boot_routine
+from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.testing import application_test
 
 
 class StaticGameObject(object):
@@ -85,6 +88,7 @@ def load_on_startup(collection_name: str):
 
 # Module Logic
 
+@boot_routine
 def update_static_data():
     """
     This function causes a complete RAM update of the game's static data.
@@ -123,3 +127,13 @@ def update_static_data():
         if listener_fun is not None:
             # Listener Function exists. Execute
             listener_fun()
+
+@application_test(name='Reload Static Objects', category='Data')
+def reload_static_objects():
+    """
+    Reloads all static objects from MongoDB. Only after execution will changes in the DB take effect on static objects.
+    """
+    response = GameResponse()
+    update_static_data()
+    response.log('Static Data Updated Successfully')
+    return response
