@@ -3,6 +3,8 @@ This package contains some test routines for Gnomebrew
 """
 from typing import Callable
 
+from flask_login import current_user
+
 from gnomebrew.game.user import User, load_user
 from gnomebrew.game.util import global_jinja_fun
 from gnomebrew.play import request_handler
@@ -41,7 +43,10 @@ class TestSuite:
         return self.name
 
     def get_description(self):
-        return markdown(self.function.__doc__.replace('    ', ''))
+        docstring = self.function.__doc__
+        if not docstring:
+            docstring = f"No description available for {self.get_name()}."
+        return markdown(docstring.replace('    ', ''))
 
     def run_test(self, **kwargs) -> str:
         """
@@ -75,6 +80,7 @@ def application_test(**kwargs):
             _test_suites_by_category[category] = list()
 
         insort(_test_suites_by_category[category], suite)
+        assert suite.get_id() not in _test_suites_by_id
         _test_suites_by_id[suite.get_id()] = suite
         return fun
 
@@ -93,14 +99,15 @@ def execute_test(request_object: dict, user: User):
         response.add_fail_msg("You are not authorized to execute tests.")
         return response
 
-    start = datetime.now()
+
     try:
         suite: TestSuite = _test_suites_by_id[request_object.pop('test_id')]
     except KeyError as e:
         response.add_fail_msg(f"Did not find the test ID:<br/>{str(e)}")
-    end = datetime.now()
 
+    start = datetime.now()
     response.append_into(suite.run_test(**request_object))
+    end = datetime.now()
     response.set_parameter('exec_time', str(end-start))
 
     # No failed test means success in request
@@ -150,5 +157,28 @@ def user_assertions(username: str):
     if success:
         response.log("All Assertions were successful.")
         response.succeess()
+
+    return response
+
+
+@application_test(name='Evaluate Game ID', category='Mechanics')
+def evaluate_game_id(game_id: str, username: str):
+    """
+    Evaluates a given `game_id` on a user and returns a string representation of the result. If no `username` is given,
+    evaluates on current player. Valid IDs are for example:
+
+    * `item.gold`
+    * `data.storage.content.iron`
+    """
+    response = GameResponse()
+    if username is None or username == '':
+        user = current_user
+    else:
+        user = load_user(username)
+        if not user:
+            response.add_fail_msg(f"Username {username} not found.")
+            return response
+
+    response.log(str(user.get(game_id)))
 
     return response
