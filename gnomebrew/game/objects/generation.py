@@ -6,6 +6,8 @@ import re
 from numbers import Number
 from typing import Dict, Any, Union, Tuple, Callable
 
+import numpy
+
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.util import random_uniform
@@ -83,8 +85,6 @@ class Environment:
             self.update(key, other.variables[key])
 
 
-
-
 class Generator:
     """
     Implementation of a controllable Random Number Generator for Gnomebrew.
@@ -101,6 +101,15 @@ class Generator:
     c = 182903  # Any odd number should work
     m = 4294967296  # 2 ^ 32
     m_bit_and = m - 1  # Value used for bitwise AND to speed up modulo operations
+
+    # Other Constants used
+
+    euler_mascheroni = numpy.euler_gamma
+
+    # Calculate the first harmonic numbers 'by hand', because the approximating function is really bad
+    # for small values.
+    MAX_LOOKUP_HARMONIC_NUMBER = 15
+    harmonic_numbers_lookup = {n: sum(1 / i for i in range(1, n + 1)) for n in range(1, MAX_LOOKUP_HARMONIC_NUMBER)}
 
     def __init__(self, seed: Union[int, str], environment: Environment):
         if type(seed) == str:
@@ -137,6 +146,15 @@ class Generator:
         """
         return self.next() / Generator.m
 
+    def rand_float(self, min_value: float, max_value: float):
+        """
+        Generates a random float in given bounds.
+        :param min_value: Minimum (inclusive)
+        :param max_value: Maximum (exclusive)
+        :return:    A generated float in bounds (uniformly distributed probability)
+        """
+        return self.rand_unit() * (max_value - min_value) + min_value
+
     def rand_normal(self, **kwargs) -> float:
         """
         Generates a normally distributed variable
@@ -147,7 +165,9 @@ class Generator:
         if 'min' and 'max' in kwargs:
             median = (kwargs['min'] + kwargs['max']) / 2
             std_deviation = (kwargs['max'] - kwargs['min']) / 6
-            return self.rand_normal(median=median, deviation=std_deviation)
+            return max(min(self.rand_normal(median=median, deviation=std_deviation),
+                           kwargs['max']),
+                       kwargs['min'])
 
         u_1, u_2 = self.rand_unit(), self.rand_unit()
         res = math.sqrt(-2 * math.log(u_1)) * math.cos(2 * math.pi * u_2)
@@ -175,6 +195,39 @@ class Generator:
         random_val = self.rand_int_limited(weight_total)
         # Return the next biggest lookup value
         return reverse_lookup[min(filter(lambda v: random_val < v, reverse_lookup.keys()))]
+
+    def generate_pareto_index(self, num_choices) -> int:
+        """
+        Generates a pareto index.
+        Assuming a choice of `num_choices` different options with pareto-distributed probability (first option most
+        probable, last option least probable).
+        :param num_choices:     The total number of choices.
+        :return:                An index between `0` and `num_choices-1` (each inclusive) that represents the generated
+                                pareto-choice.
+        """
+        if num_choices < Generator.MAX_LOOKUP_HARMONIC_NUMBER:
+            # Too small to approximate with function
+            total_weight = Generator.harmonic_numbers_lookup[num_choices]
+        else:
+            # Big enough to use approximate with function
+            total_weight = Generator.euler_mascheroni + math.log(num_choices)
+        uniform_variable = self.rand_float(0, total_weight)
+        if uniform_variable > Generator.harmonic_numbers_lookup[Generator.MAX_LOOKUP_HARMONIC_NUMBER-1]:
+            # Variable is greater than the larges value in the lookup. Use approximation
+            return math.floor(math.exp(uniform_variable - Generator.euler_mascheroni))
+        else:
+            # Variable within value range of lookup table. Use it.
+            return min(filter(lambda n: uniform_variable < Generator.harmonic_numbers_lookup[n],
+                              Generator.harmonic_numbers_lookup.keys())) - 1
+
+    def choose_pareto(self, options: list):
+        """
+        Makes a choice with pareto-distribution, meaning that the earlier an element appears in the given list of
+        options, the more probable it is to be selected.
+        :param options:     I list of options to choose one from.
+        :return:            One chosen element from the list.
+        """
+        return options[self.generate_pareto_index(len(options))]
 
     # Regex to check against during string evaluations
 
@@ -205,7 +258,7 @@ class Generator:
             res += command_string[next_index:match_start]
             # Replace the match context
             gen_type = match.group()
-            gen_type = gen_type[1:len(gen_type)-1]
+            gen_type = gen_type[1:len(gen_type) - 1]
             res += self.generate(gen_type)
             next_index = match_end
         if next_index < len(command_string):
@@ -314,8 +367,6 @@ class GenerationRule(StaticGameObject):
             pass
 
 
-
-
 ## INTERFACING for generation algos:
 
 _generation_functions: Dict[str, Tuple[Callable, Any]] = dict()
@@ -351,7 +402,7 @@ def rng_test(seq_size, seed):
     response = GameResponse()
 
     if not seed or seed == '':
-        seed = 13423
+        seed = Generator.true_random_generator_seed()
     else:
         seed = int(seed)
 
@@ -361,42 +412,80 @@ def rng_test(seq_size, seed):
         seq_size = int(seq_size)
 
     gen = Generator(seed, None)
-    cnt = dict()
-    for i in range(2000000):
-        num = gen.rand_int_limited(seq_size)
-        if num not in cnt:
-            cnt[num] = 0
-        cnt[num] += 1
-    total = sum(cnt.values())
-    in_percent = {key: f"{value / total:.3%}" for key, value in cnt.items()}
+    cnt_uniform = dict()
+    cnt_normal = dict()
+    total = 2000000
+    for i in range(total):
+        num_linear = gen.rand_int_limited(seq_size)
+        if num_linear not in cnt_uniform:
+            cnt_uniform[num_linear] = 0
+        cnt_uniform[num_linear] += 1
+
+        num_normal = int(gen.rand_normal(min=0, max=seq_size))
+        if num_normal not in cnt_normal:
+            cnt_normal[num_normal] = 0
+        cnt_normal[num_normal] += 1
+
+    response.log('Uniform Distribution Results:')
+    in_percent = {key: f"{value / total:.3%}" for key, value in cnt_uniform.items()}
     for i in sorted(in_percent.keys()):
         response.log(f"{'&nbsp;' * (4 - math.floor(math.log10(i if i > 0 else 1)))}{i}: {in_percent[i]}")
+    response.log('==================================================')
+    response.log('Normal Distribution Results:')
+    in_percent = {key: f"{value / total:.3%}" for key, value in cnt_normal.items()}
+    for i in sorted(in_percent.keys()):
+        response.log(
+            f"{'&nbsp;' * (4 - math.floor(math.log10(i if i > 0 else 1)))}{i}: {in_percent[i]} ({cnt_normal[i]})")
 
     return response
 
-@application_test(name='Evaluate String', category='Mechanics')
-def evaluate_string(string: str, num_exec):
+
+@application_test(name='Pareto RNG Test', category='Mechanics')
+def pareto_test(seq_size, num_options):
     """
-    Evaluates a `string` (formatted as `Champion of <Name>|<Surname>'s Challenger`) and returns the generated result.
-    if `num_exec` is set, will generate `num_exec` times and print summary.
+    Tests the game's pareto distribution function `seq_size` times and summarizes the results.
+    If `seq_size` is empty, will perform 200000 runs
+    If `num_options` is empty, will use internal list
     """
     response = GameResponse()
-    generator = Generator(Generator.true_random_generator_seed(), Environment())
 
-    if not num_exec or num_exec == '':
-        num_exec = 1
+    if seq_size is None or seq_size == '':
+        seq_size = 200000
     else:
-        num_exec = int(num_exec)
+        seq_size = int(seq_size)
 
-    res = dict()
+    if num_options is None or num_options == '':
+        options = ['Lydan', 'Syrin', 'Ptorik', 'Joz', 'Varog', 'Gethrod', 'Hezra', 'Feron', 'Ophni', 'Colborn',
+                   'Fintis',
+                   'Gatlin', 'Jinto', 'Hagalbar', 'Krinn', 'Lenox', 'Revvyn', 'Hodus', 'Dimian', 'Paskel', 'Kontas',
+                   'Weston', 'Azamarr', 'Jather', 'Tekren', 'Jareth', 'Adon', 'Zaden', 'Eune', 'Graff', 'Tez', 'Jessop',
+                   'Gunnar', 'Pike', 'Domnhar', 'Baske', 'Jerrick', 'Mavrek', 'Riordan', 'Wulfe', 'Straus', 'Tyvrik',
+                   'Henndar', 'Favroe', 'Whit', 'Jaris', 'Renham', 'Kagran', 'Lassrin', 'Vadim', 'Arlo', 'Quintis',
+                   'Vale', 'Caelan', 'Yorjan', 'Khron', 'Ishmael', 'Jakrin', 'Fangar', 'Roux', 'Baxar', 'Hawke']
+    else:
+        options = [f"Option {i}" for i in range(int(num_options))]
 
-    for i in range(num_exec):
-        eval = generator.evaluate_string(string)
-        if eval not in res:
-            res[eval] = 0
-        res[eval] += 1
+    generator = Generator(Generator.true_random_generator_seed(), None)
+    counter = dict()
+    for option in options:
+        counter[option] = 0
 
-    for ev in res:
-        response.log(f"{ev}: {res[ev]}")
+    for n in range(seq_size):
+        selection = generator.choose_pareto(options)
+        counter[selection] += 1
+
+    in_percent = {key: f"{value / seq_size:.3%}" for key, value in counter.items()}
+    expected = {options[i]: (1 / (i + 1)) / (Generator.euler_mascheroni + math.log(len(options))) for i in
+                range(len(options))}
+    for option in options:
+        response.log(f"{option}: {in_percent[option]} [expected: {expected[option]:.3%}]({counter[option]})")
+
+    for n in range(1, 100):
+        print(f"--- n={n} ---")
+        h_n = sum(1 / i for i in range(1, n + 1))
+        approx = Generator.euler_mascheroni + math.log(n)
+        print(f"Harmonic Number: {h_n}")
+        print(f"With Formula:    {approx}")
+        print(f"Difference:      {h_n - approx}")
 
     return response
