@@ -17,7 +17,7 @@ add_startup(function() {
 });
 </script>
 <li class="navbar-item">
-    <img class="nav-link gb-link gb-icon" src="{{ url_for('get_icon', game_id='special.storage') }}" href="#" id="storage-toggle"/>
+    {{ icon('special.storage', class='nav-link gb-link gb-icon', href='#', id='storage-toggle') | safe }}
 </li>
 {% endblock %}
 

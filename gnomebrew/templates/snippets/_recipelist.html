@@ -20,7 +20,7 @@
                     {% endwith %}
                     {% endfor %}
                         <div class="gb-cost-item" title="Crafting Time">
-                            <img class="gb-icon-sm" src="{{ url_for('get_icon', game_id='special.time') }}">
+                            {{ icon('special.time', class="gb-icon-sm") | safe }}
                             {{ recipe_data.base_time }} s
                         </div>
                     {% if recipe_data.slots != 1 %}

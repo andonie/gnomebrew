@@ -9,7 +9,7 @@ Expects set variables:
     {% for patron in patrons %}
     <div class="gb-patron">
         <div class="gb-patron-state">
-            <img class="gb-icon" src="{{ icon('') }}"
+            {{ icon('') | safe }}
         </div>
         <div class="gb-patron-details">
             <h6>{{ patron.name() }}</h6>

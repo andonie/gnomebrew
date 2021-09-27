@@ -6,8 +6,8 @@
     <thead>
         <tr>
             <th scope="col"></th>
-            <th scope="col" title="Stock"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.stock') }}"></th>
-            <th scope="col" title="Cost"><img class="gb-icon" src="{{ url_for('get_icon', game_id='special.cost') }}"></th>
+            <th scope="col" title="Stock">{{ icon('special.stock') | safe }}</th>
+            <th scope="col" title="Cost">{{ icon('special.cost') | safe }}</th>
             <th scope="col">Buy</th>
         </tr>
     </thead>
@@ -15,7 +15,7 @@
         {% for offer in offers %}
         {% with item = current_user.get('item.' + offer).get_json() %}
         <tr>
-            <td><img title="{{ item.name }}" class="gb-icon" src="{{ url_for('get_icon', game_id=item.game_id) }}"></td>
+            <td>{{ icon('item.' + offer) | safe }}</td>
             <td><span id="data.market.inventory.{{ offer }}.stock">{{ shorten_num(offers[offer].stock) }}</span></td>
             <td><span id="data.market.inventory.{{ offer }}.price">{{ shorten_cents(offers[offer].price) }}</span></td>
             <td>

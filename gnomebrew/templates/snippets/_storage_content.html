@@ -19,7 +19,7 @@
 <div class="gb-storage-category-content collapse show" id="it_cat-{{ item_category.get_minimized_id() }}">
     {% for item in category_table[item_category] %}
     <div class="gb-storage-item" title="{{ item.description() }}" data-content="{{ item.name() }}">
-        <img class="gb-icon" title="{{ item.name() }}" src="{{ url_for('get_icon', game_id=item.get_value('game_id')) }}">
+        {{ icon(item.get_id()) | safe }}
         <div class="gb-storage-amount" id="data.storage.content.{{ item.get_minimized_id() }}">{{ shorten_num(category_table[item_category][item]) }}</div>
     </div>
     {% endfor %}

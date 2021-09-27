@@ -141,14 +141,3 @@ def format_markdown(input: str) -> str:
     :return:        Output string formatted as HTML
     """
     return markdown(input)
-
-
-@global_jinja_fun
-def icon(game_id: str):
-    """
-    Wraps `url_for` specified for game icons since it's used all over the place and makes the code more readable.
-    :param game_id: An entity ID
-    :return:
-    """
-    return url_for('get_icon', game_id=game_id)
-

@@ -8,7 +8,7 @@
 
 <div class="gb-tab-buttons">
     <button data-target="gb-tavern-patrons">Patrons</button>
-    <button data-target="gb-tavern-prices"><img src="{{ icon('special.cost') }}"></button>
+    <button data-target="gb-tavern-prices">{{ icon('special.cost') | safe }}</button>
 </div>
 <div class="gb-tab-pane">
     <div class="gb-tab gb-active-tab" id="gb-tavern-patrons">

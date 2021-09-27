@@ -15,7 +15,7 @@ You gained {% if effect_data.values()|length > 1 %}some items{% else %}an item{%
 <table class="gb-table">
 {% with item_object = current_user.get('item.' + item_name) %}
 <tr class="gb-delta-inventory" title="{{ item_object.description() }}">
-    <td><img title="{{ item_object.name() }}" src="{{ url_for('get_icon', game_id=item_object.get_id()) }}" class="gb-icon"></td>
+    <td>{{ icon(item_object.get_id()) | safe }}</td>
     <td><div class="gb-delta-inventory-data">{{ shorten_num(effect_data[item_name]) }}</div></td>
 </tr>
 </table>
