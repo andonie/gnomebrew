@@ -1,12 +1,18 @@
+import logging
+
 from flask import Flask
 from flask_login import LoginManager
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
+import logging
 
 # Start App
 app = Flask(__name__)
-socketio = SocketIO(app)
+
+# SocketIO Setup
+socketio = SocketIO(app, logger=False)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 # Load Configuration
 app.config.from_envvar('GNOMEBREW_CONFIG')
@@ -28,4 +34,3 @@ import gnomebrew.index
 import gnomebrew.play
 
 import gnomebrew.game
-
