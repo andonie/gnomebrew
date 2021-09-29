@@ -27,7 +27,7 @@ class Station(StaticGameObject):
 
     def get_base_value(self, attr):
         """
-        Used for `attr` evaluation. Technically this method is redundant since it's equivalent to `get_value` in
+        Used for `attr` evaluation. Technically this method is redundant since it's equivalent to `get_static_value` in
         `StaticGameObject`. It stays in the code for now in case the `attr` evaluation gets more fancy.
         """
         assert self._data[attr]

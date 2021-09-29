@@ -65,6 +65,8 @@ class GameResponse(object):
         Adds to the log message of this game response.
         :param log: A string to be added to the log.
         """
+        # Clean Up log for view:
+        log = log.replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>')
         if 'log' in self._data:
             self._data['log'] += '<br/>' + log
         else:

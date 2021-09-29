@@ -206,7 +206,7 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
             # The new item might be orderable. In that case --> Add it to the price list
             item_object = StaticGameObject.from_id('item.' + material)
             if item_object.is_orderable():
-                inventory_update['tavern.prices.' + material] = item_object.get_value('base_value')
+                inventory_update['tavern.prices.' + material] = item_object.get_static_value('base_value')
         elif material == 'gold':
             # Gold is an exception and can grow to infinity always:
             inventory_update['storage.content.' + material] = user_inventory[material] + effect_data[material]

@@ -8,7 +8,7 @@ Requires these variables set:
         <div class="modal-content">
             <div class="modal-header">
                 {% block event_header %}
-                <h4 class="modal-title">{{ event.get_value('title') }}</h4>
+                <h4 class="modal-title">{{ event.get_static_value('title') }}</h4>
                 {% if not event.has_inputs() %}
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>

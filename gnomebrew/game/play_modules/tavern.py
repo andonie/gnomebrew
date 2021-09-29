@@ -219,7 +219,7 @@ class Patron(Person):
                     thirst > 0 and \
                     wish['demand'] >= 1 and \
                     wish['desire'] > desire_threshold:
-                orderable_data = wish['item'].get_value('orderable')
+                orderable_data = wish['item'].get_static_value('orderable')
                 # I want the most possible of this limited by:
                 # a) Budget
                 # b) Thirst
@@ -278,7 +278,7 @@ class Patron(Person):
         if item_name in self._data['tab']:
             # This item has already been ordered. Apply saturation factor
             return self._saturation_factor_formula(self._data['tab'][item_name],
-                                                   orderable_item.get_value('orderable')['saturation_speed'] * user.get(
+                                                   orderable_item.get_static_value('orderable')['saturation_speed'] * user.get(
                                                        'attr.tavern.saturation_factor', default=1))
         else:
             # Not ordered this yet. Factor = 1
@@ -409,7 +409,7 @@ class Patron(Person):
         :return:                  A whole number between 0 and positive infinity defining the maximum desired amount
                                   of an item this patron would like next, taking into account variables and environment.
         """
-        orderable_data = orderable_item.get_value('orderable')
+        orderable_data = orderable_item.get_static_value('orderable')
         personality_adjust = kwargs['personality_adjust'] if 'personality_adjust' in kwargs else \
             1 + orderable_item.personality_adjust(self._data['personality']) * user.get(
                 'attr.tavern.personality_flex', default=1)

@@ -20,12 +20,6 @@ class Item(StaticGameObject):
     def __str__(self):
         return f"<Item {self._data['name']} -- {self._data=}>"
 
-    def name(self):
-        return self._data['name']
-
-    def description(self):
-        return self._data['description']
-
     def is_orderable(self):
         """
         Returns `True` if patrons can order this item.
@@ -143,11 +137,10 @@ def format_player_storage(storage_data: dict):
         if item == 'gold':
             # Gold is special case. Ignore
             continue
-        print(f"{Item=}")
         item_object: Item = Item.from_id(f"item.{item}")
         main_category: ItemCategory = next(filter(lambda cat: cat.is_main_category(),
                                                   map(lambda cat_str: ItemCategory.from_id('it_cat.' + cat_str),
-                                                      item_object.get_value('categories'))))
+                                                      item_object.get_static_value('categories'))))
         if main_category not in to_be_sorted:
             to_be_sorted[main_category] = dict()
         to_be_sorted[main_category].update({item_object: storage_data[item]})

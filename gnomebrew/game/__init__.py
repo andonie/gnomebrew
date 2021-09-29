@@ -3,8 +3,8 @@ Init module
 """
 from typing import Callable
 
-
 _boot_routines = list()
+
 
 def boot_routine(fun: Callable):
     """
@@ -14,15 +14,15 @@ def boot_routine(fun: Callable):
     _boot_routines.append(fun)
     return fun
 
+
 # Load all Game Modules
-_game_module_names = ['gnomebrew.game.objects', 'gnomebrew.game.play_modules',
-                      'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.static_data', 'gnomebrew.game.ig_event']
+_game_module_names = ['gnomebrew.game.objects', 'gnomebrew.game.play_modules', 'gnomebrew.game.objects.world',
+                      'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.static_data',
+                      'gnomebrew.game.ig_event']
 
 # Load in Game Modules
 game_modules = list(map(__import__, _game_module_names))
 
-## Execute all boot routines
+# Execute all boot routines
 for routine in _boot_routines:
     routine()
-
-

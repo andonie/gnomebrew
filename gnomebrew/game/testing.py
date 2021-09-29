@@ -104,6 +104,7 @@ def execute_test(request_object: dict, user: User):
         suite: TestSuite = _test_suites_by_id[request_object.pop('test_id')]
     except KeyError as e:
         response.add_fail_msg(f"Did not find the test ID:<br/>{str(e)}")
+        return response
 
     start = datetime.now()
     response.append_into(suite.run_test(**request_object))
@@ -179,6 +180,7 @@ def evaluate_game_id(game_id: str, username: str):
             response.add_fail_msg(f"Username {username} not found.")
             return response
 
-    response.log(str(user.get(game_id)))
+    result = str(user.get(game_id))
+    response.log(result)
 
     return response

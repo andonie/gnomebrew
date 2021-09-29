@@ -1,10 +1,9 @@
 """
 This module describes and generates people in Gnomebrew.
 """
-
-from gnomebrew.game.objects.generation import generator_logic, Generator, GeneratedGameObject
-
-MIN = 15
+from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects.generation import generation_type, Generator, GeneratedGameObject
+from gnomebrew.game.testing import application_test
 
 
 class Person(GeneratedGameObject):
@@ -15,14 +14,20 @@ class Person(GeneratedGameObject):
     def __init__(self, data: dict):
         self._data = data
 
+    _race_postfixes = {
+        'human': 'light',
+        'dwarf': 'dark',
+        'orc': 'green',
+        'elf': 'light',
+        'half_elf': 'light'
+    }
 
     def get_styling_postfix(self):
         """
         :return: Returns a postfix (e.g. 'light', 'dark', 'green') to be used for state icons that are sensitive to
                 different person.
         """
-
-
+        return Person._race_postfixes[self._data['race']]
 
     def get_id(self):
         """
@@ -33,13 +38,11 @@ class Person(GeneratedGameObject):
     def get_data(self):
         return self._data
 
-
     def name(self):
         return self._data['name']
 
 
-
-@generator_logic(gen_type='Person', ret_type=Person)
+@generation_type(gen_type='Person', ret_type=Person)
 def generate_person(gen: Generator):
     """
     Generates a person.
@@ -47,19 +50,19 @@ def generate_person(gen: Generator):
     :return:    The generated Person.
     """
     data = dict()
-    # Generate a gender
+    # Generate
     data['race'] = gen.generate('Race')
     data['gender'] = gen.generate('Gender')
-    data['name'] = gen.generate('PName')
+    data['name'] = gen.generate('Person Name')
     # Budget is standardized independent of upgrade status of user. Budget will be modified upon patron entry
     # data['budget'] = random_normal(min=MIN, max=100)
     data['personality'] = gen.generate('Personality')
     return Person(data)
 
 
-@generator_logic(gen_type='Gender', ret_type=str)
+@generation_type(gen_type='Gender', ret_type=str)
 def generate_gender(gen: Generator):
-    if gen.get('Race') == 'warforged':
+    if gen.get_env_var('Race') == 'warforged':
         return 'nonbinary'
     choices = {
         'male': 498,
@@ -69,7 +72,7 @@ def generate_gender(gen: Generator):
     return gen.choose(choices)
 
 
-@generator_logic(gen_type='Personality', ret_type=dict)
+@generation_type(gen_type='Personality', ret_type=dict)
 def generate_personality(gen: Generator):
     personality = dict()
     personality['extraversion'] = gen.rand_normal(min=-1, max=1)
@@ -88,6 +91,24 @@ _RACE_BASE_CHOICES = {
     'orc': 7
 }
 
-@generator_logic(gen_type='Race', ret_type=str)
+
+@generation_type(gen_type='Race', ret_type=str)
 def generate_race(gen: Generator):
-    return gen.choose(gen.get('Prevalent People', default=_RACE_BASE_CHOICES))
+    return gen.choose(gen.get_env_var('Prevalent People', default=_RACE_BASE_CHOICES))
+
+
+
+
+@application_test(name='Generate People', context='Generation')
+def generate_many_people(seq_size):
+    """
+    Generates `seq_size` (default=200) people and prints the results.
+    """
+    response = GameResponse()
+
+    if seq_size is None or seq_size == '':
+        seq_size = 200
+    else:
+        seq_size = int(seq_size)
+
+    return response

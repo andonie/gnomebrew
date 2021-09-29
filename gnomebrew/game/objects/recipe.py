@@ -191,7 +191,7 @@ class Recipe(StaticGameObject):
         :param upgrade: an upgrade
         :return:    `True` if this recipe is unlocked by this upgrade
         """
-        return False if 'requirements' not in self._data else upgrade.get_value('game_id') in self._data['requirements']
+        return False if 'requirements' not in self._data else upgrade.get_static_value('game_id') in self._data['requirements']
 
     def describe_outcome(self):
         """
@@ -226,7 +226,7 @@ class Recipe(StaticGameObject):
         """
         recipe_lookup = dict()
         for recipe in StaticGameObject.get_all_of_type('recipe').values():
-            station_name = recipe.get_value('station')
+            station_name = recipe.get_static_value('station')
             if station_name not in recipe_lookup:
                 recipe_lookup[station_name] = list()
             recipe_lookup[station_name].append(recipe)

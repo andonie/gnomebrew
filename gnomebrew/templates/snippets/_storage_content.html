@@ -4,7 +4,7 @@
 {% for item_category in category_table %}
 <div class="gb-storage-category" data-toggle="collapse" data-target="#it_cat-{{ item_category.get_minimized_id() }}">
     <div class="st-cat-indicator" id="col-ind-{{ item_category.get_minimized_id() }}">v</div>
-    <div>{{ item_category.get_value('name') }}</div>
+    <div>{{ item_category.get_static_value('name') }}</div>
     <script>
     add_startup(function() {
         $('#it_cat-{{ item_category.get_minimized_id() }}').on("hide.bs.collapse", function() {

@@ -36,3 +36,8 @@ The most basic way to run the server locally:
 ```bash
 export FLASK_APP=gnomebrew && export GNOMEBREW_CONFIG=path/to/config/config.py && flask run
 ```
+
+
+## Disclaimers
+
+A list of data sources can be found in `data/sources.md`.

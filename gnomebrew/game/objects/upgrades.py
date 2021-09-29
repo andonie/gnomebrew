@@ -120,7 +120,7 @@ class Upgrade(StaticGameObject):
 
         # Every Station with a recipe that is unlocked by this upgrade is to be updated
         global _RECIPE_LIST
-        for station in map(lambda r: r.get_value('station'),
+        for station in map(lambda r: r.get_static_value('station'),
                            filter(lambda recipe: recipe.unlocked_by_upgrade(self), _RECIPE_LIST)):
             stations_to_update.add(station)
 
