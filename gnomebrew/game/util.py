@@ -6,7 +6,7 @@ import random
 
 from numpy.random import default_rng
 from gnomebrew import app
-from typing import Callable
+from typing import Callable, List
 from markdown import markdown
 from flask import url_for
 
@@ -132,7 +132,6 @@ def shorten_cents(val) -> str:
     return shorten_num(val / 100)
 
 
-
 @global_jinja_fun
 def format_markdown(input: str) -> str:
     """
@@ -141,3 +140,28 @@ def format_markdown(input: str) -> str:
     :return:        Output string formatted as HTML
     """
     return markdown(input)
+
+
+@global_jinja_fun
+def transpose_matrix(matrix: List[List]) -> List[List]:
+    """
+    Transposes a matrix formatted as a list of lists.
+    :param matrix:  A list of list that's expected to behave as a matrix, i.e. every list on the second layer is
+                    expected to have the same length.
+    :return:        A transposed version of this matrix, i.e. `matrix[x][y] = result[y][x]` for all `x` and `y`
+    """
+    return [[matrix[x][y] for x in range(len(matrix))] for y in range(len(matrix[0]))]
+
+
+@global_jinja_fun
+def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
+    """
+    Shifts a matrix.
+    :param matrix:  A list of list that's expected to behave as a matrix, i.e. every list on the second layer is
+                    expected to have the same length.
+    :param d_x:     How much to shift matrix in X direction.
+    :param d_y:     How much to shift matrix in Y direction.
+    :return:        A shifted version of `matrix`. Values that are shifted beyond the limits of the matrix will rotate
+                    around in modulo fashion.
+    """
+    return [[matrix[(x + d_x) % len(matrix)][(y + d_y) % len(matrix[0])] for y in range(len(matrix[0]))] for x in range(len(matrix))]
