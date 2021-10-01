@@ -17,6 +17,20 @@ h4 {
     font-size: 0.9em;
 }
 
+/* IMAGES */
+
+.gb-icon {
+    max-width: 40px;
+    margin: 5px;
+    min-width: 32px;
+    image-rendering: crisp-edges;
+}
+
+.gb-icon-sm {
+    width: 16px;
+    image-rendering: crisp-edges;
+}
+
 .navbar .gb-brand {
     font-family: 'Press Start 2P';
     color: #A63E42;

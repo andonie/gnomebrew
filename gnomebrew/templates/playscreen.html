@@ -24,7 +24,7 @@ add_startup(function() {
 {% block sidebar_outer %}
 <div class="gb-sidebar sb-toggle" id="gb-sidebar">
     {% block sidebar %}
-    {{ current_user.get('html.storage', game_data=game_data)|safe }}
+    {{ current_user.get('html.station.storage', game_data=game_data)|safe }}
     {% endblock %}
 </div>
 {% endblock %}
@@ -41,10 +41,10 @@ add_startup(function() {
     {% endif %}
 </div>
 {% with user_stations = current_user.get_unlocked_station_list(),
-        slots=current_user.get('allslots') %}
+        slots=current_user.get('slots._all') %}
 <div class="grid" id="station-grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 300, "gutter": 5}'>
-    {% for station in user_stations if station != 'storage' %}
-    {{ current_user.get('html.' + station, slots=slots, game_data=game_data)|safe }}
+    {% for station in user_stations if not has_station_special_ui(station) %}
+    {{ current_user.get('html.station.' + station, slots=slots, game_data=game_data)|safe }}
     {% endfor %}
 </div>
 {% endwith %}

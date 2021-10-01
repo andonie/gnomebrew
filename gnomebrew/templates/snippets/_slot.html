@@ -1,0 +1,21 @@
+{#
+ # Renders one slot
+ # expects variable `slot` to be set.
+ #}
+<div class="slot-ext"
+     {% if slot.state == 'free' %}
+     data-state="free"
+     data-due=""
+     data-since=""
+     {% else %}
+     data-state="occupied"
+     data-due="{{ slot.due.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
+     data-since="{{ slot.since.strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"
+     {% endif %}
+>
+    <div class="slot-bar"></div>
+    <div class="slot-desc">
+        <div class="slot-result">{% if slot.state == 'occupied' %}{{ icon(slot.recipe, class='gb-icon-sm') | safe }}{% endif %}</div>
+        <div class="slot-timer">...</div>
+    </div>
+</div>

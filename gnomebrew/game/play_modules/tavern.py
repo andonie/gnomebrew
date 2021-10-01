@@ -6,6 +6,7 @@ import threading
 import datetime
 import time
 from math import floor, ceil, log
+from os.path import join
 from typing import Callable
 
 from flask import render_template
@@ -857,13 +858,13 @@ def ignore_tavern_data(user: User, data: dict, game_id: str):
 
 
 @html_generator('html.tavern-prices')
-def render_tavern_prices(user: User):
+def render_tavern_prices(game_id: str, user: User, **kwargs):
     """
     Generates up-to-date HTML that represents the tavern's current pricing list
     :param user:    a user
     :return:        HTML for pricing list
     """
-    return render_template('snippets/_tavern_price_list.html',
+    return render_template(join('snippets', '_tavern_price_list.html'),
                            prices=user.get('data.tavern.prices'))
 
 

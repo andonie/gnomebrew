@@ -1,6 +1,11 @@
+from os.path import join
+
+from flask import render_template
+
 from gnomebrew.game.event import Event
 from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
-from gnomebrew.game.user import User, get_resolver
+from gnomebrew.game.user import User, get_resolver, html_generator
+from gnomebrew.game.util import global_jinja_fun
 
 
 @get_resolver('station')
@@ -48,6 +53,12 @@ class Station(StaticGameObject):
             for effect in self._data['init_effect']:
                 Event.execute_event_effect(user, effect_type=effect, effect_data=self._data['init_effect'][effect])
 
+    def has_slots(self) -> bool:
+        """
+        :return: `True`, if this station has slots to calcuate for. Otherwise `False`.
+        """
+        return 'slots' in self._data
+
 
 @Event.register_effect
 def add_station(user: User, effect_data: dict, **kwargs):
@@ -65,3 +76,38 @@ def add_station(user: User, effect_data: dict, **kwargs):
         'type': 'add_station',
         'station': station.get_minimized_id()
     })
+
+
+@html_generator(base_id='html.station', is_generic=True)
+def generate_station_html(game_id: str, user: User, **kwargs):
+    """
+    Generates HTML for a station in game.
+    :param game_id: An Id starting with 'html.station'
+    :param user:    A user
+    :return:        Most appropriate HTML rendering of the station.
+    """
+    splits = game_id.split('.')
+    if 'game_data' not in kwargs:
+        # Provide as much game data as necessary
+        kwargs['game_data'] = {splits[1]: user.get(f"data.{splits[2]}")}
+    if 'station' not in kwargs:
+        kwargs['station'] = Station.from_id(f"station.{splits[2]}")
+        print(kwargs['station'])
+    if 'slots' not in kwargs:
+        # Also provide minimal slot info
+        if kwargs['station'].has_slots():
+            kwargs['slots'] = {splits[2]: user.get(f'slots.{splits[2]}')}
+        else:
+            kwargs['slots'] = dict()
+    res = render_template(join("stations", splits[2] + ".html"), **kwargs)
+    return res
+
+
+@global_jinja_fun
+def has_station_special_ui(station_name: str) -> bool:
+    """
+    Jinja Utility. Checks if a given station has a special position withing Gnomebrew's UI.
+    :param station_name:    A simple station name, e.g. 'well'
+    :return:                `True`, if this station has a special role within Gnomebrew's UI.
+    """
+    return 'special_ui' in Station.from_id(f"station.{station_name}").get_json()

@@ -13,7 +13,7 @@
     <div class="description-value" id="data.storage.content.gold">{{ shorten_cents(game_data.storage.content.gold) }}</div>
 </div>
 <div class="description">
-    <div class="descriptor">{{ icon('attr.storage_capacity') | safe }}</div>
+    <div class="descriptor">{{ icon('attr.storage.max_capacity') | safe }}</div>
     <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
 <input type="text" id="storage-filter" placeholder="Filter Storage">

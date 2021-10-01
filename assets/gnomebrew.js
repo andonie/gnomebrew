@@ -5,6 +5,7 @@ function animate_whole_ui(element) {
         animate_countdown(this);
     });
     $(element).find('.slot-ext').each(function(index){
+        console.log('animating ' + this)
         if(this.dataset.state === 'occupied') {
             animate_slot(this);
         }
@@ -123,7 +124,7 @@ function update_time_difference(success_callback) {
 }
 
 function reload_station(station_name) {
-    $.post('/play/game_id/html.' + station_name).done(function(response) {
+    $.post('/play/game_id/html.station.' + station_name).done(function(response) {
         station_element = document.getElementById('station.' + station_name);
         //Parse Response to DOM and retrieve innerHTML
         var outer = document.createElement('div');
@@ -140,7 +141,7 @@ function reload_element(element_name) {
     $.post('/play/game_id/html.' + element_name).done(function(response) {
         element_to_reload = document.getElementById(element_name);
         element_to_reload.innerHTML = response;
-        animate_whole_ui(element_name);
+        animate_whole_ui(element_to_reload);
         $('.grid').masonry();
     }).fail(function(response){
         global_error('Error while connecting to server!');
@@ -149,7 +150,7 @@ function reload_element(element_name) {
 
 function add_station(station_name) {
     console.log('adding station: ' + station_name);
-    $.post('/play/game_id/html.' + station_name).done(function(response) {
+    $.post('/play/game_id/html.station.' + station_name).done(function(response) {
         //$('#station-grid').append(response);
         //$('.grid').masonry();
         $('#station-grid').append(response);

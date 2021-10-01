@@ -1,3 +1,4 @@
+from os.path import join
 from typing import Callable
 import re
 
@@ -154,7 +155,7 @@ class IngameEvent(StaticGameObject):
         Returns HTML code for a modal DIV (not shown yet) that can be used to display the event to the user.
         :return:    HTML code for a modal DIV for this event.
         """
-        return render_template('/ig_event/_event_modal.html',
+        return render_template(join('ig_event', '_event_modal.html'),
                                event=self)
 
     def render_input_html(self):
@@ -168,7 +169,7 @@ class IngameEvent(StaticGameObject):
             return ""
         html_code = ""
         for index, input_item in enumerate(self._data['content']['input']):
-            html_code += render_template('ig_event/inputs/' + input_item['type'] + ".html",
+            html_code += render_template(join('ig_event', 'inputs', input_item['type'] + ".html"),
                                          input_data=input_item,
                                          id=index)
         return html_code
@@ -181,7 +182,7 @@ class IngameEvent(StaticGameObject):
         """
         html_code = ""
         for effect in self._data['effect']:
-            html_code += render_template(f'ig_event/effects/{effect}.html',
+            html_code += render_template(join('ig_event', 'effects', f'{effect}.html'),
                                          effect_data=self._data['effect'][effect])
         return html_code
 
@@ -424,7 +425,7 @@ def get_ig_event(game_id: str, user):
 
 
 @html_generator('html.ingame_event.next')
-def display_next_event_if_applicable(user: User) -> str:
+def display_next_event_if_applicable(game_id: str, user: User, **kwargs) -> str:
     """
     Renders and returns HTML for the next event in the ingame-event-queue, if applicable.
     If there is no ingame-event, returns an empty string.

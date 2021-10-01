@@ -1,6 +1,7 @@
 """
 Manages User Data for the game
 """
+from os.path import join
 from typing import Callable
 
 from gnomebrew import mongo, login_manager, socketio
@@ -16,7 +17,8 @@ _UPDATE_RESOLVERS = dict()
 _UPDATE_LISTENERS = dict()
 _USER_ASSERTIONS = list()
 _FRONTEND_DATA_RESOLVERS = dict()
-_HTML_GENERATOR_RESOLVERS = dict()
+_HTML_DIRECT_IDS = dict()
+_HTML_ID_RULES = dict()
 _USR_CACHE = dict()
 
 
@@ -34,6 +36,7 @@ def get_resolver(type: str):
 
     def wrapper(fun: Callable):
         _GAME_ID_RESOLVERS[type] = fun
+        return fun
 
     return wrapper
 
@@ -113,18 +116,22 @@ def frontend_id_resolver(game_id_regex):
     return wrapper
 
 
-def html_generator(html_id):
+def html_generator(base_id, is_generic=False):
     """
     Registers a resolver for HTML code.
-    :param html_id:     The ID this html generator will generate HTML for
+    :param is_generic:  if this is `True`, will call for any call of `html.base_id.*` instead of only `hmtl.base_id`
+    :param base_id:     The ID this html generator will generate HTML for
     :return: The wrapper for the function that will cover the `html_id`. Expects a function that has a `user: User`
-            parameter.
+            parameter and a game_id kwarg.
     """
 
     def wrapper(fun: Callable):
-        global _HTML_GENERATOR_RESOLVERS
-        assert html_id not in _HTML_GENERATOR_RESOLVERS
-        _HTML_GENERATOR_RESOLVERS[html_id] = fun
+        global _HTML_DIRECT_IDS
+        assert base_id not in _HTML_DIRECT_IDS
+        _HTML_DIRECT_IDS[base_id] = dict()
+        _HTML_DIRECT_IDS[base_id]['fun'] = fun
+        _HTML_DIRECT_IDS[base_id]['generic'] = is_generic
+        return fun
 
     return wrapper
 
@@ -357,81 +364,22 @@ def data(user: User, game_id: str, **kwargs):
     return res
 
 
-@get_resolver('slots')
-def slots(game_id: id, user: User, **kwargs):
-    """
-    Calculates the amount of **available** slots for a station:
-
-    `slots.well = attr.well.slots - [currently occupied slots based on event queue]`
-    :param game_id:       e.g. `attr.slots.well`
-    :return:              The amount of currently free slots.
-    """
-    splits = game_id.split('.')
-    assert splits[0] == 'slots' and len(splits) == 2
-
-    # Available Slots = Max Slots - Currently Taken Slots
-    max_slots = user.get('attr.' + splits[1] + '.slots')
-    currently_taken = next(mongo.db.events.aggregate([{'$match': {
-        'target': user.username,
-        'station': splits[1],
-        'due_time': {'$gt': datetime.utcnow()}
-    }}, {'$group': {'_id': '', 'slots': {'$sum': '$slots'}}}]), None)
-    if currently_taken:
-        # Request had a result!
-        return max_slots - currently_taken['slots']
-    return max_slots
-
-
 @get_resolver('html')
 def html(game_id: str, user: User, **kwargs):
     splits = game_id.split('.')
-    if game_id in _HTML_GENERATOR_RESOLVERS:
-        return _HTML_GENERATOR_RESOLVERS[game_id](user=user)
-    elif len(splits) == 2:
-        # Prototypical Case: Reload the entire station
-        return render_template("stations/" + splits[1] + ".html",
-                               station=user.get('station.' + splits[1]).get_json(),
-                               **kwargs)
+    if game_id in _HTML_DIRECT_IDS:
+        # Most simple case. Direct ID is registered
+        return _HTML_DIRECT_IDS[game_id]['fun'](game_id=game_id, user=user, **kwargs)
+    # No direct match. Check if any generic-type rules match
+    rule_matches = [html_res_data['fun']
+                       for html_base, html_res_data in _HTML_DIRECT_IDS.items()
+                       if html_res_data['generic'] and game_id.startswith(html_base)]
+    if not rule_matches:
+        raise Exception(f"ID {game_id} can not be resolved with registered resolvers.")
     else:
-        raise KeyError(f"This HTML request {game_id} was unkown.")
+        # Arbitrarily execute the first match. There should only be one match in this list in any case.
+        return rule_matches[0](game_id=game_id, user=user, **kwargs)
 
-
-@get_resolver('allslots')
-def allslots(game_id: str, user: User):
-    """
-    Get ALL current slot data in comprehensive dict format.
-    :param game_id: 'allslots' nothing else allowed
-    :param user:    Executing user
-    :return:        dict styled like this:
-    ```
-    {
-        well: [ (% eta of slot 1 %), 'free' ],
-        brewery: [ (% eta of slot 1 %), (% eta of slot 2 %), 'free' ],
-        (% etc. etc. %)
-    }
-    ```
-    """
-
-    ret = dict()
-    slot_data = {x['_id']: x['etas'] for x in mongo.db.events.aggregate([{'$match': {
-        'target': user.username,
-        'due_time': {'$gt': datetime.utcnow()}
-    }}, {'$group': {'_id': '$station', 'etas': {'$push': {
-        'due': '$due_time',
-        'since': '$since'
-    }}}}])}
-
-    for _station in mongo.db.users.find_one({"username": user.username},
-                                            {'data': 1, '_id': 0})['data']:
-        max_slots = user.get('attr.' + _station + '.slots', default=0)
-        if max_slots:
-            # _station is slotted. Add the necessary input to return value
-            if _station in slot_data:
-                ret[_station] = slot_data[_station] + (['free'] * (max_slots - len(slot_data[_station])))
-            else:
-                ret[_station] = ['free'] * max_slots
-
-    return ret
 
 
 @update_resolver('data')

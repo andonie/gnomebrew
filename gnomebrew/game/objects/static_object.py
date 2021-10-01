@@ -24,7 +24,7 @@ class StaticGameObject(object):
     def __init__(self, data):
         self._data = data
 
-    def get_json(self):
+    def get_json(self) -> dict:
         return self._data
 
     def get_static_value(self, key: str):
@@ -58,7 +58,7 @@ class StaticGameObject(object):
         return self._data['description']
 
     @staticmethod
-    def from_id(game_id):
+    def from_id(game_id) -> 'StaticGameObject':
         """
         Returns the respective station from game_id
         :param game_id: The stations game_id

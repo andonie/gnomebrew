@@ -49,28 +49,6 @@ function shorten_time(val) {
 
 /* LOADING BAR */
 
-// Called when a UI update requires a slot being occupied
-function occupy_slot(response) {
-    var slot_num = 1;
-    while(true) {
-        var slot = document.getElementById(response.station + '-slot-' + slot_num);
-        if(slot==null) {
-            error_msg('station.' + response.station + '-warning', 'I did not manage to find a free slot. This should not have happened');
-            break;
-        }
-        //Check if slot is free
-        if(slot.dataset.state === 'free') {
-            //Slot is free, we can fill it.
-            slot.dataset.due = response.due;
-            slot.dataset.since = response.since;
-            slot.dataset.state = 'occupied';
-            animate_slot(slot);
-            break;
-        }
-        slot_num++;
-    }
-}
-
 // Called when a UI update requires a duetime being updated
 function animate_due_time(response) {
     console.log('Animating duetime: ' + response)
@@ -79,18 +57,20 @@ function animate_due_time(response) {
     animate_countdown(target);
 }
 
-// Animates a slot, assuming data values have been set correctly. Input is local system time
+// Animates a slot, assuming data values have been set correctly.
 function animate_slot(slot) {
     var due_time_server = Date.parse(slot.dataset.due);
     var since_time_server = Date.parse(slot.dataset.since);
-    var progress_bar = slot.children[0]; // We know the location
-    var progress_desc = slot.children[1];
+    var progress_bar = slot.children[0]; // We know the location within HTML
+    var progress_desc = slot.children[1].children[1];
+    var icon = slot.children[1].children[0]
     var animation = setInterval(function() {
         var now = Date.now() - time_difference;
         if(now > due_time_server) {
             // We are finished! Stop animation.
             progress_bar.style.width = '0%';
             progress_desc.innerHTML = '...';
+            icon.innerHTML = '';
             slot.dataset.state = 'free';
             clearInterval(animation);
             return;

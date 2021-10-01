@@ -3,15 +3,18 @@ Contains Recipe logic/implementation
 """
 import datetime
 from bisect import bisect_left
+from datetime import datetime, timedelta
+from os.path import join
 
-from flask import url_for
+from flask import url_for, render_template
+from typing import List, Dict
 
 from gnomebrew import mongo
 from gnomebrew.game import event as event
 from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.upgrades import Upgrade
-from gnomebrew.game.user import get_resolver, User
+from gnomebrew.game.user import get_resolver, User, html_generator
 from gnomebrew.play import request_handler
 
 
@@ -55,21 +58,19 @@ class Recipe(StaticGameObject):
 
         response = GameResponse()
 
-        # Check if prerequisites are met
-        ok = True
+        # ~~~~ Check if prerequisites are met ~~~~
 
         # 1. Material Cost
         player_inventory = user.get('data.storage.content')
         if not all([x in player_inventory and player_inventory[x] >= self._data['cost'][x] for x in
                     self._data['cost'].keys()]):
             response.add_fail_msg('Not enough resources to execute recipe.')
-            ok = False
 
         # 2. Available Slots
-        slots_available = user.get('slots.' + self._data['station'])
+        slots_list = user.get('slots.' + self._data['station'])
+        slots_available = len([slot for slot in slots_list if slot['state'] == 'free'])
         if slots_available < self._data['slots']:
             response.add_fail_msg(f"Not enough slots available in {self._data['station']}")
-            ok = False
 
         # 3. One Time Recipes
         if self.is_one_time():
@@ -77,54 +78,61 @@ class Recipe(StaticGameObject):
             if not self._otr_check(user):
                 # The recipe is already logged in the list of finished one-time-recipes. This cannot be crafted again.
                 response.add_fail_msg("This recipe can't be run more than once.")
-                ok = False
 
         # 4. Recipe Already Available
         if not self.requirements_met(user):
-            ok = False
             response.add_fail_msg('Recipe not unlocked yet.')
 
-        # If all requirements are met, execute Recipe
-        if ok:
-            # Remove material from Inventory now
-            update_data = self._data['cost'].copy()
-            for material in update_data:
-                update_data[material] = player_inventory[material] - update_data[material]
-            if update_data:
-                user.update('data.storage.content', update_data, is_bulk=True)
+        # 5. Inventory change event can theoretically improve player inventory
+        if 'delta_inventory' in self._data['result']:
+            max_capacity = user.get('attr.storage.max_capacity')
+            at_max_capacity = [item for item in self._data['result']['delta_inventory']
+                               if player_inventory[item] == max_capacity]
+            if len(at_max_capacity) == len(self._data['result']['delta_inventory']):
+                # Everything is at max capacity
+                response.add_fail_msg('You are at storage capacity for all resulting items.')
 
-            # (slots don't have to be discounted as they are logged via the eventqueue)
+        # ~~~~ If all requirements are met, execute Recipe ~~~~
+        if response.has_failed():
+            return response
 
-            # Create Event to trigger when crafting time is over and enqueue it
-            due_time = datetime.datetime.utcnow() + datetime.timedelta(
-                seconds=self._data['base_time'])
+        # Remove material from Inventory now
+        update_data = self._data['cost'].copy()
+        for material in update_data:
+            update_data[material] = player_inventory[material] - update_data[material]
+        if update_data:
+            user.update('data.storage.content', update_data, is_bulk=True)
 
-            # If the recipe is a one-time recipe, add a push to the result that ensures the finished recipe is logged
-            result = self._data['result']
-            if self.is_one_time():
-                if 'push_data' not in result:
-                    result['push_data'] = dict()
-                result['push_data']['data.workshop.finished_otr'] = self._data['game_id']
-                result['ui_update'] = {
-                    'type': 'reload_station',
-                    'station': self._data['station']
-                }
+        # (slots don't have to be discounted as they are logged via the eventqueue)
 
-            # Enqueue the update event that triggers on recipe completion
-            event.Event.generate_event_from_recipe_data(target=user.get_id(),
-                                                        result=result,
-                                                        due_time=due_time,
-                                                        slots=self._data['slots'],
-                                                        station=self._data['station'],
-                                                        recipe_id=self._data['game_id']).enqueue()
+        # Create Event to trigger when crafting time is over and enqueue it
+        due_time = datetime.utcnow() + timedelta(
+            seconds=self._data['base_time'])
 
-            response.succeess()
-            response.set_ui_update({
-                'type': 'slot',
-                'due': due_time.strftime('%d %b %Y %H:%M:%S') + ' GMT',
-                'since': datetime.datetime.utcnow().strftime('%d %b %Y %H:%M:%S') + ' GMT',
+        # If the recipe is a one-time recipe, add a push to the result that ensures the finished recipe is logged
+        result = self._data['result']
+        if self.is_one_time():
+            if 'push_data' not in result:
+                result['push_data'] = dict()
+            result['push_data']['data.workshop.finished_otr'] = self._data['game_id']
+            result['ui_update'] = {
+                'type': 'reload_station',
                 'station': self._data['station']
-            })
+            }
+
+        # Enqueue the update event that triggers on recipe completion
+        event.Event.generate_event_from_recipe_data(target=user.get_id(),
+                                                    result=result,
+                                                    due_time=due_time,
+                                                    slots=self._data['slots'],
+                                                    station=self._data['station'],
+                                                    recipe_id=self._data['game_id']).enqueue()
+
+        response.succeess()
+        response.set_ui_update({
+            'type': 'reload_element',
+            'element': f"slots.{self._data['station']}"
+        })
 
         return response
 
@@ -191,7 +199,8 @@ class Recipe(StaticGameObject):
         :param upgrade: an upgrade
         :return:    `True` if this recipe is unlocked by this upgrade
         """
-        return False if 'requirements' not in self._data else upgrade.get_static_value('game_id') in self._data['requirements']
+        return False if 'requirements' not in self._data else upgrade.get_static_value('game_id') in self._data[
+            'requirements']
 
     def describe_outcome(self):
         """
@@ -241,8 +250,108 @@ class Recipe(StaticGameObject):
         return [] if station_name not in Recipe._station_recipe_map else Recipe._station_recipe_map[station_name]
 
 
+def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str, List[dict]]:
+    """
+    Behavior for `slots._all` feature.
+    :param game_id: game ID that resulted in this call.
+    :param user:    calling user.
+    :param kwargs:
+    :return:        a dict mapping all known stations with slots to a list representing their current slot allocation.
+    """
+    ret = dict()
+    slot_data = {x['_id']: x['etas'] for x in mongo.db.events.aggregate([{'$match': {
+        'target': user.username,
+        'due_time': {'$gt': datetime.utcnow()}
+    }}, {'$group': {'_id': '$station', 'etas': {'$push': {
+        'due': '$due_time',
+        'since': '$since'
+    }}}}])}
+    complete_station_data = mongo.db.users.find_one({"username": user.get_id()}, {'data': 1, '_id': 0})['data']
+    for _station in complete_station_data:
+        max_slots = user.get('attr.' + _station + '.slots', default=0)
+        if max_slots:
+            # _station is slotted. Add the necessary input to return value
+            ret[_station] = list()
+            if _station in slot_data:
+                print(f"{slot_data=}")
+                ret[_station] = slot_data[_station] + ([{'state': 'free'}] * (max_slots - len(slot_data[_station])))
+            else:
+                ret[_station] = [{'state': 'free'}] * max_slots
+
+    return ret
+
+
+_special_slot_behavior = {
+    '_all': generate_complete_slot_dict
+}
+
+
+@get_resolver('slots')
+def slots(game_id: id, user: User, **kwargs) -> List[dict]:
+    """
+    Calculates slot data for a given station.
+
+    :param user:
+    :param game_id:       e.g. 'slots.well'
+    :return:              A list
+
+    """
+    splits = game_id.split('.')
+
+    # Interpret the game_id input
+    if splits[1] in _special_slot_behavior:
+        return _special_slot_behavior[splits[1]](game_id, user, **kwargs)
+
+    # Default: slots of a station
+
+    active_events = mongo.db.events.find({
+        'target': user.username,
+        'station': splits[1],
+        'due_time': {'$gt': datetime.utcnow()}
+    }, {"_id": 0, "effect": 1,
+        "due_time": 1,
+        "slots": 1,
+        "recipe_id": 1,
+        "since": 1,
+        })
+
+    slot_list = list()
+    total_slots_allocated = 0
+
+    for recipe_event in active_events:
+        slot_list.append({
+            'state': 'occupied',
+            'due': recipe_event['due_time'],
+            'since': recipe_event['since'],
+            'slots': recipe_event['slots'],
+            'effect': recipe_event['effect'],
+            'recipe': recipe_event['recipe_id']
+        })
+        total_slots_allocated += recipe_event['slots']
+
+    # Fill up list with empty slots with appropriate empty slots
+    max_slots = user.get('attr.' + splits[1] + '.slots')
+    slot_list += [{
+        'state': 'free'
+    }] * (max_slots - total_slots_allocated)
+
+    return slot_list
+
+
 @request_handler
 def recipe(request_object: dict, user):
     response = Recipe.from_id(request_object['recipe_id']).check_and_execute(user)
     return response
 
+
+@html_generator('html.slots', is_generic=True)
+def generate_slot_html(user: User, game_id: str):
+    """
+    Generates slot HTML for a given station.
+    :param user:        A user.
+    :param game_id:     e.g. 'html.slots.well'
+    :return:            HTML rendering for the given slot environment/station. Returns an empty string for now slot data.
+    """
+    station_name = game_id.split('.')[2]
+    return ''.join([render_template(join('snippets', f"_slot.html"), slot=slot_data)
+                    for slot_data in user.get(f"slots.{station_name}")])
