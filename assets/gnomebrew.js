@@ -5,7 +5,6 @@ function animate_whole_ui(element) {
         animate_countdown(this);
     });
     $(element).find('.slot-ext').each(function(index){
-        console.log('animating ' + this)
         if(this.dataset.state === 'occupied') {
             animate_slot(this);
         }
@@ -224,16 +223,11 @@ function close_event_modal() {
 // Wrapper for all Game Requests that do not require a direct reaction to the response, which covers all UI
 function one_way_game_request(request_data, error_target, trigger_element) {
     trigger_element.disabled = true;
-    var html_before = trigger_element.innerHTML;
-    if(html_before.length < 3) {
-        trigger_element.innerHTML = '.';
-    } else {
-        trigger_element.innerHTML = '...';
-    }
+    $(trigger_element).addClass('gb-pending');
 
     var reset_element = function(){
         trigger_element.disabled = false;
-        trigger_element.innerHTML = html_before;
+        $(trigger_element).removeClass('gb-pending');
     };
 
     $.post('/play/request', request_data).done(function(response){
@@ -280,12 +274,12 @@ function execute_recipe(recipe_id, error_target, trigger_element) {
     }, error_target, trigger_element);
 }
 
-function cancel_recipe(event_id, trigger_element) {
+function cancel_recipe(event_id, error_target, trigger_element) {
     one_way_game_request({
         type: 'recipe',
         action: 'cancel',
         event_id: event_id
-    }, null, trigger_element);
+    }, error_target, trigger_element);
 }
 
 // Buy From Market

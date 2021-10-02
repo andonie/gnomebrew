@@ -266,6 +266,7 @@ class Recipe(StaticGameObject):
             'type': 'reload_element',
             'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
         })
+        response.succeess()
         return response
 
 
@@ -366,7 +367,6 @@ def recipe(request_object: dict, user):
     if request_object['action'] == 'execute':
         response = Recipe.from_id(request_object['recipe_id']).check_and_execute(user)
     elif request_object['action'] == 'cancel':
-        print(f"{request_object=}")
         response = Recipe.cancel_running_recipe(request_object['event_id'], user)
     return response
 
@@ -393,5 +393,5 @@ def generate_recipe_list(game_id: str, user: User, **kwargs):
     :param kwargs:
     :return:
     """
-    # 
+    #
     pass

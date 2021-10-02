@@ -62,18 +62,19 @@ function animate_slot(slot) {
     var due_time_server = Date.parse(slot.dataset.due);
     var since_time_server = Date.parse(slot.dataset.since);
     var progress_bar = slot.children[0]; // We know the location within HTML
-
+    var cancel_button = slot.children[1].children[0];
     var icon = slot.children[1].children[1];
     var progress_desc = slot.children[1].children[2];
     var animation = setInterval(function() {
         var now = Date.now() - time_difference;
         if(now > due_time_server) {
-            // We are finished! Stop animation.
+            // We are finished! Stop animation and clean up.
             progress_bar.style.width = '0%';
             progress_desc.innerHTML = '...';
             icon.innerHTML = '';
             slot.dataset.state = 'free';
             clearInterval(animation);
+            cancel_button.parentNode.removeChild(cancel_button);
             return;
         }
         // Set % width based on time passed
@@ -104,6 +105,7 @@ function global_error(error_msg) {
 }
 
 function error_msg(target_id, message) {
+    console.log('Error: ' + target_id + ' --- ' + message);
     if(target_id === null) {
         global_error(message);
         return;
