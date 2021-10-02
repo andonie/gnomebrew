@@ -12,7 +12,7 @@
 <script>
 add_startup(function() {
     $('#storage-toggle').on('click', function(event) {
-        $('#gb-sidebar').toggleClass('sb-toggle');
+        $('.gb-sidebar').toggleClass('sb-toggle');
     });
 });
 </script>
@@ -22,7 +22,7 @@ add_startup(function() {
 {% endblock %}
 
 {% block sidebar_outer %}
-<div class="gb-sidebar sb-toggle" id="gb-sidebar">
+<div class="gb-sidebar sb-toggle" id="gb.sidebar">
     {% block sidebar %}
     {{ current_user.get('html.station.storage', game_data=game_data)|safe }}
     {% endblock %}

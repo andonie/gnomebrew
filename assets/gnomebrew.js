@@ -275,8 +275,17 @@ function two_way_game_request(request_data, trigger_element, output_id, success_
 function execute_recipe(recipe_id, error_target, trigger_element) {
     one_way_game_request({
         type: 'recipe',
+        action: 'execute',
         recipe_id: recipe_id
     }, error_target, trigger_element);
+}
+
+function cancel_recipe(event_id, trigger_element) {
+    one_way_game_request({
+        type: 'recipe',
+        action: 'cancel',
+        event_id: event_id
+    }, null, trigger_element);
 }
 
 // Buy From Market

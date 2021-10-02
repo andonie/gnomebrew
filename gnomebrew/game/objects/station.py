@@ -92,7 +92,6 @@ def generate_station_html(game_id: str, user: User, **kwargs):
         kwargs['game_data'] = {splits[1]: user.get(f"data.{splits[2]}")}
     if 'station' not in kwargs:
         kwargs['station'] = Station.from_id(f"station.{splits[2]}")
-        print(kwargs['station'])
     if 'slots' not in kwargs:
         # Also provide minimal slot info
         if kwargs['station'].has_slots():

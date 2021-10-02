@@ -249,6 +249,25 @@ class Recipe(StaticGameObject):
         """
         return [] if station_name not in Recipe._station_recipe_map else Recipe._station_recipe_map[station_name]
 
+    @staticmethod
+    def cancel_running_recipe(recipe_event_id: str, user: User) -> GameResponse:
+        """
+        Cancels a running recipe.
+        :param user:            target user.
+        :param recipe_event_id: unique ID of the event to cancel.
+        :return:
+        """
+        response = GameResponse()
+        recipe_event = mongo.db.events.find_one_and_delete({
+            'target': user.get_id(),
+            'event_id': recipe_event_id
+        })
+        response.set_ui_update({
+            'type': 'reload_element',
+            'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
+        })
+        return response
+
 
 def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str, List[dict]]:
     """
@@ -308,12 +327,15 @@ def slots(game_id: id, user: User, **kwargs) -> List[dict]:
         'target': user.username,
         'station': splits[1],
         'due_time': {'$gt': datetime.utcnow()}
-    }, {"_id": 0, "effect": 1,
+    }, {
+        "_id": 0,
+        "effect": 1,
         "due_time": 1,
         "slots": 1,
         "recipe_id": 1,
         "since": 1,
-        })
+        "event_id": 1
+    })
 
     slot_list = list()
     total_slots_allocated = 0
@@ -325,7 +347,8 @@ def slots(game_id: id, user: User, **kwargs) -> List[dict]:
             'since': recipe_event['since'],
             'slots': recipe_event['slots'],
             'effect': recipe_event['effect'],
-            'recipe': recipe_event['recipe_id']
+            'recipe': recipe_event['recipe_id'],
+            'event_id': recipe_event['event_id']
         })
         total_slots_allocated += recipe_event['slots']
 
@@ -340,12 +363,16 @@ def slots(game_id: id, user: User, **kwargs) -> List[dict]:
 
 @request_handler
 def recipe(request_object: dict, user):
-    response = Recipe.from_id(request_object['recipe_id']).check_and_execute(user)
+    if request_object['action'] == 'execute':
+        response = Recipe.from_id(request_object['recipe_id']).check_and_execute(user)
+    elif request_object['action'] == 'cancel':
+        print(f"{request_object=}")
+        response = Recipe.cancel_running_recipe(request_object['event_id'], user)
     return response
 
 
 @html_generator('html.slots', is_generic=True)
-def generate_slot_html(user: User, game_id: str):
+def generate_slot_html(game_id: str, user: User, **kwargs):
     """
     Generates slot HTML for a given station.
     :param user:        A user.
@@ -355,3 +382,16 @@ def generate_slot_html(user: User, game_id: str):
     station_name = game_id.split('.')[2]
     return ''.join([render_template(join('snippets', f"_slot.html"), slot=slot_data)
                     for slot_data in user.get(f"slots.{station_name}")])
+
+
+@html_generator('html.recipes', is_generic=True)
+def generate_recipe_list(game_id: str, user: User, **kwargs):
+    """
+    Generates a station's available recipes.
+    :param game_id:
+    :param user:
+    :param kwargs:
+    :return:
+    """
+    # 
+    pass

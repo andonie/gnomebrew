@@ -134,7 +134,6 @@ class Upgrade(StaticGameObject):
             print(f"{attribute=}")
             for regex in regexes:
                 match = regex.match(attribute)
-                print(f"{match=}")
                 if match:
                     # Attribute match. Get station name
                     stations_to_update.add(match.group('station_name'))

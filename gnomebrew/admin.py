@@ -36,7 +36,6 @@ def reset_game_data(user: User):
             'finished': []
         }
     }})
-    print(f"{res=}")
 
 @application_test(name='Reset User Data', category='Admin')
 def reset_game_data_frontend(username: str):

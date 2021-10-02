@@ -21,9 +21,11 @@
     {% block station_recipes %}
         {% set recipe_list = current_user.get('recipes.' + station_name) %}
         {% if recipe_list %}
+        <div id="recipes.{{ station.get_minimized_id() }}">
             {% with error_log_id=station.get_id() + '-warning' %}
             {% include 'snippets/_recipelist.html' %}
             {% endwith %}
+        </div>
         {% endif %}
     {% endblock %}
 </div>

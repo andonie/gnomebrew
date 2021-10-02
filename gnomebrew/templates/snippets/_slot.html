@@ -15,6 +15,7 @@
 >
     <div class="slot-bar"></div>
     <div class="slot-desc">
+        <a href="#" onclick="cancel_recipe('{{ slot.event_id }}', this);">{% if slot.state == 'occupied' %}{{ icon('special.cancel', class='gb-icon-sm') | safe }}{% endif %}</a>
         <div class="slot-result">{% if slot.state == 'occupied' %}{{ icon(slot.recipe, class='gb-icon-sm') | safe }}{% endif %}</div>
         <div class="slot-timer">...</div>
     </div>

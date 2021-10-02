@@ -62,8 +62,9 @@ function animate_slot(slot) {
     var due_time_server = Date.parse(slot.dataset.due);
     var since_time_server = Date.parse(slot.dataset.since);
     var progress_bar = slot.children[0]; // We know the location within HTML
-    var progress_desc = slot.children[1].children[1];
-    var icon = slot.children[1].children[0]
+
+    var icon = slot.children[1].children[1];
+    var progress_desc = slot.children[1].children[2];
     var animation = setInterval(function() {
         var now = Date.now() - time_difference;
         if(now > due_time_server) {

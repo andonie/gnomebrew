@@ -4,14 +4,17 @@ This file manages the basic '/' view and generic views
 
 from gnomebrew import app
 from flask import render_template, send_from_directory, redirect, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 from os.path import isfile, join
 
 
 @app.route('/')
 @login_required
 def index():
-    return render_template('playscreen.html')
+    if current_user.is_authenticated:
+        return render_template('playscreen.html')
+    else:
+        return redirect(url_for('login'))
 
 
 @app.route('/res/<res>')

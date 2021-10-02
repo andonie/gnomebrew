@@ -3,6 +3,7 @@ This module manages events and event dispatching
 """
 import time
 import traceback
+import uuid
 from typing import Callable
 
 from gnomebrew import mongo
@@ -77,6 +78,8 @@ class Event(object):
         :param mongo_data:  mongoDB data to initialize this object with
         """
         self._data = mongo_data
+        if 'event_id' not in self._data:
+            self._data['event_id'] = str(uuid.uuid4())
 
     """
     Wrapper Class for Events

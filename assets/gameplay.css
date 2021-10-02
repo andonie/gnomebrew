@@ -181,14 +181,16 @@ input {
 
 /* STORAGE */
 
-.station-storage-content {
+#station.storage-content {
     background: #E7BF8B;
 }
 
-.station-storage {
+.station-storage.grid-item {
     display: flex;
     flex-direction: column;
     max-height: inherit;
+    max-height: unset;
+    width: inherit;
 }
 
 .storage-content {
@@ -238,23 +240,9 @@ input {
     margin-right: 5px;
 }
 
-.station-storage .gb-table-wrap {
-    max-height: unset;
-}
-
-.grid-item.station-storage {
-    width: unset;
-}
 
 /* TAVERN */
 
-.station-tavern-queue {
-    background: #E7BF8B;
-}
-
-.tavern-prices {
-    margin-top: 16px;
-}
 
 /* MARKET */
 
