@@ -11,7 +11,8 @@
 /* STATION DATA */
 
 .station-warning {
-    color: red;
+    color: #a63e42;
+    letter-spacing: -0.08em;
     min-height: 1.5em;
     margin-bottom: 5px;
 }
@@ -126,6 +127,17 @@ input {
 .gb-recipe-details {
 }
 
+.gb-recipe-fine-print {
+    background: #FFEED9;
+    padding-left: 5px;
+    padding-top: 2px;
+    padding-bottom: 5px;
+    margin-top: 5px;
+    border-radius: 12px;
+    font-size: 0.85em;
+
+}
+
 .gb-recipe-outcome {
     display: flex;
     flex-direction: row;
@@ -143,7 +155,7 @@ input {
 
 .gb-mini-heading {
     font-family: 'Press Start 2P';
-    font-size: 0.7em;
+    font-size: 0.75em;
 }
 
 .gb-recipe-item {

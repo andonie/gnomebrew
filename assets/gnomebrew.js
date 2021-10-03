@@ -19,6 +19,13 @@ function animate_whole_ui(element) {
             return $(this).data('filter-match').toLowerCase().includes(value);
         }).removeClass('gb-collapsed');
     });
+    $(element).find('#storage-close-button').on('click', function(event) {
+        $('.gb-sidebar').addClass('sb-toggle');
+    });
+    $(element).find('.gb-toggle-view').on('click', function(event) {
+        $($(this).data('toggles')).toggleClass('show');
+        $('.grid').masonry();
+    });
 }
 
 function startup_script() {

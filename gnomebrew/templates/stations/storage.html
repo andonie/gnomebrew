@@ -20,11 +20,4 @@
 <div class="gb-table-wrap storage-content" id="storage-content">
     {% with content=game_data.storage.content %}{% include "snippets/_storage_content.html" %}{% endwith %}
 </div>
-<script>
-add_startup(function() {
-    $('#storage-close-button').on('click', function(event) {
-        $('#gb-sidebar').addClass('sb-toggle');
-    });
-});
-</script>
 {% endblock %}

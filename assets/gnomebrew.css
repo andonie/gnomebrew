@@ -94,6 +94,17 @@ h4 {
     background: #FFEED9;
 }
 
+/* GB TOGGLE VIEW */
+
+.gb-toggle-view {
+    transition: .3s transform ease-in-out;
+    cursor: pointer;
+}
+
+.gb-minimized {
+    display: none;
+}
+
 /* SIDEBAR */
 
 .gb-wrapper {
@@ -217,7 +228,9 @@ h4 {
     display: none;
 }
 
-
+.gb-filter {
+    min-width: 0px;
+}
 
 
 

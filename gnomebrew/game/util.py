@@ -104,6 +104,16 @@ def is_weekday() -> bool:
 
 
 @global_jinja_fun
+def css_friendly(game_id: str) -> str:
+    """
+    Takes a (game) ID string and turns it into a string that's easy to process in CSS.
+    :param game_id:  An ID, e.g. 'data.storage.content.gold'
+    :return:    A CSS friendly ID, e.g. 'data-storage-content-gold'
+    """
+    return game_id.replace('.', '-')
+
+
+@global_jinja_fun
 def shorten_num(val) -> str:
     """
     Number shortening code that works identical to JS implementation.

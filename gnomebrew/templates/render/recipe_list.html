@@ -5,8 +5,8 @@
 {% if recipe_list is not defined %}{% endif %}
 {% with recipe_list = data %}
 <div class="gb-recipe-list">
-    <h6>Recipes</h6>
-    <div class="gb-recipe-collapse gb-collapse">
+    <h6 class="gb-toggle-view" data-toggles="#{{ recipe_list[0].get_static_value('station') }}-recipe-container">Recipes</h6>
+    <div class="gb-recipe-collapse collapse show" id="{{ recipe_list[0].get_static_value('station') }}-recipe-container">
         {% if recipe_list|length > 1 %}
         <div class="gb-search gb-icon-group">
             {{ icon( 'special.search', class='gb-icon gb-recipe-icon') | safe }}
@@ -17,12 +17,14 @@
         <div class="gb-recipe {{ recipe.get_static_value('station') }}-recipe" data-filter-match="{{ recipe.name() }}">
             <div class="gb-recipe-view gb-icon-group">
                 <button class="gb-button" onclick="execute_recipe('{{ recipe.get_id() }}', 'station.{{recipe.get_static_value('station') }}-warning', this)">{{ icon( recipe.get_id(), class='gb-icon gb-recipe-icon') | safe }}</button>
-                <div class="gb-recipe-details">
-                    <span class="gb-mini-heading">{{ recipe.name() }}</span>
-                    {{ render_object('render.recipe_outcome', data=recipe) | safe }}
+                <div class="gb-toggle-view" style="background: none; flex-basis: 100%" data-toggles="#{{ css_friendly(recipe.get_id()) }}-description">
+                    <div class="gb-recipe-details">
+                        <span class="gb-mini-heading">{{ recipe.name() }}</span>
+                        {{ render_object('render.recipe_outcome', data=recipe) | safe }}
+                    </div>
                 </div>
             </div>
-            <div class="gb-recipe-details gb-collapse gb-collapsed">
+            <div id="{{ css_friendly(recipe.get_id()) }}-description" class="gb-recipe-fine-print collapse">
                 {{ recipe.description() }}
             </div>
         </div>
