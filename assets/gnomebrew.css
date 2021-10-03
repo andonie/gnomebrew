@@ -20,7 +20,7 @@ h4 {
 /* IMAGES */
 
 .gb-icon {
-    max-width: 40px;
+    max-width: 32px;
     margin: 5px;
     min-width: 32px;
     image-rendering: crisp-edges;
@@ -28,6 +28,12 @@ h4 {
 
 .gb-icon-sm {
     width: 16px;
+    height: 16px;
+    image-rendering: crisp-edges;
+}
+
+.gb-icon-md {
+    width: 24px;
     image-rendering: crisp-edges;
 }
 
@@ -52,6 +58,40 @@ h4 {
 
 .gb-main {
     width: 100%;
+}
+
+.gb-icon-group {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.gb-icon-group input {
+    flex-basis: 100%;
+}
+
+.gb-icon-group .gb-icon {
+}
+
+.gb-button {
+    border-width: 3px;
+    border-color: #5e484f;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 16px;
+    background: #aca7a9;
+}
+
+.gb-button:hover {
+    background: #99958f;
+    cursor: pointer;
+}
+
+.gb-button:active {
+    background: #FFEED9;
 }
 
 /* SIDEBAR */
@@ -170,6 +210,15 @@ h4 {
         width: 90vw;
     }
 }
+
+/* Collapse/Filter Feature */
+
+.gb-collapsed {
+    display: none;
+}
+
+
+
 
 
 /* Admin Interface */

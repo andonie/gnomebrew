@@ -1,0 +1,32 @@
+{#
+ # Renders a list of recipes in HTML.
+ # Requires the variable `recipe_list` to be set.
+ #}
+{% if recipe_list is not defined %}{% endif %}
+{% with recipe_list = data %}
+<div class="gb-recipe-list">
+    <h6>Recipes</h6>
+    <div class="gb-recipe-collapse gb-collapse">
+        {% if recipe_list|length > 1 %}
+        <div class="gb-search gb-icon-group">
+            {{ icon( 'special.search', class='gb-icon gb-recipe-icon') | safe }}
+            <input type="text" class="gb-filter" placeholder="Filter Recipes" data-filters=".{{ recipe_list[0].get_static_value('station') }}-recipe">
+        </div>
+        {% endif %}
+        {% for recipe in recipe_list %}
+        <div class="gb-recipe {{ recipe.get_static_value('station') }}-recipe" data-filter-match="{{ recipe.name() }}">
+            <div class="gb-recipe-view gb-icon-group">
+                <button class="gb-button" onclick="execute_recipe('{{ recipe.get_id() }}', 'station.{{recipe.get_static_value('station') }}-warning', this)">{{ icon( recipe.get_id(), class='gb-icon gb-recipe-icon') | safe }}</button>
+                <div class="gb-recipe-details">
+                    <span class="gb-mini-heading">{{ recipe.name() }}</span>
+                    {{ render_object('render.recipe_outcome', data=recipe) | safe }}
+                </div>
+            </div>
+            <div class="gb-recipe-details gb-collapse gb-collapsed">
+                {{ recipe.description() }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endwith %}

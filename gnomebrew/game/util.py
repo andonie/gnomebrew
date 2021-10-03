@@ -2,11 +2,12 @@
 Module for utility functions that are used in several modules of the game, such as random numbers.
 """
 import datetime
+import math
 import random
 
 from numpy.random import default_rng
 from gnomebrew import app
-from typing import Callable, List
+from typing import Callable, List, Any
 from markdown import markdown
 from flask import url_for
 
@@ -122,6 +123,26 @@ def shorten_num(val) -> str:
 
 
 @global_jinja_fun
+def shorten_time(val: int) -> str:
+    """
+    Renders a given number as a human-readable time.
+    :param val: A number representing an amount of seconds to wait
+    :return:
+    """
+    if val <= 60:
+        return f"{math.floor(val)} s"
+    elif val <= 60 * 60:
+        rest = val % 60
+        return f"{math.floor(val / 60)} m{f', {shorten_time(rest)}' if rest > 0 else ''}"
+    elif val <= 60 * 60 * 24:
+        rest = val % 60 * 60
+        return f"{math.floor(val / (60 * 60))} h{f', {shorten_time(rest)}' if rest > 0 else ''}"
+    else:
+        rest = val % (60 * 60 * 24)
+        return f"{math.floor(val / (60 * 60 * 24))} days{f', {shorten_time(rest)}' if rest > 0 else '' }"
+
+
+@global_jinja_fun
 def shorten_cents(val) -> str:
     """
     Number display for a unit that's being stored in **cents** rather than in whole units.
@@ -164,4 +185,5 @@ def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
     :return:        A shifted version of `matrix`. Values that are shifted beyond the limits of the matrix will rotate
                     around in modulo fashion.
     """
-    return [[matrix[(x + d_x) % len(matrix)][(y + d_y) % len(matrix[0])] for y in range(len(matrix[0]))] for x in range(len(matrix))]
+    return [[matrix[(x + d_x) % len(matrix)][(y + d_y) % len(matrix[0])] for y in range(len(matrix[0]))] for x in
+            range(len(matrix))]

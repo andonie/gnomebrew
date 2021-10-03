@@ -9,6 +9,16 @@ function animate_whole_ui(element) {
             animate_slot(this);
         }
     });
+    $(element).find('.gb-filter').on("keyup", function() {
+        var value = $(this).val().toLowerCase();
+        var to_filter = $(this).data('filters');
+        $(to_filter).filter(function() {
+            return ! $(this).data('filter-match').toLowerCase().includes(value);
+        }).addClass('gb-collapsed');
+        $(to_filter).filter(function() {
+            return $(this).data('filter-match').toLowerCase().includes(value);
+        }).removeClass('gb-collapsed');
+    });
 }
 
 function startup_script() {

@@ -1,0 +1,9 @@
+{#
+ # Renders the outcome of an upgrade recipe.
+ # Expects: `data` as the JSON data from the upgrade effect.
+ #}
+{% for upgrade in data %}
+<div class="gb-upgrade-outcome {% if class is defined %}{{ class }}{% endif %}">
+    {{ format_markdown(current_user.get(upgrade).get_static_value('description')) | safe }}
+</div>
+{% endfor %}

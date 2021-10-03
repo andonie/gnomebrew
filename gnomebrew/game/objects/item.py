@@ -4,7 +4,7 @@ from gnomebrew.game.util import global_jinja_fun
 
 
 @get_resolver('item')
-def item(game_id: str, user: User):
+def item(game_id: str, user: User, **kwargs):
     return Item.from_id(game_id)
 
 
@@ -109,6 +109,8 @@ class ItemCategory(StaticGameObject):
         but only belong into one main-category.
         """
         return self._data['is_main'] if 'is_main' in self._data else False
+
+
 
 
 @global_jinja_fun

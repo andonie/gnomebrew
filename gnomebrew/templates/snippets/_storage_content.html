@@ -18,7 +18,7 @@
 </div>
 <div class="gb-storage-category-content collapse show" id="it_cat-{{ item_category.get_minimized_id() }}">
     {% for item in category_table[item_category] %}
-    <div class="gb-storage-item" title="{{ item.description() }}" data-content="{{ item.name() }}">
+    <div class="gb-storage-item" title="{{ item.description() }}" data-filter-match="{{ item.name() }}">
         {{ icon(item.get_id()) | safe }}
         <div class="gb-storage-amount" id="data.storage.content.{{ item.get_minimized_id() }}">{{ shorten_num(category_table[item_category][item]) }}</div>
     </div>

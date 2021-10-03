@@ -11,7 +11,7 @@
     {% if station_name in slots %}
     <div class="slots" id="slots.{{ station_name }}">
         {% for slot in slots[station_name] %}
-        {% include 'snippets/_slot.html' %}
+        {{ render_object('render.slot', data=slot) | safe }}
         {% endfor %}
     </div>
     {% endif %}
@@ -22,9 +22,7 @@
         {% set recipe_list = current_user.get('recipes.' + station_name) %}
         {% if recipe_list %}
         <div id="recipes.{{ station.get_minimized_id() }}">
-            {% with error_log_id=station.get_id() + '-warning' %}
-            {% include 'snippets/_recipelist.html' %}
-            {% endwith %}
+            {{ render_object('render.recipe_list', data=recipe_list) | safe }}
         </div>
         {% endif %}
     {% endblock %}

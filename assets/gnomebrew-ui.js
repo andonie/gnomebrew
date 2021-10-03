@@ -132,6 +132,8 @@ function error_msg(target_id, message) {
             // Animation Done. Clean Up
             clearInterval(fadeEffect);
             target.innerHTML = "";
+            $('.grid').masonry();
         }
     }, 100);
+    $('.grid').masonry();
 }

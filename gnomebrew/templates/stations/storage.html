@@ -16,19 +16,12 @@
     <div class="descriptor">{{ icon('attr.storage.max_capacity') | safe }}</div>
     <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
-<input type="text" id="storage-filter" placeholder="Filter Storage">
-<div class="gb-table-wrap storage-content" id="storage.content">
+<input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item">
+<div class="gb-table-wrap storage-content" id="storage-content">
     {% with content=game_data.storage.content %}{% include "snippets/_storage_content.html" %}{% endwith %}
 </div>
 <script>
 add_startup(function() {
-    $('#storage-filter').on("keyup", function() {
-        var value = $(this).val().toLowerCase();
-        $('#storage\\.content .gb-storage-item').filter(function() {
-            console.log($(this).data('content').toLowerCase());
-            $(this).toggle($(this).data('content').toLowerCase().indexOf(value) > -1);
-        });
-    });
     $('#storage-close-button').on('click', function(event) {
         $('#gb-sidebar').addClass('sb-toggle');
     });

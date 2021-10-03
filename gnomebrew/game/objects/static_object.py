@@ -1,15 +1,18 @@
 """
 This module manages the game's in-loading
 """
-from typing import Type
+from os.path import join
+from typing import Type, Any
 
-from flask import url_for
+from flask import url_for, render_template
 
 from gnomebrew import mongo
 from gnomebrew.game import boot_routine
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.testing import application_test
+from gnomebrew.game.user import get_resolver, User
 from gnomebrew.game.util import global_jinja_fun
+
 
 
 class StaticGameObject(object):
@@ -42,6 +45,13 @@ class StaticGameObject(object):
         :return:    A trimmed ID, e.g. turns `item.wood` into `wood` or `recipe.simple_beer` to `simple_beer`.
         """
         return self._data['game_id'].split('.')[1]
+
+    def get_class_code(self):
+        """
+        Returns the generic type of this static object.
+        :return:    The static type of this object, e.g. 'station' or 'recipe'
+        """
+        return ''.join(self._data['game_id'].split('.')[:-1])
 
     def name(self):
         """
@@ -196,3 +206,25 @@ def icon(game_id: str, **kwargs):
 
     return f'<img class="{kwargs["class"]}"{element_addition} src="{url_for("get_icon", game_id=game_id)}">'
 
+
+@global_jinja_fun
+def render_object(game_id: str, data: Any, verbose: bool=False, **kwargs) -> str:
+    """
+    Renders an object to it's HTML representation.
+    @:param game_id: Fully qualified ID of the render template; e.g. of a `render.structure`
+    @:param data:   Data of the object to be used as template `data`
+    @:param kwargs  Will be forwarded to template.
+
+    """
+    splits = game_id.split('.')
+    assert splits[0] == 'render'
+    template = render_template(join('render', f"{''.join(splits[1:])}.html"), data=data, **kwargs)
+    if verbose:
+        print(f"Rendering: {game_id=} on: {data=}")
+        print(template)
+    return template
+
+
+@get_resolver('render')
+def render_object_get_res(game_id: str, user: User, **kwargs):
+    return render_object(game_id, **kwargs)

@@ -1,8 +1,13 @@
 import re
+from bisect import bisect_left
+from os.path import join
 
+from flask import render_template
+
+from gnomebrew.game.event import Event
 from gnomebrew.game.user import get_resolver
 from gnomebrew.game.user import User
-from gnomebrew.game.objects.static_object import StaticGameObject, load_on_startup
+from gnomebrew.game.objects.static_object import StaticGameObject, load_on_startup, render_object
 
 
 @get_resolver('attr')
@@ -152,9 +157,45 @@ class Upgrade(StaticGameObject):
         assert type(other) is Upgrade
         return self.upgrade_order() < other.upgrade_order()
 
-    def describe_outcome(self):
+    def describe_outcome(self, **kwargs) -> str:
         """
         Utility Method that generates HTML text that summarizes the outcome of this upgrade.
+        `kwargs` will be forwarded to render.upgrade_outcome template.
         """
-        if 'description' in self._data:
-            return self._data['description']
+        return render_object('render.upgrade_outcome', data=[self._data['game_id']], **kwargs)
+
+
+@Event.register_effect
+def upgrade(user: User, effect_data: list, **kwargs):
+    """
+    Event execution for an upgrade.
+    :param user:            The user to execute on.
+    :param effect_data:     The registered effect data formatted as `['upgrade1', 'upgrade2']`
+    """
+    # Get Upgrade list (always sorted)
+    user_upgrade_list = user.get('data.workshop.upgrades')
+
+    stations_to_update = set()
+
+    for upgrade in effect_data:
+        assert upgrade not in user_upgrade_list
+        # Add the upgrade in the correct sorted position
+        user_upgrade_list.insert(bisect_left(user_upgrade_list, upgrade), upgrade)
+        # Check if there is a UI update to be done
+        upgrade_object = Upgrade.from_id(upgrade)
+        stations_to_update.update(upgrade_object.stations_to_update())
+
+    # Flush. Update Game Data
+    user.update('data.workshop.upgrades', user_upgrade_list)
+
+    # Flush to Frontend: Update User Frontends
+    for station in stations_to_update:
+        user.frontend_update('ui', {
+            'type': 'reload_station',
+            'station': station
+        })
+
+
+@get_resolver('upgrade')
+def upgrade(game_id: str, user: User, **kwargs):
+    return Upgrade.from_id(game_id)

@@ -13,3 +13,4 @@ from gnomebrew.game.objects.generation import Generator as Generator
 
 import gnomebrew.game.objects.names
 import gnomebrew.game.objects.game_statistics
+import gnomebrew.game.objects.special_entities

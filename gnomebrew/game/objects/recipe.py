@@ -11,7 +11,7 @@ from typing import List, Dict
 
 from gnomebrew import mongo
 from gnomebrew.game import event as event
-from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
+from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.upgrades import Upgrade
 from gnomebrew.game.user import get_resolver, User, html_generator
@@ -202,27 +202,11 @@ class Recipe(StaticGameObject):
         return False if 'requirements' not in self._data else upgrade.get_static_value('game_id') in self._data[
             'requirements']
 
-    def describe_outcome(self):
+    def describe_outcome(self) -> str:
         """
-        Utility Method that describes the outcome of this recipe.
-        :return:    Outcome of the recipe formatted in HTML (if necessary)
+        Convencience formatting code Returns HTML
         """
-        output = ''
-        # If the recipe contains inventory output, we want this formatted in the output.
-        if 'delta_inventory' in self._data['result']:
-            output += '<span class="gb-outcome-descriptor">Creates</span> '
-            for item in self._data['result']['delta_inventory']:
-                output += f"""<div class="gb-outcome-item">
-                        <img class="gb-icon-sm" src="{url_for('get_icon', game_id='item.' + item)}">
-                        {self._data['result']['delta_inventory'][item]}
-                    </div>"""
-
-        # if the recipe contains upgrade(s), access the upgrades description:
-        if 'upgrade' in self._data['result']:
-            for upgrade in self._data['result']['upgrade']:
-                upgrade_entity = Upgrade.from_id(upgrade)
-                output += upgrade_entity.describe_outcome()
-        return output
+        return render_template(join('snippets', '_recipe_'))
 
     # Maps a station to a list of recipes associated with this station
     _station_recipe_map = dict()
@@ -279,12 +263,16 @@ def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str,
     :return:        a dict mapping all known stations with slots to a list representing their current slot allocation.
     """
     ret = dict()
-    slot_data = {x['_id']: x['etas'] for x in mongo.db.events.aggregate([{'$match': {
+    mongo_result = {x['_id']: x['etas'] for x in mongo.db.events.aggregate([{'$match': {
         'target': user.username,
         'due_time': {'$gt': datetime.utcnow()}
     }}, {'$group': {'_id': '$station', 'etas': {'$push': {
         'due': '$due_time',
-        'since': '$since'
+        'since': '$since',
+        'slots': '$slots',
+        'effect': '$effect',
+        'recipe': '$recipe_id',
+        'event_id': '$event_id'
     }}}}])}
     complete_station_data = mongo.db.users.find_one({"username": user.get_id()}, {'data': 1, '_id': 0})['data']
     for _station in complete_station_data:
@@ -292,9 +280,12 @@ def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str,
         if max_slots:
             # _station is slotted. Add the necessary input to return value
             ret[_station] = list()
-            if _station in slot_data:
-                print(f"{slot_data=}")
-                ret[_station] = slot_data[_station] + ([{'state': 'free'}] * (max_slots - len(slot_data[_station])))
+            print(f"{mongo_result=}")
+            if _station in mongo_result:
+                # By Default, add the implicit occupied state
+                for item in mongo_result[_station]:
+                    item['state'] = 'occupied'
+                ret[_station] = mongo_result[_station] + ([{'state': 'free'}] * (max_slots - len(mongo_result[_station])))
             else:
                 ret[_station] = [{'state': 'free'}] * max_slots
 
@@ -380,7 +371,7 @@ def generate_slot_html(game_id: str, user: User, **kwargs):
     :return:            HTML rendering for the given slot environment/station. Returns an empty string for now slot data.
     """
     station_name = game_id.split('.')[2]
-    return ''.join([render_template(join('snippets', f"_slot.html"), slot=slot_data)
+    return ''.join([render_object('render.slot', data=slot_data)
                     for slot_data in user.get(f"slots.{station_name}")])
 
 

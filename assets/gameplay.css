@@ -113,45 +113,82 @@ input {
 
 }
 
-/* COST ITEMS */
+/* Recipe Rendering */
 
-.gb-cost-item {
-    margin-right: 5px;
+.gb-recipe-view {
+    margin-top: 12px;
+}
+
+.gb-recipe-icon {
     float: left;
+}
+
+.gb-recipe-details {
+}
+
+.gb-recipe-outcome {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    align-content: flex-start;
+    gap: 5px;
+}
+
+.gb-recipe-list h6 {
+    font-family: 'Press Start 2P';
+    font-size: 0.8em;
+}
+
+.gb-mini-heading {
+    font-family: 'Press Start 2P';
+    font-size: 0.7em;
+}
+
+.gb-recipe-item {
+    border-radius: 5px;
+    display: flex;
+    flex-flow: row no-wrap;
+    align-items: center;
+    gap: 3px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.gb-break {
+    flex-basis: 100%;
+}
+
+.gb-outcome-icon {
+
+}
+
+.gb-outcome-amount {
+
+}
+
+.gb-recipe-cost {
     background: #E7BF8B;
-    border-radius: 8px;
-    padding-inline: 4px;
-    margin-bottom: 2px;
 }
 
-.gb-cost-item img {
-    vertical-align: baseline;
+.gb-recipe-cost:hover {
+    background: #FFE8C8;
 }
 
-.gb-cost-item:hover {
-    filter: brightness(85%);
+.gb-recipe-effect {
+    background: #e7948b;
 }
 
-.gb-outcome-descriptor {
-    float: left;
-    margin-right: 3px;
+.gb-recipe-effect:hover {
+    background: #ffccc6;
 }
 
-.gb-outcome-item {
-    margin-right: 5px;
-    float: left;
-    background: #7DA0AC;
-    border-radius: 8px;
-    padding-inline: 4px;
-    margin-bottom: 2px;
-}
-
-.gb-outcome-item img {
-    padding-top: 3px;
-}
-
-.gb-outcome-item:hover {
-    filter: brightness(115%);
+.gb-upgrade-outcome {
+    font-family: "DotGothic16";
+    padding-left: 6px;
+    padding-right: 6px;
+    letter-spacing: -0.1em;
 }
 
 

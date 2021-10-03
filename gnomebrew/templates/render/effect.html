@@ -1,0 +1,14 @@
+{#
+ # Renders any event-effect into HTML to display.
+ # Requires the effect's `effect_type` (e.g. 'delta_inventory') and `effect_data` (e.g. `{ water: 10 }`).
+ #}
+{% if effect_type is not defined %}{% set effect_type = data.effect_type %}{% endif %}
+{% if effect_data is not defined %}{% set effect_data = data.effect_data %}{% endif %}
+{% if effect_type == 'delta_inventory' %}
+{% for item in effect_data %}
+{% with item_id = "item."+item, cost=effect_data[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-recipe-item gb-recipe-effect') | safe}}{% endwith %}
+{% endfor %}
+{% elif effect_type == 'upgrade' %}
+<div class="gb-break"></div>
+{% with class='gb-recipe-item gb-recipe-effect' %}{{ render_object('render.upgrade_outcome', data=effect_data, class=class) | safe }}{% endwith %}
+{% endif %}
