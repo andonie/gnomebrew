@@ -172,8 +172,8 @@ input {
     color: #822929;
 }
 
-.gb-recipe-item p {
-    margin: 0;
+.gb-recipe p {
+    margin-bottom: 0px;
 }
 
 .gb-break {
