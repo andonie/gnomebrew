@@ -129,7 +129,7 @@ class Recipe(StaticGameObject):
                                                     recipe_id=self._data['game_id']).enqueue()
 
         response.succeess()
-        response.set_ui_update({
+        response.add_ui_update({
             'type': 'reload_element',
             'element': f"slots.{self._data['station']}"
         })
@@ -246,10 +246,13 @@ class Recipe(StaticGameObject):
             'target': user.get_id(),
             'event_id': recipe_event_id
         })
-        response.set_ui_update({
+        response.add_ui_update({
             'type': 'reload_element',
             'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
         })
+        cost = Recipe.from_id(recipe_event['recipe_id']).get_static_value('cost')
+        if cost:
+            user.update('data.storage.content', cost, command='$inc', is_bulk=True)
         response.succeess()
         return response
 

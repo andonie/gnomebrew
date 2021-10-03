@@ -104,9 +104,10 @@ class GameResponse(object):
         """
         self._data[key] = value
 
-    def set_ui_update(self, ui_data: dict):
-        assert not self.ui
-        self.ui = ui_data
+    def add_ui_update(self, ui_data: dict):
+        if not self.ui:
+            self.ui = list()
+        self.ui.append(ui_data)
 
     def finalize(self, user):
         """
@@ -115,7 +116,8 @@ class GameResponse(object):
         """
         if self.ui:
             # Send UI update
-            user.frontend_update('ui', self.ui)
+            for ui_update in self.ui:
+                user.frontend_update('ui', ui_update)
 
     def has_failed(self):
         """

@@ -47,11 +47,20 @@ function shorten_time(val) {
     }
 }
 
+/* GENERAL UI */
+
+
+function rescale_ui(e) {
+    $('.grid').masonry();
+    $('.grid').css('height', 'inherit');
+}
+
+window.onresize = rescale_ui
+
 /* LOADING BAR */
 
 // Called when a UI update requires a duetime being updated
 function animate_due_time(response) {
-    console.log('Animating duetime: ' + response)
     var target = document.getElementById(response.target);
     target.dataset.due = response.due;
     animate_countdown(target);
@@ -98,6 +107,41 @@ function animate_countdown(countdown) {
     }, 50);
 }
 
+
+/* ZOOM UTILITY */
+
+function zoom_in(target_selector) {
+    console.log($(target_selector).data('zoom'));
+    var zoom_configs = $(target_selector).data('zoom');
+    for (const key in zoom_configs) {
+        $(target_selector).find(key).each(function() {
+            for(var i = 0; i < zoom_configs[key].length-1; i++) {
+                if($(this).hasClass(zoom_configs[key][i])) {
+                    $(this).removeClass(zoom_configs[key][i]);
+                    $(this).addClass(zoom_configs[key][i+1]);
+                    break;
+                }
+            }
+        });
+    }
+}
+
+function zoom_out(target_selector) {
+    var zoom_configs = $(target_selector).data('zoom');
+    for (const key in zoom_configs) {
+        $(target_selector).find(key).each(function() {
+            for(var i = 1; i < zoom_configs[key].length; i++) {
+                if($(this).hasClass(zoom_configs[key][i])) {
+                    $(this).removeClass(zoom_configs[key][i]);
+                    $(this).addClass(zoom_configs[key][i-1]);
+                    break;
+                }
+            }
+        });
+    }
+}
+
+
 /* ERROR LOGGING */
 
 function global_error(error_msg) {
@@ -114,6 +158,7 @@ function error_msg(target_id, message) {
     if(target.style.opacity > 0) {
         // A fadeout is already running. Only append and leave be.
         target.innerHTML += "<br>" + message;
+        rescale_ui();
         return;
     }
     target.innerHTML = message;
@@ -132,8 +177,8 @@ function error_msg(target_id, message) {
             // Animation Done. Clean Up
             clearInterval(fadeEffect);
             target.innerHTML = "";
-            $('.grid').masonry();
+            rescale_ui();
         }
     }, 100);
-    $('.grid').masonry();
+    rescale_ui();
 }

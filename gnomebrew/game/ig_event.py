@@ -121,7 +121,7 @@ class IngameEvent(StaticGameObject):
         :return:                    The ready-to-use listener function.
         """
 
-        def on_update(user: User, update: dict):
+        def on_update(user: User, mongo_command: str, update: dict):
             if basic_check(user, value=update[target_game_id]) and self._data['game_id'] not in user.get(
                     'ingame_event.finished'):
                 self._check_and_fire_if_ready(user)
@@ -402,13 +402,13 @@ def update_ig_event(user: User, game_id: str, update, **kwargs):
     """
     mongo_command = '$set' if 'mongo_command' not in kwargs else kwargs['mongo_command']
     mongo.db.users.update_one({'username': user.get_id()}, {mongo_command: {game_id: update}})
-    return {
+    return mongo_command, {
         game_id: update
     }
 
 
 @frontend_id_resolver(r'^ingame_event\.')
-def match_and_ignore_any_ingame_event(user: User, data: dict, game_id: str):
+def match_and_ignore_any_ingame_event(user: User, data: dict, game_id: str, **kwargs):
     """
     Ignore any and all ingame_event frontend updates
     """

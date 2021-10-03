@@ -9,6 +9,5 @@
 {% with item_id = "item."+item, cost=effect_data[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-recipe-item gb-recipe-effect') | safe}}{% endwith %}
 {% endfor %}
 {% elif effect_type == 'upgrade' %}
-<div class="gb-break"></div>
 {% with class='gb-recipe-item gb-recipe-effect' %}{{ render_object('render.upgrade_outcome', data=effect_data, class=class) | safe }}{% endwith %}
 {% endif %}

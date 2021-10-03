@@ -24,7 +24,7 @@ function animate_whole_ui(element) {
     });
     $(element).find('.gb-toggle-view').on('click', function(event) {
         $($(this).data('toggles')).toggleClass('show');
-        $('.grid').masonry();
+        rescale_ui();
     });
 }
 
@@ -39,7 +39,7 @@ function startup_script() {
 
     fire_boot_list();
     // After everything is set up, re-update the masonry grid to make sure everything looks nice
-    $('.grid').masonry();
+    rescale_ui();
 }
 
 $(document).ready(startup_script);
@@ -52,7 +52,6 @@ socket = io();
 
 // Invoked when game data is updated
 function handle_update(data) {
-    //console.log('update: ' + JSON.stringify(data));
     for(var id in data) {
         // Pre-Check if ID matches a station that must be reloaded
         // This would be the case for mechanism that come after a heavier data change
@@ -124,7 +123,7 @@ function handle_ui_req(data) {
             break;
     }
     // After any UI update, Masonry gets card blanche to update the grid
-    $('.grid').masonry();
+    rescale_ui();
 }
 
 function update_time_difference(success_callback) {
@@ -147,7 +146,7 @@ function reload_station(station_name) {
         outer.innerHTML = response;
         station_element.innerHTML = outer.children[0].innerHTML;
         animate_whole_ui(station_element);
-        $('.grid').masonry();
+        rescale_ui();
     }).fail(function(response){
         global_error('Error while connecting to server!');
     });
@@ -158,7 +157,7 @@ function reload_element(element_name) {
         element_to_reload = document.getElementById(element_name);
         element_to_reload.innerHTML = response;
         animate_whole_ui(element_to_reload);
-        $('.grid').masonry();
+        rescale_ui();
     }).fail(function(response){
         global_error('Error while connecting to server!');
     });
@@ -168,7 +167,6 @@ function add_station(station_name) {
     console.log('adding station: ' + station_name);
     $.post('/play/game_id/html.station.' + station_name).done(function(response) {
         //$('#station-grid').append(response);
-        //$('.grid').masonry();
         $('#station-grid').append(response);
         $('#station-grid').masonry('reloadItems');
         $('#station-grid').masonry('layout');

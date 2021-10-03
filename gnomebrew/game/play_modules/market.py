@@ -153,7 +153,7 @@ def market_update(user: User, effect_data: dict, **kwargs):
 
 
 @frontend_id_resolver('^data.market.inventory$')
-def full_update_on_market_update(user: User, data: dict, game_id: str):
+def full_update_on_market_update(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('ui', {
         'type': 'reload_station',
         'station': 'market'
@@ -161,6 +161,6 @@ def full_update_on_market_update(user: User, data: dict, game_id: str):
 
 
 @frontend_id_resolver(r'^data.market.due$')
-def update_market_duetime(user: User, data: dict, game_id: str):
+def update_market_duetime(user: User, data: dict, game_id: str, **kwargs):
     pass # Due Time need not be updated, because on inventory update the entire market module will be reloaded
 

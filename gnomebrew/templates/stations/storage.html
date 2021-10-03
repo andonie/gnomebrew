@@ -17,7 +17,7 @@
     <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
 </div>
 <input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item">
-<div class="gb-table-wrap storage-content" id="storage-content">
+<div class="gb-table-wrap storage-content" id="storage.content">
     {% with content=game_data.storage.content %}{% include "snippets/_storage_content.html" %}{% endwith %}
 </div>
 {% endblock %}

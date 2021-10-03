@@ -4,12 +4,13 @@ Module for utility functions that are used in several modules of the game, such 
 import datetime
 import math
 import random
+import re
 
 from numpy.random import default_rng
 from gnomebrew import app
 from typing import Callable, List, Any
 from markdown import markdown
-from flask import url_for
+from flask import url_for, render_template_string
 
 rng = default_rng()
 
@@ -164,13 +165,15 @@ def shorten_cents(val) -> str:
 
 
 @global_jinja_fun
-def format_markdown(input: str) -> str:
+def format_markdown(code: str) -> str:
     """
-    Basic markdown formatter for access in templates.
-    :param input:   Input string formatted in markdown
+    Basic markdown formatter for access in templates. Includes a pre-compiler that evaluates the input as a jinja
+    template. This enables **arbitrary code exeucution**. Hence this function should remain inaccessible to users.
+    :param code:   Input string formatted in markdown. It is **highly critical that this input is safe**.
     :return:        Output string formatted as HTML
     """
-    return markdown(input)
+    code = render_template_string(code)
+    return markdown(code)
 
 
 @global_jinja_fun

@@ -220,7 +220,7 @@ def render_object(game_id: str, data: Any, verbose: bool=False, **kwargs) -> str
     assert splits[0] == 'render'
     template = render_template(join('render', f"{''.join(splits[1:])}.html"), data=data, **kwargs)
     if verbose:
-        print(f"Rendering: {game_id=} on: {data=}")
+        print(f"~~~~ Rendering: {game_id=} on: {data=} ~~~~")
         print(template)
     return template
 

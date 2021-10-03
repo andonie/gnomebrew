@@ -193,7 +193,7 @@ input {
 }
 
 .gb-recipe-cost:hover {
-    background: #FFE8C8;
+    background: #FFEED9;
 }
 
 .gb-recipe-effect {
@@ -229,11 +229,16 @@ input {
 }
 
 
+.station-grid {
+    position: relative;
+}
+
 .station {
     background: #BE8251;
     border-radius: 5px;
     padding: 10px;
     margin-bottom: 5px;
+    z-index: -100;
 }
 
 /* STORAGE */
@@ -316,4 +321,48 @@ input {
 .market-offers button {
     float: left;
     margin-right: 5px;
+}
+
+/* DIVINATION TABLE */
+
+.gb-map {
+    border: none;
+    padding: 5px 15px;
+    overflow: auto;
+    height: 210px;
+    background: #e7bf8b;
+    border-radius: 15px;
+}
+
+.gb-map tr {
+    height: unset;
+}
+
+.gb-map td {
+    height: unset;
+}
+
+.gb-map img {
+    margin: 0px;
+}
+
+.gb-hover-info {
+    position: absolute;
+    top: 80%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    display: none;
+    background: #ffeed9ee;
+    font-size: 0.85em;
+    text-align: center;
+    z-index: 50;
+}
+
+.gb-location:hover .gb-hover-info {
+    display: block;
+}
+
+.location-name {
+    color: black;
 }

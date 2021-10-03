@@ -6,9 +6,9 @@
 
 {% block station_body %}
 
-<div class="gb-tab-buttons">
-    <button data-target="gb-tavern-patrons">Patrons</button>
-    <button data-target="gb-tavern-prices">{{ icon('special.cost') | safe }}</button>
+<div class="gb-top-buttons">
+    <button class="gb-button" data-target="gb-tavern-patrons">Patrons</button>
+    <button class="gb-button" data-target="gb-tavern-prices">{{ icon('special.cost') | safe }}</button>
 </div>
 <div class="gb-tab-pane">
     <div class="gb-tab gb-active-tab" id="gb-tavern-patrons">
@@ -34,10 +34,10 @@ add_startup(function () {
         $('#price-toggle').html("Show Prices");
     });
     $('#tavern-prices').on('shown.bs.collapse', function() {
-        $('.grid').masonry();
+        rescale_ui();
     });
     $('#tavern-prices').on('hidden.bs.collapse', function() {
-        $('.grid').masonry();
+        rescale_ui();
     });
 });
 </script>

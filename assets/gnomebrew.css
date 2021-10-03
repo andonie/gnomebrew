@@ -34,6 +34,19 @@ h4 {
 
 .gb-icon-md {
     width: 24px;
+    height: 24px;
+    image-rendering: crisp-edges;
+}
+
+.gb-icon-lg {
+    width: 64px;
+    height: 64px;
+    image-rendering: crisp-edges;
+}
+
+.gb-icon-xl {
+    width: 128px;
+    height: 128px;
     image-rendering: crisp-edges;
 }
 
@@ -49,8 +62,22 @@ h4 {
     border-radius: 10px;
 }
 
+#station-grid {
+    height: unset;
+}
 
 /* Formatting Stuff */
+
+.gb-button:hover img {
+    filter: saturate(160%);
+    -webkit-filter: saturate(160%);
+    cursor: pointer;
+}
+
+.gb-button:active img {
+    filter: saturate(160%) drop-shadow(2px 2px 2px #5e484f);
+    -webkit-filter: saturate(160%) drop-shadow(2px 2px 2px #5e484f);
+}
 
 .row-margin-05 {
     margin-top: 0.5em;
@@ -75,13 +102,24 @@ h4 {
 .gb-icon-group .gb-icon {
 }
 
+.gb-iconbox-wrapper {
+    position: relative;
+}
+
+.gb-background-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -10;
+}
+
 .gb-button {
-    border-width: 3px;
+    border-width: 3.5px;
     border-color: #5e484f;
-    border-top-left-radius: 16px;
+    border-top-left-radius: 20px;
     border-bottom-left-radius: 5px;
     border-top-right-radius: 5px;
-    border-bottom-right-radius: 16px;
+    border-bottom-right-radius: 20px;
     background: #aca7a9;
 }
 
@@ -92,6 +130,21 @@ h4 {
 
 .gb-button:active {
     background: #FFEED9;
+}
+
+.gb-top-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    gap: 15px;
+}
+
+.gb-label {
+    font-family: 'Press Start 2P';
+    font-size: 0.9em;
 }
 
 /* GB TOGGLE VIEW */

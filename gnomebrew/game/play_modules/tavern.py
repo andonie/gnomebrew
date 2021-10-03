@@ -835,12 +835,12 @@ def _process_user(user: User, tavern_data: dict, patron_list: list):
 ## FRONTEND DATA
 
 @frontend_id_resolver(r'^data\.tavern\.name$')
-def normal_update_for_tavern_name(user: User, data: dict, game_id: str):
+def normal_update_for_tavern_name(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('update', data)
 
 
 @frontend_id_resolver(r'data\.tavern\.prices')
-def reload_prices_on_price_update(user: User, data: dict, game_id: str):
+def reload_prices_on_price_update(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('ui', {
         'type': 'reload_element',
         'element': 'tavern-prices'
@@ -848,7 +848,7 @@ def reload_prices_on_price_update(user: User, data: dict, game_id: str):
 
 
 @frontend_id_resolver(r'^data\.tavern\.[\w\-\.]+$')
-def ignore_tavern_data(user: User, data: dict, game_id: str):
+def ignore_tavern_data(user: User, data: dict, game_id: str, **kwargs):
     """
     This implementation is a little dirty, because the above function matches the tavern queue only and this function
     matches all tavern data, including the queue.

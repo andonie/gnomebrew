@@ -95,7 +95,6 @@ add_startup(function() {
     $('#gb-admin-routine-select').change(function (event) {
         $('.gb-multi-list').removeClass("gb-multi-visible");
         var test_id = helper_get_selected_test_id();
-        console.log('fixing ' + test_id + '-parameters');
         $('#' + test_id + '-table-head').addClass("gb-multi-visible");
         $('#' + test_id + '-description').addClass("gb-multi-visible");
     });

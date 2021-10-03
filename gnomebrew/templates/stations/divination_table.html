@@ -1,0 +1,12 @@
+{% extends "stations/_station.html" %}
+
+{% block station_body %}
+<div class="gb-top-buttons">
+    <button class="gb-button" onclick="zoom_out('#map')">{{ icon('special.zoom_out', class='gb-icon-hover gb-icon', onclick='change_class()') | safe }}</button>
+    <button class="gb-button" onclick="zoom_in('#map')">{{ icon('special.zoom_in', class='gb-icon-hover gb-icon', onclick='change_class()') | safe }}</button>
+    <button class="gb-button">{{ icon('special.fullscreen', class='gb-icon-hover gb-icon', onclick='change_class()') | safe }}</button>
+</div>
+{% with location_matrix = generate_current_divination_map(current_user) %}
+{{ render_object('render.map', data=location_matrix) | safe }}
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{#
+ # Renders a location for the map.
+ # Expects a `WorldLocation` object named `location`.
+ #}
+{% if location is not defined %}{% set location=data %}{% endif %}
+<div class="gb-location gb-iconbox-wrapper {% if class is defined %}{{ class }}{% endif %}" title="{{ location.get_full_address() }}">
+    {{ icon(location.get_icon_id(), class='gb-icon-lg') | safe }}
+    <div class="gb-hover-info">
+        <span class="location-name">{{ location.get_location_name() }}</span>
+    </div>
+</div>

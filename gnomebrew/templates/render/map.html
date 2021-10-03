@@ -1,0 +1,22 @@
+{#
+ # Renders a part of the world map for the player to view.
+ # Expects a matrix of `WorldLocation` objects to render named `location_matrix`.
+ #}
+{% if location_matrix is not defined %}{% set location_matrix = data %}{% endif %}
+{% set location_rows = reformat_divination_map_for_display(location_matrix) %}
+<div class="gb-map {% if class is defined %}{{ class }}{% endif %}" id="{% if id is defined %}{{ id }}{% else %}map{% endif %}"
+     data-zoom='{"img": ["gb-icon-sm", "gb-icon", "gb-icon-lg", "gb-icon-xl"]}'>
+    <table cellspacing="0" cellpadding="0" class="">
+        <tbody>
+            {% for row in location_rows %}
+            <tr>
+                {% for location in row %}
+                <td>
+                    {{ render_object('render.location', data=location) | safe }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

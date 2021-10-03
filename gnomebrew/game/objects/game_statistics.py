@@ -42,7 +42,7 @@ def statistical_update(user: User, game_id: str, update, **kwargs):
     # Update DB
     mongo.db.player_statistics.update_one({'username': user.get_id()}, {mongo_command: update_content})
 
-    return update_content
+    return mongo_command, update_content
 
 
 @get_resolver('stat')

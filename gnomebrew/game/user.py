@@ -254,7 +254,7 @@ class User(UserMixin):
         """
         id_type = game_id.split('.')[0]
         assert id_type in _UPDATE_RESOLVERS
-        res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
+        mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
         # If any update listeners are registered for this game ID, inform update listeners of the update
         global _UPDATE_LISTENERS
@@ -262,30 +262,31 @@ class User(UserMixin):
             if gid in _UPDATE_LISTENERS:
                 for listener in _UPDATE_LISTENERS[gid]:
                     listener(user=self,
-                             update=res)
+                             update=res,
+                             mongo_command=mongo_command)
 
         if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
             return
-        self._data_update_to_frontends(res)
+        self._data_update_to_frontends(mongo_command, res)
 
-    def _data_update_to_frontends(self, set_content):
+    def _data_update_to_frontends(self, mongo_command, command_content):
         """
         Helper function.
         Takes in the MongoDB content update and defines what/how to update the frontends
         :return:
         """
-        for path in set_content:
-            if type(set_content[path]) is datetime:
-                set_content[path] = set_content[path].strftime('%d %b %Y %H:%M:%S') + ' GMT'
+        for path in command_content:
+            if type(command_content[path]) is datetime:
+                command_content[path] = command_content[path].strftime('%d %b %Y %H:%M:%S') + ' GMT'
 
-            individual_data = {path: set_content[path]}
+            individual_data = {path: command_content[path]}
 
             found_match = False
             for regex in _FRONTEND_DATA_RESOLVERS:
                 if regex.match(path):
                     # Found a match. Execute handler instead of default.
                     found_match = True
-                    _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path)
+                    _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path, command=mongo_command)
                     break
 
     def frontend_update(self, update_type: str, update_data: dict):
@@ -349,11 +350,11 @@ def data(user: User, game_id: str, **kwargs):
     :return:    The value of this game data (KeyError if it does not exist)
     """
     splits = game_id.split('.')
-    res = mongo.db.users.find_one({"username": user.get_id()}, {game_id: 1, '_id': 0})
-    assert res
+    result = mongo.db.users.find_one({"username": user.get_id()}, {game_id: 1, '_id': 0})
+    assert result
     try:
         for split in splits:
-            res = res[split]
+            result = result[split]
     except KeyError as e:
         # A key error means the resource is not (yet) written in the user data.
         # If the 'default' kwarg is used, instead of an error, return the default value
@@ -361,7 +362,7 @@ def data(user: User, game_id: str, **kwargs):
             return kwargs['default']
         else:
             raise e
-    return res
+    return result
 
 
 @get_resolver('html')
@@ -397,4 +398,4 @@ def game_data_update(user: User, game_id: str, update, **kwargs):
     mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
     mongo.db.users.update_one({"username": user.get_id()}, {mongo_command: command_content})
     # Also update the currently attached users.
-    return command_content
+    return mongo_command, command_content
