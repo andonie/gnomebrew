@@ -168,6 +168,14 @@ input {
     padding-right: 2px;
 }
 
+.gb-recipe-item strong {
+    color: #822929;
+}
+
+.gb-recipe-item p {
+    margin: 0;
+}
+
 .gb-break {
     flex-basis: 100%;
 }
@@ -189,7 +197,7 @@ input {
 }
 
 .gb-recipe-effect {
-    background: #e7948b;
+    background: #e39f84;
 }
 
 .gb-recipe-effect:hover {

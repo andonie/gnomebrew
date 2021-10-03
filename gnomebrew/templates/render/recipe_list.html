@@ -25,7 +25,7 @@
                 </div>
             </div>
             <div id="{{ css_friendly(recipe.get_id()) }}-description" class="gb-recipe-fine-print collapse">
-                {{ recipe.description() }}
+                {{ format_markdown(recipe.description()) | safe }}
             </div>
         </div>
         {% endfor %}
