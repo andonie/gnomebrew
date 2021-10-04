@@ -5,8 +5,8 @@
 {% if location_matrix is not defined %}{% set location_matrix = data %}{% endif %}
 {% set location_rows = reformat_divination_map_for_display(location_matrix) %}
 <div class="gb-map {% if class is defined %}{{ class }}{% endif %}" id="{% if id is defined %}{{ id }}{% else %}map{% endif %}"
-     data-zoom='{"img": ["gb-icon-sm", "gb-icon", "gb-icon-lg", "gb-icon-xl"]}'>
-    <table cellspacing="0" cellpadding="0" class="">
+     data-zoom='{"img": ["gb-icon-sm", "gb-icon", "gb-icon-lg", "gb-icon-xl"], "div": ["gb-hover-sm", "gb-hover", "gb-hover-lg", "gb-hover-xl"]}'>
+    <table cellspacing="0" cellpadding="0" class="" data-target="#map-hover">
         <tbody>
             {% for row in location_rows %}
             <tr>

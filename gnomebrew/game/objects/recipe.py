@@ -12,7 +12,7 @@ from typing import List, Dict
 from gnomebrew import mongo
 from gnomebrew.game import event as event
 from gnomebrew.game.objects.item import ItemCategory
-from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject, render_object
+from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.upgrades import Upgrade
 from gnomebrew.game.user import get_resolver, User, html_generator
@@ -104,7 +104,7 @@ class Recipe(StaticGameObject):
         if 'delta_inventory' in self._data['result']:
             max_capacity = user.get('attr.storage.max_capacity')
             at_max_capacity = [item for item in self._data['result']['delta_inventory']
-                               if player_inventory[item] == max_capacity]
+                               if item in player_inventory and player_inventory[item] == max_capacity]
             if len(at_max_capacity) == len(self._data['result']['delta_inventory']):
                 # Everything is at max capacity
                 response.add_fail_msg('You are at storage capacity for all resulting items.')
@@ -127,15 +127,18 @@ class Recipe(StaticGameObject):
             seconds=self._data['base_time'])
 
         # If the recipe is a one-time recipe, add a push to the result that ensures the finished recipe is logged
-        result = self._data['result']
+        result: list = self._data['result'].copy()
         if self.is_one_time():
-            if 'push_data' not in result:
-                result['push_data'] = dict()
-            result['push_data']['data.workshop.finished_otr'] = self._data['game_id']
-            result['ui_update'] = {
-                'type': 'reload_station',
-                'station': self._data['station']
-            }
+            result.append({
+                'effect_type': 'push_data',
+                'push_target': 'data.workshop.finished_otr',
+                'to_push': self.get_id()
+            })
+            result.append({
+                'effect_type': 'ui_update',
+                'type': 'reload_element',
+                'element': f"recipes.{self._data['station']}"
+            })
 
         # Enqueue the update event that triggers on recipe completion
         event.Event.generate_event_from_recipe_data(target=user.get_id(),
@@ -419,7 +422,7 @@ def format_recipes_by_category(recipe_list: List[Recipe]) -> Dict[str, List[Reci
     """
     recipes_by_category = dict()
     for recipe in recipe_list:
-        if recipe.has_static_value('category'):
+        if recipe.has_static_key('category'):
             category = recipe.get_static_value('category')
         else:
             category = 'no_category'

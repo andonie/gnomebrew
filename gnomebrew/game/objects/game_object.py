@@ -14,29 +14,47 @@ from gnomebrew.game.user import get_resolver, User
 from gnomebrew.game.util import global_jinja_fun
 
 
-
-class StaticGameObject(object):
+class GameObject:
     """
-    This class describes a static game object in the game.
-    A static game object is:
-    * Identical for all players
-    * Stored in a dedicated database collection
-    * Managed in RAM entirely during server runtime
+    Describes any object in Gnomebrew
     """
 
     def __init__(self, data):
         self._data = data
 
     def get_json(self) -> dict:
+        """
+        Returns a JSON representation of the object.
+        :return: a JSON representation of the object.
+        """
         return self._data
 
-    def get_static_value(self, key: str):
-        return self._data[key]
+    def get_static_value(self, key: str, **kwargs):
+        """
+        Returns a value of this game-object.
+        :param key:     associated key to get the value from.
+        :return:        associated value.
+        :raise          Exception if value not found.
+        :keyword default    If set, will return `default` instead of an exception.
+        """
+        if key in self._data:
+            return self._data[key]
+        elif 'default' in kwargs:
+            return kwargs['default']
 
-    def has_static_value(self, key: str):
+    def has_static_key(self, key: str):
+        """
+        Checks if a key is part of this object.
+        :param key: key to check.
+        :return:    `True` if key exists, otherwise `False`
+        """
         return key in self._data
 
     def get_id(self):
+        """
+        Returns the object's game ID.
+        :return:    Associated ID.
+        """
         return self._data['game_id']
 
     def get_minimized_id(self):
@@ -69,6 +87,19 @@ class StaticGameObject(object):
         :return:    This object's description.
         """
         return self._data['description']
+
+
+class StaticGameObject(GameObject):
+    """
+    This class describes a static game object in the game.
+    A static game object is:
+    * Identical for all players
+    * Stored in a dedicated database collection
+    * Managed in RAM entirely during server runtime
+    """
+
+    def __init__(self, db_data):
+        GameObject.__init__(self, db_data)
 
     @staticmethod
     def from_id(game_id) -> 'StaticGameObject':
@@ -116,6 +147,7 @@ def load_on_startup(collection_name: str):
     :param collection_name      Name of the DB collection to load from
     :return:            Ensures this class is loaded
     """
+
     def wrapper(static_data_class: Type[StaticGameObject]):
         job_object = {
             'class': static_data_class,
@@ -123,6 +155,7 @@ def load_on_startup(collection_name: str):
         }
         _load_job_list.append(job_object)
         return static_data_class
+
     return wrapper
 
 
@@ -211,7 +244,7 @@ def icon(game_id: str, **kwargs):
 
 
 @global_jinja_fun
-def render_object(game_id: str, data: Any, verbose: bool=False, **kwargs) -> str:
+def render_object(game_id: str, data: Any, verbose: bool = False, **kwargs) -> str:
     """
     Renders an object to it's HTML representation.
     @:param game_id: Fully qualified ID of the render template; e.g. of a `render.structure`

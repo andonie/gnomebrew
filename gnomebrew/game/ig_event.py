@@ -6,13 +6,13 @@ from flask import render_template, render_template_string
 
 from gnomebrew import mongo
 
-from gnomebrew.game.objects.static_object import StaticGameObject
+from gnomebrew.game.objects.game_object import StaticGameObject
 from gnomebrew.game.user import get_resolver, update_resolver, User, frontend_id_resolver, html_generator, \
     update_listener
 from gnomebrew.game.event import Event
 from gnomebrew.play import request_handler
 from gnomebrew.game.gnomebrew_io import GameResponse
-from gnomebrew.game.objects.static_object import load_on_startup
+from gnomebrew.game.objects.game_object import load_on_startup
 
 
 @load_on_startup('ingame_events')

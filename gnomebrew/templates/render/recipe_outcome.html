@@ -15,5 +15,5 @@
     {{ render_object('render.item_amount', {'item_id': 'special.time', 'amount': recipe.get_static_value('base_time')}, class=class, shorten_fun=shorten_time) | safe}}
     {% endwith %}
     <div class="">{{ icon("special.recipe_result", class='gb-icon-md') | safe }}</div>
-    {% for effect_type, effect_data in recipe.get_static_value('result').items() %}{{ render_object('render.effect', data={'effect_type': effect_type, 'effect_data': effect_data}) | safe }}{% endfor %}
+    {% for effect_data in recipe.get_static_value('result') %}{{ render_object('render.effect', data={'effect_type': effect_data['type'], 'effect_data': effect_data}) | safe }}{% endfor %}
 </div>

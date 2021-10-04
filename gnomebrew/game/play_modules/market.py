@@ -1,7 +1,7 @@
 """
 This module covers the functionality of the Market station
 """
-
+from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.user import User, user_assertion, frontend_id_resolver
 from gnomebrew.game.event import Event
 from gnomebrew.play import request_handler
@@ -134,7 +134,7 @@ def _generate_market_update_event(target: str, due_time: datetime):
     return Event(data)
 
 
-@Event.register_effect
+@Effect.type('market_update')
 def market_update(user: User, effect_data: dict, **kwargs):
     """
     Updates a user's inventory

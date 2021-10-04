@@ -5,9 +5,10 @@ from os.path import join
 from flask import render_template
 
 from gnomebrew.game.event import Event
+from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.user import get_resolver
 from gnomebrew.game.user import User
-from gnomebrew.game.objects.static_object import StaticGameObject, load_on_startup, render_object
+from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, render_object
 
 
 @get_resolver('attr')
@@ -165,7 +166,7 @@ class Upgrade(StaticGameObject):
         return render_object('render.upgrade_outcome', data=[self._data['game_id']], **kwargs)
 
 
-@Event.register_effect
+@Effect.type('upgrade')
 def upgrade(user: User, effect_data: list, **kwargs):
     """
     Event execution for an upgrade.

@@ -10,7 +10,8 @@ from gnomebrew import mongo
 from gnomebrew.game import boot_routine
 import datetime
 
-from gnomebrew.game.objects.static_object import StaticGameObject
+from gnomebrew.game.objects.effect import Effect
+from gnomebrew.game.objects.game_object import StaticGameObject
 from gnomebrew.game.user import User, load_user, html_generator
 import threading
 
@@ -94,15 +95,12 @@ class Event(object):
         # Get user object that represents the target
         user: User = load_user(self._data['target'])
 
-        # Clean up the escaped dots (.)
-        for effect_type in self._data['effect']:
-            if type(self._data['effect'][effect_type]) is dict:
-                for key, _ in self._data['effect'][effect_type].copy().items():
-                    self._data['effect'][effect_type][key.replace('-', '.')] = self._data['effect'][effect_type].pop(key)
+        if not user:
+            raise Exception(f"Invalid username given: {self._data['target']}")
 
-        for effect in self._data['effect']:
+        for effect_data in self._data['effect']:
             # Call the registered handling function for the effect key
-            Event.execute_event_effect(user=user, effect_type=effect, effect_data=self._data['effect'][effect], source=self)
+            Effect(effect_data).execute_on(user)
 
     def get_target_username(self):
         """
@@ -128,7 +126,7 @@ class Event(object):
         self._data['due_time'] = due_time
 
     @staticmethod
-    def generate_event_from_recipe_data(target: str, result: dict,
+    def generate_event_from_recipe_data(target: str, result: list,
                                         due_time: datetime.datetime, slots: int, station: str, recipe_id: str,
                                         total_cost: dict):
         """
@@ -143,47 +141,19 @@ class Event(object):
         data = dict()
         data['target'] = target
         data['type'] = 'recipe'
-        data['effect'] = dict()
-        data['effect'].update(result)
-        for effect_type in data['effect']:
-            if type(data['effect'][effect_type]) is dict:
-                # Change dots (.) to dashes (-) because BSON/Mongo gets sad :(
-                for key, _ in data['effect'][effect_type].copy().items():
-                    # Take an iteration copy to avoid concurrent modification horrors
-                    data['effect'][effect_type][key.replace('.', '-')] = data['effect'][effect_type].pop(key)
+        data['effect'] = result
+        # for effect_type in data['effect']:
+        #     if type(data['effect'][effect_type]) is dict:
+        #         # Change dots (.) to dashes (-) because BSON/Mongo gets sad :(
+        #         for key, _ in data['effect'][effect_type].copy().items():
+        #             # Take an iteration copy to avoid concurrent modification horrors
+        #             data['effect'][effect_type][key.replace('.', '-')] = data['effect'][effect_type].pop(key)
         data['due_time'] = due_time
         data['slots'] = slots
         data['station'] = station
         data['recipe_id'] = recipe_id
         data['cost'] = total_cost
         return Event(data)
-
-    @staticmethod
-    def register_effect(effect_callable: Callable):
-        """
-        Registers an event effect handling function.
-        :param effect_id:       The effect ID stored in the event queue
-        :param effect_callable: A function to be executed when the event is triggered. Takes the kwargs:
-                                * `user: User` the targetted user object
-                                * `effect_data`: The stored data under the key `effect_id` in the event queue
-        """
-        global _EVENT_FUNCTIONS
-        assert effect_callable.__name__ not in _EVENT_FUNCTIONS
-        _EVENT_FUNCTIONS[effect_callable.__name__] = effect_callable
-
-    @staticmethod
-    def execute_event_effect(user: User, effect_type: str, effect_data: dict, **kwargs):
-        """
-        This function can be called to interpret and execute JSON effect data
-        :param user:            a user to execute the effect on.
-        :param effect_type:     The effect type (used in `Event.register`)
-        :param effect_data:     A dict representing the effect data JSON
-        :keyword source:        Can be undefined. If a timed event triggered this effect, the triggering event object
-                                is `source`.
-        """
-        global _EVENT_FUNCTIONS
-        _EVENT_FUNCTIONS[effect_type](user=user, effect_data=effect_data, **kwargs)
-
 
     def enqueue(self):
         """
@@ -193,65 +163,6 @@ class Event(object):
         self._data['since'] = datetime.datetime.utcnow()
         mongo.db.events.insert_one(self._data)
 
-
-# Some Builtin Event Handling
-
-@Event.register_effect
-def delta_inventory(user: User, effect_data: dict, **kwargs):
-    """
-    Event execution for a change in inventory data.
-    :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
-    """
-    user_inventory = user.get('data.storage.content')
-    max_capacity = user.get('attr.storage.max_capacity')
-    inventory_update = dict()
-    for material in effect_data:
-        if material not in user_inventory:
-            inventory_update['storage.content.' + material] = min(max_capacity, effect_data[material])
-            # The new item might be orderable. In that case --> Add it to the price list
-            item_object = StaticGameObject.from_id('item.' + material)
-            if item_object.is_orderable():
-                inventory_update['tavern.prices.' + material] = item_object.get_static_value('base_value')
-        elif material == 'gold':
-            # Gold is an exception and can grow to infinity always:
-            inventory_update['storage.content.' + material] = user_inventory[material] + effect_data[material]
-        else:
-            inventory_update['storage.content.' + material] = min(max_capacity, user_inventory[material] + effect_data[material])
-    user.update('data', inventory_update, is_bulk=True)
-
-
-@Event.register_effect
-def push_data(user: User, effect_data: dict, **kwargs):
-    """
-    Event execution for an arbitrary push (list append) of data.
-    :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
-    """
-    for data_path in effect_data:
-        data = user.get(data_path)
-        new_data = effect_data[data_path]
-        if type(new_data) is not list:
-            # Wrap the update in a list to ensure multiple push-data handling is possible
-            new_data = [new_data]
-
-        # Ensure none of the items to push are already in the data
-        assert not any(x in data for x in new_data)
-        for item in new_data:
-            data.append(item)
-            # Update each item individually to ensure every frontend_id_resolver
-            # Can fetch the list tail and knows this is the pushed change
-            user.update(data_path, data)
-
-
-@Event.register_effect
-def ui_update(user: User, effect_data: dict, **kwargs):
-    """
-    Event execution for a user ui update
-    :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
-    """
-    user.frontend_update('ui', effect_data)
 
 
 @boot_routine

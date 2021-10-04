@@ -6,6 +6,7 @@ throughout gameplay** and optimized for such operations, unlike the more general
 Instead of using that genaral collection, the module manages its own collection `player_statistics`.
 """
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, get_resolver, update_resolver, load_user
 from gnomebrew import mongo
@@ -98,7 +99,7 @@ def get_statistical_data(user: User, game_id: str, **kwargs):
     return result
 
 
-@Event.register_effect
+@Effect.type('apply_statistics')
 def apply_statistics(user: User, effect_data: dict, **kwargs):
     """
     Applies basic (/default) statistics updates for a user when fired.

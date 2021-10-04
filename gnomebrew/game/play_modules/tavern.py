@@ -11,6 +11,7 @@ from typing import Callable
 
 from flask import render_template
 
+from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.item import Item
 from gnomebrew.game.user import User, load_user, frontend_id_resolver, user_assertion, html_generator
 from gnomebrew.game.event import Event
@@ -660,7 +661,7 @@ def _generate_patron_next_step_event(target: str, patron: Patron, due_time: date
     return Event(data)
 
 
-@Event.register_effect
+@Effect.type('patron_next_step')
 def patron_next_step(user: User, effect_data: dict, **kwargs):
     """
     Fires when a patron is due to decide what to do next. Initiates a state change.
@@ -672,7 +673,7 @@ def patron_next_step(user: User, effect_data: dict, **kwargs):
     patron.run_next_step(user)
 
 
-@Event.register_effect
+@Effect.type('patron_enter')
 def patron_enter(user: User, effect_data: dict, **kwargs):
     """
     Fires when a patron enters the tavern.

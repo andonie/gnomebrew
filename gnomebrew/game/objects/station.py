@@ -3,7 +3,8 @@ from os.path import join
 from flask import render_template
 
 from gnomebrew.game.event import Event
-from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
+from gnomebrew.game.objects.effect import Effect
+from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.user import User, get_resolver, html_generator
 from gnomebrew.game.util import global_jinja_fun
 
@@ -60,7 +61,7 @@ class Station(StaticGameObject):
         return 'slots' in self._data
 
 
-@Event.register_effect
+@Effect.type('add_station')
 def add_station(user: User, effect_data: dict, **kwargs):
     """
     Fired when a new station is to be added to a user's game data.

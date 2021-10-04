@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
+from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import get_resolver, User
 from gnomebrew.game.util import global_jinja_fun

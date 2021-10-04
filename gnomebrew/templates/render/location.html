@@ -3,9 +3,11 @@
  # Expects a `WorldLocation` object named `location`.
  #}
 {% if location is not defined %}{% set location=data %}{% endif %}
-<div class="gb-location gb-iconbox-wrapper {% if class is defined %}{{ class }}{% endif %}" title="{{ location.get_full_address() }}">
+<div class="gb-location gb-iconbox-wrapper gb-selectable {% if class is defined %}{{ class }}{% endif %}" title="{{ location.get_full_address() }}" id="{{ location.get_full_address() }}"
+    onclick="select('data.divination_table.current_focus', this)" data-value="{{ location.get_full_address() }}" data-peers=".gb-location">
     {{ icon(location.get_icon_id(), class='gb-icon-lg') | safe }}
-    <div class="gb-hover-info">
+    <div class="gb-hover-info gb-hover-lg">
         <span class="location-name">{{ location.get_location_name() }}</span>
+        <span class="location-address">{{ location.get_full_address()[6:] }}</span>
     </div>
 </div>

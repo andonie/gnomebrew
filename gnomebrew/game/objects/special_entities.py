@@ -3,7 +3,7 @@ This module manages the game's special entities that are mostly needed for icon 
 """
 
 from gnomebrew.game.user import get_resolver, User
-from gnomebrew.game.objects.static_object import StaticGameObject, load_on_startup
+from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup
 
 
 @load_on_startup('special_entities')
