@@ -33,6 +33,9 @@ class StaticGameObject(object):
     def get_static_value(self, key: str):
         return self._data[key]
 
+    def has_static_value(self, key: str):
+        return key in self._data
+
     def get_id(self):
         return self._data['game_id']
 

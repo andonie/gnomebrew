@@ -142,6 +142,21 @@ function zoom_out(target_selector) {
 }
 
 
+/* SELECT Utility */
+
+// Updates a selection in game.
+function select(game_id, selected) {
+    two_way_game_request({
+        type: 'select',
+        target_id: game_id,
+        value: $(selected).data('value')
+    }, selected, null, function(response) {
+        console.log(response);
+        $($(selected).data('peers')).removeClass('gb-selected');
+        $(selected).addClass('gb-selected');
+    });
+}
+
 /* ERROR LOGGING */
 
 function global_error(error_msg) {

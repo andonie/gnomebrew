@@ -11,10 +11,12 @@ from typing import List, Dict
 
 from gnomebrew import mongo
 from gnomebrew.game import event as event
+from gnomebrew.game.objects.item import ItemCategory
 from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.upgrades import Upgrade
 from gnomebrew.game.user import get_resolver, User, html_generator
+from gnomebrew.game.util import global_jinja_fun
 from gnomebrew.play import request_handler
 
 
@@ -60,10 +62,25 @@ class Recipe(StaticGameObject):
 
         # ~~~~ Check if prerequisites are met ~~~~
 
-        # 1. Material Cost
+        # 0.5. If Item Categories are involved, convert the categories to additional hard material Cost
+        total_cost = self._data['cost'].copy()
+
+        if 'it_cat' in total_cost:
+            for category in total_cost['it_cat']:
+                selected_cat_item = user.get(f"selection.it_cat.{category}", default=None)
+                if not selected_cat_item:
+                    response.add_fail_msg(f"Cannot find an item in your inventory matching the category {ItemCategory.from_id(f'selection.it_cat.{category}').name()}.")
+                    return response
+                if selected_cat_item in total_cost:
+                    total_cost[selected_cat_item] += total_cost['it_cat'][category]
+                else:
+                    total_cost[selected_cat_item] = total_cost['it_cat'][category]
+            del total_cost['it_cat']
+
+        # 1. Hard Material Cost
         player_inventory = user.get('data.storage.content')
-        if not all([x in player_inventory and player_inventory[x] >= self._data['cost'][x] for x in
-                    self._data['cost'].keys()]):
+        if not all([x in player_inventory and player_inventory[x] >= total_cost[x] for x in
+                    total_cost.keys() if x != 'it_cat']):
             response.add_fail_msg('Not enough resources to execute recipe.')
 
         # 2. Available Slots
@@ -97,9 +114,9 @@ class Recipe(StaticGameObject):
             return response
 
         # Remove material from Inventory now
-        update_data = self._data['cost'].copy()
-        for material in update_data:
-            update_data[material] = player_inventory[material] - update_data[material]
+        update_data = dict()
+        for material in total_cost:
+            update_data[material] = player_inventory[material] - total_cost[material]
         if update_data:
             user.update('data.storage.content', update_data, is_bulk=True)
 
@@ -126,7 +143,8 @@ class Recipe(StaticGameObject):
                                                     due_time=due_time,
                                                     slots=self._data['slots'],
                                                     station=self._data['station'],
-                                                    recipe_id=self._data['game_id']).enqueue()
+                                                    recipe_id=self._data['game_id'],
+                                                    total_cost=total_cost).enqueue()
 
         response.succeess()
         response.add_ui_update({
@@ -250,7 +268,7 @@ class Recipe(StaticGameObject):
             'type': 'reload_element',
             'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
         })
-        cost = Recipe.from_id(recipe_event['recipe_id']).get_static_value('cost')
+        cost = recipe_event['cost']
         if cost:
             user.update('data.storage.content', cost, command='$inc', is_bulk=True)
         response.succeess()
@@ -389,3 +407,23 @@ def generate_recipe_list(game_id: str, user: User, **kwargs):
     """
     #
     pass
+
+
+@global_jinja_fun
+def format_recipes_by_category(recipe_list: List[Recipe]) -> Dict[str, List[Recipe]]:
+    """
+    Helper function to keep the template-code lean. Takes a list of recipe and formats it by `category`.
+    :param recipe_list: Result of `user.get('recipes.[...]')`
+    :return:        A dict that sorts the recipes by category (i.e. `{'category': ['recipe.a', 'recipe.b']}`)
+                    If a recipe does not have `category` data, it is instead matched to `'no_category'`
+    """
+    recipes_by_category = dict()
+    for recipe in recipe_list:
+        if recipe.has_static_value('category'):
+            category = recipe.get_static_value('category')
+        else:
+            category = 'no_category'
+        if category not in recipes_by_category:
+            recipes_by_category[category] = list()
+        recipes_by_category[category].append(recipe)
+    return recipes_by_category

@@ -18,7 +18,7 @@ def boot_routine(fun: Callable):
 # Load all Game Modules
 _game_module_names = ['gnomebrew.game.objects', 'gnomebrew.game.play_modules', 'gnomebrew.game.objects.world',
                       'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.static_data',
-                      'gnomebrew.game.ig_event']
+                      'gnomebrew.game.ig_event', 'gnomebrew.game.selection']
 
 # Load in Game Modules
 game_modules = list(map(__import__, _game_module_names))

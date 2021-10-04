@@ -5,9 +5,13 @@
 {% if recipe is not defined %}{% set recipe=data %}{% endif %}
 <div class="gb-recipe-outcome">
     {% with cost = recipe.get_static_value('cost'), class='gb-recipe-item gb-recipe-cost' %}
-    {% for item in cost %}{% with item_id="item." + item, amount=cost[item] %}
+    {% for item in cost %}
+    {% if item == 'it_cat' %}
+    {% for cat_cost in cost['it_cat'] %}{{ render_object('render.item_amount', {'item_id': 'it_cat.' + cat_cost, 'amount': cost['it_cat'][cat_cost]}, class=class + ' gb-recipe-category') | safe }}{% endfor %}
+    {% else %}
+    {% with item_id="item." + item, amount=cost[item] %}
     {{ render_object('render.item_amount', {'item_id': item_id, 'amount': amount}, class=class) | safe }}
-    {% endwith %}{% endfor %}
+    {% endwith %}{% endif %}{% endfor %}
     {{ render_object('render.item_amount', {'item_id': 'special.time', 'amount': recipe.get_static_value('base_time')}, class=class, shorten_fun=shorten_time) | safe}}
     {% endwith %}
     <div class="">{{ icon("special.recipe_result", class='gb-icon-md') | safe }}</div>

@@ -164,12 +164,20 @@ input {
     flex-flow: row no-wrap;
     align-items: center;
     gap: 3px;
-    padding-left: 2px;
-    padding-right: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
 }
 
 .gb-recipe-item strong {
     color: #822929;
+}
+
+.gb-recipe-item.gb-recipe-category {
+    background: #8bbce7bd;
+}
+
+.gb-recipe-item.gb-recipe-category:hover {
+    background: #ebf6ffbd;
 }
 
 .gb-recipe p {
@@ -327,7 +335,7 @@ input {
 
 .gb-map {
     border: none;
-    padding: 5px 15px;
+    padding: 5px;
     overflow: auto;
     height: 210px;
     background: #e7bf8b;
@@ -348,19 +356,36 @@ input {
 
 .gb-hover-info {
     position: absolute;
+    transform: translate(-50%, 40%);
     top: 80%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
+    padding: 2px 5px;
     display: none;
     background: #ffeed9ee;
-    font-size: 0.85em;
+    font-size: 1em;
     text-align: center;
     z-index: 50;
+    flex-direction: column;
+    align-items: center;
+}
+
+.gb-hover-info.gb-hover-sm {
+}
+
+.gb-hover-info.gb-hover {
+    transform: translate(-50%, 50%);
+}
+
+.gb-hover-info.gb-hover-lg {
+    transform: translate(-50%, 50%);
+}
+
+.gb-hover-info.gb-hover-xl {
+    transform: translate(-50%, 50%);
 }
 
 .gb-location:hover .gb-hover-info {
-    display: block;
+    display: flex;
 }
 
 .location-name {

@@ -1,4 +1,7 @@
+from typing import List, Dict
+
 from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
+from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import get_resolver, User
 from gnomebrew.game.util import global_jinja_fun
 
@@ -6,6 +9,11 @@ from gnomebrew.game.util import global_jinja_fun
 @get_resolver('item')
 def item(game_id: str, user: User, **kwargs):
     return Item.from_id(game_id)
+
+
+@get_resolver('it_cat')
+def it_cat(game_id: str, user: User, **kwargs):
+    return ItemCategory.from_id(game_id)
 
 
 @load_on_startup('items')
@@ -25,6 +33,15 @@ class Item(StaticGameObject):
         Returns `True` if patrons can order this item.
         """
         return True if 'orderable' in self._data else False
+
+    def matches_category_name(self, category_name: str) -> bool:
+        """
+        Checks if this item belongs to a given category.
+        :param category_name:   Name of the category to test this item against, simplified, e.g. `'mundane'`.
+        :return:                `True` if the item belongs into this category. Otherwise `False`.
+        """
+        assert category_name[:7] == 'it_cat.'
+        return category_name[7:] in self._data['categories']
 
     def item_order(self):
         """
@@ -85,6 +102,8 @@ class ItemCategory(StaticGameObject):
     Item Category Wrapper Class
     """
 
+    _items_by_category: Dict[str, List[Item]] = dict()
+
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
 
@@ -110,7 +129,25 @@ class ItemCategory(StaticGameObject):
         """
         return self._data['is_main'] if 'is_main' in self._data else False
 
+    def get_matching_items(self) -> List[Item]:
+        """
+        Returns a list of all items that belong into this category.
+        :return:    A list of all items that belong in this category.
+        """
+        return ItemCategory._items_by_category[self._data['game_id']]
 
+    @classmethod
+    def on_data_update(cls):
+        """
+        This method is called from the backend whenever static item data is freshly updated from the database.
+        """
+        new_data = dict()
+        all_items = StaticGameObject.get_all_of_type('item')
+        all_categories = StaticGameObject.get_all_of_type('it_cat')
+        for category in all_categories:
+            new_data[all_categories[category].get_id()] = [all_items[item_name] for item_name in all_items
+                                                           if all_items[item_name].matches_category_name(all_categories[category].get_id())]
+        cls._items_by_category = new_data
 
 
 @global_jinja_fun

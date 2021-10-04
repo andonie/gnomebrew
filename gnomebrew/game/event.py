@@ -129,7 +129,8 @@ class Event(object):
 
     @staticmethod
     def generate_event_from_recipe_data(target: str, result: dict,
-                                        due_time: datetime.datetime, slots: int, station: str, recipe_id: str):
+                                        due_time: datetime.datetime, slots: int, station: str, recipe_id: str,
+                                        total_cost: dict):
         """
         Generates an event that modifies user inventory.
         :param station:
@@ -154,6 +155,7 @@ class Event(object):
         data['slots'] = slots
         data['station'] = station
         data['recipe_id'] = recipe_id
+        data['cost'] = total_cost
         return Event(data)
 
     @staticmethod

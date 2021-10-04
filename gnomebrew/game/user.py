@@ -236,7 +236,8 @@ class User(UserMixin):
         :return:        The result of the query
         """
         id_type = game_id.split('.')[0]
-        assert id_type in _GAME_ID_RESOLVERS
+        if id_type not in _GAME_ID_RESOLVERS:
+            raise Exception(f"Don't recognize game IDs starting with {id_type}: {game_id}")
         return _GAME_ID_RESOLVERS[id_type](user=self, game_id=game_id, **kwargs)
 
     def update(self, game_id: str, update, **kwargs):

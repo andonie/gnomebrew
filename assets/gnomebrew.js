@@ -235,7 +235,7 @@ function close_event_modal() {
 
 /* GAMEPLAY */
 
-// Wrapper for all Game Requests that do not require a direct reaction to the response, which covers all UI
+// Wrapper for all Game Requests that do not require a direct reaction to the response
 function one_way_game_request(request_data, error_target, trigger_element) {
     trigger_element.disabled = true;
     $(trigger_element).addClass('gb-pending');
@@ -259,23 +259,18 @@ function one_way_game_request(request_data, error_target, trigger_element) {
 // Wrapper for all Game requests that do print output
 function two_way_game_request(request_data, trigger_element, output_id, success_logic) {
     trigger_element.disabled = true;
-    var html_before = trigger_element.innerHTML;
-    if(html_before.length < 3) {
-        trigger_element.innerHTML = '.';
-    } else {
-        trigger_element.innerHTML = '...';
-    }
+    $(trigger_element).addClass('gb-pending');
 
     var reset_element = function(){
         trigger_element.disabled = false;
-        trigger_element.innerHTML = html_before;
+        $(trigger_element).removeClass('gb-pending');
     };
 
     $.post('/play/request', request_data).done(function(response){
         success_logic(response);
         reset_element();
-    }).fail(function() {
-        document.getElementById(output_id).innerHTML = 'Error connecting to the Gnomebrew server.';
+    }).fail(function(e) {
+        console.print(e);
         reset_element();
     });
 }
