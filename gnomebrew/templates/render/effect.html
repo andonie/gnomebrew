@@ -5,9 +5,9 @@
 {% if effect_type is not defined %}{% set effect_type = data.effect_type %}{% endif %}
 {% if effect_data is not defined %}{% set effect_data = data.effect_data %}{% endif %}
 {% if effect_type == 'delta_inventory' %}
-{% for item in effect_data %}
-{% with item_id = "item."+item, cost=effect_data[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-recipe-item gb-recipe-effect') | safe}}{% endwith %}
+{% for item in effect_data.delta %}
+{% with item_id = "item."+item, cost=effect_data.delta[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-recipe-item gb-recipe-effect') | safe}}{% endwith %}
 {% endfor %}
 {% elif effect_type == 'upgrade' %}
-{% with class='gb-recipe-item gb-recipe-effect' %}{{ render_object('render.upgrade_outcome', data=effect_data, class=class) | safe }}{% endwith %}
+{% with class='gb-recipe-item gb-recipe-effect' %}{{ render_object('render.upgrade_outcome', data=effect_data.to_upgrade, class=class) | safe }}{% endwith %}
 {% endif %}

@@ -20,7 +20,7 @@ add_startup(function() {
 {% endblock %}
 
 {% block sidebar_outer %}
-<div class="gb-sidebar sb-toggle" id="gb.sidebar">
+<div class="gb-sidebar" id="gb.sidebar">
     {% block sidebar %}
     {{ current_user.get('html.station.storage', id_buffer=buffer) | safe }}
     {% endblock %}

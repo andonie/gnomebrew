@@ -8,13 +8,13 @@
 {% endblock %}
 
 {% block station_body %}
-<div class="description">
-    <div class="descriptor">{{ icon('item.gold') | safe }}</div>
-    <div class="description-value {{ css_friendly( 'data.storage.content.gold' ) }}">{{ shorten_cents(current_user.get('data.storage.content.gold', id_buffer=buffer)) }}</div>
+<div class="gb-icon-group">
+    {{ icon('item.gold') | safe }}
+    <span class="data-storage-content-gold gold-counter">{{ shorten_cents(current_user.get('data.storage.content.gold', id_buffer=buffer)) }}</span>
 </div>
-<div class="description">
-    <div class="descriptor">{{ icon('attr.storage.max_capacity') | safe }}</div>
-    <div class="description-value {{ css_friendly('attr.storage.max_capacity') }}">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}</div>
+<div class="gb-icon-group">
+    {{ icon('attr.storage.max_capacity') | safe }}
+    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}}</span>
 </div>
 <input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item">
 <div class="gb-table-wrap storage-content" id="storage.content">

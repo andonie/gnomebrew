@@ -22,7 +22,7 @@ _HTML_ID_RULES = dict()
 _USR_CACHE = dict()
 
 
-def get_resolver(type: str, dynamic_buffer=False):
+def get_resolver(type: str, dynamic_buffer=False, **kwargs):
     """
     Registers a function to resolve a game resource identifier.
     :param type: The type of this resolver. A unique identifier for the first part of a game-id, e.g. `data`
@@ -36,6 +36,25 @@ def get_resolver(type: str, dynamic_buffer=False):
     """
     global _GAME_ID_RESOLVERS
     assert type not in _GAME_ID_RESOLVERS
+
+
+
+#   # IDs of all Items that have a postfix (and therefore can be addressed with more complexity than plain items).
+#   postfixes_by_type = dict()
+
+#   @classmethod
+#   def postfix(cls, postfix_type: str, get_fun: Callable, update_fun: Callable):
+#       """
+#       Decorator function. Marks an ID-postfix class for this item (e.g. item.fruit_wine.strawberry).
+#       If a Game-ID is called (either get or update) that matches a postfixed item, the given functions `get_fun` and
+#       `update_fun` will directly handle this logic with all parameters forwarded.
+#       """
+#       if postfix_type in cls.postfixes_by_type:
+#           raise Exception(f"{postfix_type} is already a registered Item postfix type")
+#       cls.postfixes_by_type[postfix_type] = dict()
+#       cls.postfixes_by_type[postfix_type]['get'] = get_fun
+#       cls.postfixes_by_type[postfix_type]['update'] = update_fun
+
 
     def wrapper(fun: Callable):
         _GAME_ID_RESOLVERS[type] = dict()

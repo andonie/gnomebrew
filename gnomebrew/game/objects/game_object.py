@@ -2,7 +2,7 @@
 This module manages the game's in-loading
 """
 from os.path import join
-from typing import Type, Any
+from typing import Type, Any, Callable
 
 from flask import url_for, render_template
 
@@ -175,6 +175,9 @@ def update_static_data():
         base_dict = dict()
         entity_type = None
         for doc in mongo.db[job['collection']].find({}, {'_id': False}):
+            if not doc:
+                # Read an empty doc!
+                raise Exception(f"Loaded an empty doc in {job['collection']}.")
             read_type = doc['game_id'].split('.')[0]
             if entity_type is None:
                 entity_type = read_type

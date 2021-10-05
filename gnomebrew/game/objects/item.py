@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Callable
 
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
@@ -8,12 +8,23 @@ from gnomebrew.game.util import global_jinja_fun
 
 @get_resolver('item')
 def item(game_id: str, user: User, **kwargs):
-    return Item.from_id(game_id)
+    splits = game_id.split('.')
+    if len(splits) > 2:
+        # This item is beyond standard length. It is postfixed.
+        base_id = '.'.join(splits[:2])
+        base_item = Item.from_id(base_id)
+        return Item.postfixes_by_type[base_item.get_static_value('postfixed')['postfix_type']]['get'](game_id=game_id,
+                                                                                                      user=user,
+                                                                                                      **kwargs)
+    else:
+        return Item.from_id(game_id)
 
 
 @get_resolver('it_cat')
 def it_cat(game_id: str, user: User, **kwargs):
     return ItemCategory.from_id(game_id)
+
+
 
 
 @load_on_startup('items')
@@ -93,7 +104,18 @@ class Item(StaticGameObject):
         """
         This method is called from the backend whenever static item data is freshly updated from the database.
         """
-        cls._order_list = list(filter(lambda item: item.is_orderable(), StaticGameObject.get_all_of_type('item').values()))
+        cls._order_list = list(
+            filter(lambda item: item.is_orderable(), StaticGameObject.get_all_of_type('item').values()))
+
+
+
+# SETTING UP ITEM POSTFIXES
+
+
+
+
+
+
 
 
 @load_on_startup('item_categories')
@@ -154,7 +176,8 @@ class ItemCategory(StaticGameObject):
         all_categories = StaticGameObject.get_all_of_type('it_cat')
         for category in all_categories:
             new_data[all_categories[category].get_id()] = [all_items[item_name] for item_name in all_items
-                                                           if all_items[item_name].matches_category_name(all_categories[category].get_id())]
+                                                           if all_items[item_name].matches_category_name(
+                    all_categories[category].get_id())]
         cls._items_by_category = new_data
 
     def get_category_total_of(self, user: User, **kwargs) -> int:
@@ -166,7 +189,7 @@ class ItemCategory(StaticGameObject):
         """
         inventory = user.get('data.storage.content', **kwargs)
         return sum([inventory[item.get_minimized_id()] for item in self.get_matching_items()
-                     if item.get_minimized_id() in inventory])
+                    if item.get_minimized_id() in inventory])
 
 
 @global_jinja_fun
