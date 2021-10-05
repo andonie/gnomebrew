@@ -52,8 +52,8 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     :param user:            The user to execute on.
     :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
     """
-    user_inventory = user.get('data.storage.content')
-    max_capacity = user.get('attr.storage.max_capacity')
+    user_inventory = user.get('data.storage.content', **kwargs)
+    max_capacity = user.get('attr.storage.max_capacity', **kwargs)
     inventory_update = dict()
     for material in effect_data['delta']:
         if material not in user_inventory:
@@ -91,3 +91,18 @@ def ui_update(user: User, effect_data: dict, **kwargs):
     :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
     """
     user.frontend_update('ui', effect_data)
+
+
+@Effect.type('repeat')
+def repeat_event(user: User, effect_data: dict, **kwargs):
+    """
+    Repeats a given effect multiple times.
+    :param user:        targget user.
+    :param effect_data: effect data.
+    :param kwargs:
+    """
+    repeat_times = int(effect_data['repeat_times'])
+    target_effect = Effect(effect_data['repeat_data'])
+    for _ in range(repeat_times):
+        target_effect.execute_on(user)
+

@@ -2,7 +2,7 @@
 Manages User Data for the game
 """
 from os.path import join
-from typing import Callable
+from typing import Callable, Union, List
 
 from gnomebrew import mongo, login_manager, socketio
 from flask_login import UserMixin
@@ -22,10 +22,13 @@ _HTML_ID_RULES = dict()
 _USR_CACHE = dict()
 
 
-def get_resolver(type: str):
+def get_resolver(type: str, dynamic_buffer=False):
     """
     Registers a function to resolve a game resource identifier.
     :param type: The type of this resolver. A unique identifier for the first part of a game-id, e.g. `data`
+    :param dynamic_buffer:  If set to `True`, Gnomebrew assumes this get-result will always be JSON formatted, and thus
+                            nested. (e.g. I don't need to resolve 'data.storage.content.gold', when I already have the
+                            result of 'data.storage.content' buffered)
     :return: The registration wrapper. To be used as an annotation on a function that will serve as the `get` logic.
     The function will resolve game_ids leading with `type` and is expected to have these parameters:
     * `user: User` user for which the ID is to be resolved
@@ -35,7 +38,9 @@ def get_resolver(type: str):
     assert type not in _GAME_ID_RESOLVERS
 
     def wrapper(fun: Callable):
-        _GAME_ID_RESOLVERS[type] = fun
+        _GAME_ID_RESOLVERS[type] = dict()
+        _GAME_ID_RESOLVERS[type]['fun'] = fun
+        _GAME_ID_RESOLVERS[type]['dynamic_buffer'] = dynamic_buffer
         return fun
 
     return wrapper
@@ -73,6 +78,8 @@ def update_listener(game_id: str):
 
                     * `user`: The user from which the update originated.
                     * `update`: The update data
+                    * kwargs
+
                     The function should be 'lightweight', as - depending on the game id - it might be called quite
                     often. Therefore, the function should only make time-intense calls (e.g. subsequent `get`/`update`
                     calls) when strictly necessary. The function receives the update data directly as a paramter and
@@ -84,6 +91,7 @@ def update_listener(game_id: str):
 
     def wrapper(fun: Callable):
         _UPDATE_LISTENERS[game_id].append(fun)
+        return fun
 
     return wrapper
 
@@ -232,13 +240,29 @@ class User(UserMixin):
         """
         Universal Method to retrieve an input with Game ID
         :param game_id: The ID of a game item, e.g. `attr.well.slots` or `data.storage.content`
-        :return:        The result of the query
+        :keyword id_buffer `id_buffer` should always be set. If a buffer is registered it will be consulted during this
+                            get-request as well as consecutive get-requests, provided the buffer is always forwarded.
         :return:        The result of the query
         """
         id_type = game_id.split('.')[0]
         if id_type not in _GAME_ID_RESOLVERS:
             raise Exception(f"Don't recognize game IDs starting with {id_type}: {game_id}")
-        return _GAME_ID_RESOLVERS[id_type](user=self, game_id=game_id, **kwargs)
+
+        # Always go for the Buffer!
+        if 'id_buffer' not in kwargs or not kwargs['id_buffer']:
+            # No Buffer yet.
+            kwargs['id_buffer'] = IDBuffer()
+        buffer = kwargs['id_buffer']
+        # Use ID Buffer if possible.
+        is_dynamic = _GAME_ID_RESOLVERS[id_type]['dynamic_buffer']
+        if buffer.contains_id(game_id, dynamic_id=is_dynamic):
+            return buffer.evaluate_id(game_id, is_dynamic)
+
+        result = _GAME_ID_RESOLVERS[id_type]['fun'](user=self, game_id=game_id, **kwargs)
+
+        if 'id_buffer' in kwargs:
+            kwargs['id_buffer'].include(game_id, result, dynamic_id=_GAME_ID_RESOLVERS[id_type]['dynamic_buffer'])
+        return result
 
     def update(self, game_id: str, update, **kwargs):
         """
@@ -255,6 +279,11 @@ class User(UserMixin):
         """
         id_type = game_id.split('.')[0]
         assert id_type in _UPDATE_RESOLVERS
+
+        if 'id_buffer' in kwargs:
+            # If A Buffer is used currently, make sure it invalidates this ID properly
+            kwargs['id_buffer'].invalidate(game_id, dynamic_id=_GAME_ID_RESOLVERS[id_type]['dynamic_buffer'])
+
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
         # If any update listeners are registered for this game ID, inform update listeners of the update
@@ -290,7 +319,7 @@ class User(UserMixin):
                     _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path, command=mongo_command)
                     break
 
-    def frontend_update(self, update_type: str, update_data: dict):
+    def frontend_update(self, update_type: str, update_data: dict, **kwargs):
         """
         Called to send updates from server to user frontends.
         This function wraps a `socketio` call.
@@ -298,14 +327,6 @@ class User(UserMixin):
         :param update_data: Data to be sent to all active frontends
         """
         socketio.emit(update_type, update_data, json=True, to=self.username)
-
-    def get_unlocked_station_list(self):
-        """
-
-        :return:
-        """
-        return mongo.db.users.find_one({"username": self.username},
-                                       {'data': 1, '_id': 0})['data'].keys()
 
     def get_game_data(self):
         """
@@ -342,7 +363,7 @@ def load_user(user_id):
 
 # STANDARD RESOLVERS
 
-@get_resolver('data')
+@get_resolver('data', dynamic_buffer=True)
 def data(user: User, game_id: str, **kwargs):
     """
     Evaluates a game-data ID and returns the value
@@ -400,3 +421,106 @@ def game_data_update(user: User, game_id: str, update, **kwargs):
     mongo.db.users.update_one({"username": user.get_id()}, {mongo_command: command_content})
     # Also update the currently attached users.
     return mongo_command, command_content
+
+
+class IDBuffer:
+    """
+    Buffers the results of get-requests during execution of one program step.
+    """
+
+    def __init__(self):
+        """
+        Initializes a clean, empty ID BUffer
+        """
+        self._buffer_data = dict()
+
+    def __str__(self):
+        return f"<Gnomebrew ID Buffer>\n{str(self._buffer_data)}"
+
+    def _find_dynamic_match(self, game_id: str) -> Union[str, None]:
+        """
+        Tries to find the best match for a given ID.
+        :param game_id      Target ID to look for.
+        :return:            A valid ID within this buffer that exists and that starts with the given `game_id`.
+                            If no such ID is stored in Buffer, returns `None`
+        """
+        return max([buffer_id for buffer_id in self._buffer_data if game_id.startswith(buffer_id)], key=len, default=None)
+
+    def _split_at_game_id(self, game_id: str, invalidate_id: str):
+        result = self.evaluate_id(game_id)
+        del self._buffer_data[game_id]
+        for key in result:
+            sub_id = f"{game_id}.{key}"
+            self.include(sub_id, result[key])
+            if invalidate_id.startswith(sub_id):
+                # Must split this key, too.
+                self._split_at_game_id(sub_id, invalidate_id)
+
+
+    def contains_id(self, game_id: str, dynamic_id: bool):
+        """
+        Checks if this buffer already contains the data of a given game id.
+        :param game_id:         The GameID to look for.
+        :param dynamic_id:      If `True`, the buffer will assume it can evaluate a finer ID with whatever ID-result it
+                                has in buffer that starts with this. (e.g. if I have 'data.storage.content', I can use
+                                this to evaluate 'data.storage.content.iron'.
+        :return:                `True` if the given ID can be evaluated by the Buffer. Otherwise `False`
+        """
+        if game_id in self._buffer_data:
+            return True
+        elif not dynamic_id:
+            return False
+        # Try to find dynamic match. If such an ID exists, the buffer contains this element.
+        return self._find_dynamic_match(game_id)
+
+    def evaluate_id(self, game_id: str, dynamic_id: bool):
+        """
+        Evaluates a GameID in this buffer.
+        :param game_id:     An ID to evaluate.
+        :param dynamic_id:  If `True`, the buffer will assume it can evaluate a finer ID with whatever ID-result it
+                            has in buffer that starts with this. (e.g. if I have 'data.storage.content', I can use
+                            this to evaluate 'data.storage.content.iron'.
+        :return:            The result of the get-request from Buffer.
+        """
+        if game_id in self._buffer_data:
+            return self._buffer_data[game_id]
+        elif not dynamic_id:
+            raise Exception(f"Buffer does not contain {game_id}")
+        # Try to find dynamic match and use that to create return value.from
+        best_match = self._find_dynamic_match(game_id)
+        if not best_match:
+            raise Exception(f"Buffer does not contain {game_id}")
+        result = self._buffer_data[best_match]
+        evaluation_steps = game_id[len(best_match)+1:].split('.')
+        for step in evaluation_steps:
+            result = result[step]
+        return result
+
+    def invalidate(self, game_id, dynamic_id):
+        """
+        Invalidates an ID in this buffer.
+        :param game_id:     An ID to invalidate (e.g. because it changed)
+        :param dynamic_id:  Signify dynamic ID evaluation and thus removing
+        :return:
+        """
+        if dynamic_id:
+            for buffer_id in list(self._buffer_data.keys()):
+                if buffer_id == game_id:
+                    # Direct Hit. Just remove this ID
+                    del self._buffer_data[buffer_id]
+                elif game_id.startswith(buffer_id):
+                    # Indirect hit. Game ID on buffer starts with this ID.
+                    # Take the buffered dict and split its' contents and add to the buffer
+                    self._split_at_game_id(buffer_id, game_id)
+        else:
+            if game_id in self._buffer_data:
+                del self._buffer_data[game_id]
+
+    def include(self, game_id, get_result, dynamic_id):
+        """
+        Updates this buffer with new data results.
+        :param game_id:         Evaluated game_id
+        :param get_result:      Evaluation result
+        """
+        self._buffer_data[game_id] = get_result
+

@@ -8,8 +8,6 @@ from flask import url_for, render_template
 
 from gnomebrew import mongo
 from gnomebrew.game import boot_routine
-from gnomebrew.game.gnomebrew_io import GameResponse
-from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import get_resolver, User
 from gnomebrew.game.util import global_jinja_fun
 
@@ -203,15 +201,6 @@ def update_static_data():
             listener_fun()
 
 
-@application_test(name='Reload Static Objects', category='Data')
-def reload_static_objects():
-    """
-    Reloads all static objects from MongoDB. Only after execution will changes in the DB take effect on static objects.
-    """
-    response = GameResponse()
-    update_static_data()
-    response.log('Static Data Updated Successfully')
-    return response
 
 
 @global_jinja_fun

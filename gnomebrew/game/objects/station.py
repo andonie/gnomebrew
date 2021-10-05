@@ -1,4 +1,5 @@
 from os.path import join
+from typing import List
 
 from flask import render_template
 
@@ -60,6 +61,12 @@ class Station(StaticGameObject):
         """
         return 'slots' in self._data
 
+    def has_special_ui(self) -> bool:
+        """
+        :return:    `True`, if this station has a special UI. Otherwise `False`
+        """
+        return 'special_ui' in self._data
+
 
 @Effect.type('add_station')
 def add_station(user: User, effect_data: dict, **kwargs):
@@ -88,26 +95,21 @@ def generate_station_html(game_id: str, user: User, **kwargs):
     :return:        Most appropriate HTML rendering of the station.
     """
     splits = game_id.split('.')
-    if 'game_data' not in kwargs:
-        # Provide as much game data as necessary
-        kwargs['game_data'] = {splits[1]: user.get(f"data.{splits[2]}")}
     if 'station' not in kwargs:
         kwargs['station'] = Station.from_id(f"station.{splits[2]}")
     if 'slots' not in kwargs:
-        # Also provide minimal slot info
-        if kwargs['station'].has_slots():
-            kwargs['slots'] = {splits[2]: user.get(f'slots.{splits[2]}')}
-        else:
-            kwargs['slots'] = dict()
+        kwargs['slots'] = user.get('slots._all', **kwargs)
     res = render_template(join("stations", splits[2] + ".html"), **kwargs)
     return res
 
 
+
 @global_jinja_fun
-def has_station_special_ui(station_name: str) -> bool:
+def get_unlocked_station_list(user: User, **kwargs) -> List[Station]:
     """
-    Jinja Utility. Checks if a given station has a special position withing Gnomebrew's UI.
-    :param station_name:    A simple station name, e.g. 'well'
-    :return:                `True`, if this station has a special role within Gnomebrew's UI.
+
+    :return:
     """
-    return 'special_ui' in Station.from_id(f"station.{station_name}").get_json()
+    station_data = user.get('data', **kwargs)
+    return [ station for station in Station.get_all_of_type('station').values()
+             if station.get_minimized_id() in station_data and not station.has_special_ui()]

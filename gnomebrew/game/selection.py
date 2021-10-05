@@ -4,8 +4,8 @@ This module manages user selection.
 from typing import Type, Callable, Union
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.user import User, get_resolver, update_resolver
-from gnomebrew.play import request_handler
 
 selection_ids = dict()
 
@@ -30,18 +30,25 @@ def selection_id(base_id: str, is_generic: bool = False):
         selection_ids[base_id] = dict()
         selection_ids[base_id]['fun'] = fun
         selection_ids[base_id]['is_generic'] = is_generic
+        selection_ids[base_id]['base_id'] = base_id
         return fun
 
     return wrapper
 
 
-@request_handler
-def select(request_object: dict, user: User):
+@PlayerRequest.type('select', is_buffered=True)
+def select(user, request_object: dict, **kwargs):
     response = GameResponse()
     target_id = request_object['target_id']
     value = request_object['value']
     # Ensure target ID is valid selection.
-    user.update()
+    match = next([ selection_data for selection_id, selection_data in selection_ids.items()
+                   if selection_id==target_id or (selection_data['is_generic'] and target_id.startswith(selection_id))], None)
+    if match:
+        match['fun'](game_id=target_id, user=user, set_value=value, **kwargs)
+        response.succeess()
+    else:
+        response.add_fail_msg(f"Could not find a selection ID {target_id}")
     return response
 
 

@@ -6,13 +6,14 @@ from gnomebrew import app
 from flask import render_template, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
 from os.path import isfile, join
+from gnomebrew.game.user import IDBuffer
 
 
 @app.route('/')
 @login_required
 def index():
     if current_user.is_authenticated:
-        return render_template('playscreen.html')
+        return render_template('playscreen.html', buffer=IDBuffer())
     else:
         return redirect(url_for('login'))
 

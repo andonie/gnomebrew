@@ -2,9 +2,9 @@
 This module covers the functionality of the Market station
 """
 from gnomebrew.game.objects.effect import Effect
+from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.user import User, user_assertion, frontend_id_resolver
 from gnomebrew.game.event import Event
-from gnomebrew.play import request_handler
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew import mongo
 from gnomebrew.game.objects.item import Item
@@ -19,9 +19,10 @@ from numpy import random
 MARKETING_RNG_MEDIAN = 75
 MARKETING_RNG_STD_DEVIATION = 20
 
+
 # Market Game Mechanics
 
-def generate_new_inventory(user: User):
+def generate_new_inventory(user: User, **kwargs):
     """
     Generates a fresh inventory for a given user, taking into account all internal paramaters as well as
     any and all upgrades they might have made.
@@ -29,7 +30,7 @@ def generate_new_inventory(user: User):
     :return:
     """
     # Get List of Items that are technically available in market
-    possible_items = user.get('attr.market.available_items', default=['grains', 'wood'])
+    possible_items = user.get('attr.market.available_items', default=['grains', 'wood'], **kwargs)
 
     # Identify this iteration's available funds
     market_budget = generate_procurement_budget(user)
@@ -46,6 +47,7 @@ def generate_new_inventory(user: User):
 
     return new_inventory
 
+
 def generate_procurement_budget(user: User) -> float:
     """
     Generates a market cycle budget for this user.
@@ -56,10 +58,11 @@ def generate_procurement_budget(user: User) -> float:
     rng_factor = random_normal(median=MARKETING_RNG_MEDIAN, std_deviation=MARKETING_RNG_STD_DEVIATION)
     # Revenue Factor Calculation
 
-    return rng_factor * user.get('attr.market.budget_factor', default=1)
+    return rng_factor * user.get('attr.market.budget_factor', default=1, **kwargs)
 
-@request_handler
-def market_buy(request_object: dict, user: User):
+
+@PlayerRequest.type('market_buy', is_buffered=True)
+def market_buy(user: User, request_object: dict, **kwargs):
     """
     Handles a player request to buy something from the market.
     :param request_object: player request. Should look something like:
@@ -76,9 +79,9 @@ def market_buy(request_object: dict, user: User):
     item_name = request_object['item_id'].split('.')[1]
     # Get Current Market Inventory
     item = user.get('data.market.inventory.' + item_name)
-    storage_capacity = user.get('attr.storage.max_capacity')
-    user_gold = user.get('data.storage.content.gold')
-    user_item_amount = user.get('data.storage.content.' + item_name, default=0)
+    storage_capacity = user.get('attr.storage.max_capacity', **kwargs)
+    user_gold = user.get('data.storage.content.gold', **kwargs)
+    user_item_amount = user.get('data.storage.content.' + item_name, default=0, **kwargs)
     ok = True
 
     if amount + user_item_amount > storage_capacity:
@@ -86,7 +89,7 @@ def market_buy(request_object: dict, user: User):
         response.add_fail_msg('Not enough space in your storage.')
     if item['stock'] < amount:
         ok = False
-        response.add_fail_msg(f'Not enough {user.get(request_object["item_id"]).name()} in stock.')
+        response.add_fail_msg(f'Not enough {user.get(request_object["item_id"], **kwargs).name()} in stock.')
     if item['price'] * amount > user_gold:
         ok = False
         response.add_fail_msg("You can't afford this.")
@@ -95,7 +98,7 @@ def market_buy(request_object: dict, user: User):
         response.succeess()
         item['stock'] -= amount
         user_gold -= amount * item['price']
-        user_item_num = int(user.get('data.storage.content.' + item_name, default=0))
+        user_item_num = int(user.get('data.storage.content.' + item_name, default=0, **kwargs))
         user.update('data', {
             'market.inventory.' + item_name: item,  # New Item Inventory
             'storage.content.gold': user_gold,
@@ -148,7 +151,7 @@ def market_update(user: User, effect_data: dict, **kwargs):
         'due': next_duetime,
         'inventory': latest_inventory
     }, is_bulk=True)
-    #kwargs['source'].
+    # kwargs['source'].
     _generate_market_update_event(user.get_id(), next_duetime).enqueue()
 
 
@@ -162,5 +165,4 @@ def full_update_on_market_update(user: User, data: dict, game_id: str, **kwargs)
 
 @frontend_id_resolver(r'^data.market.due$')
 def update_market_duetime(user: User, data: dict, game_id: str, **kwargs):
-    pass # Due Time need not be updated, because on inventory update the entire market module will be reloaded
-
+    pass  # Due Time need not be updated, because on inventory update the entire market module will be reloaded

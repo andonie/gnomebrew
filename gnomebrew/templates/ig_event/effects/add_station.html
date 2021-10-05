@@ -1,11 +1,11 @@
 {% extends "ig_event/effects/_effect.html" %}
 
-{% block effect_title %}{% with station_object=current_user.get(effect_data.station) %}
+{% block effect_title %}{% with station_object=current_user.get(effect_data.station, id_buffer=buffer) %}
 You have now access to the <span class="gb-modal-highlight">{{ station_object.get_static_value('name') }}</span>:
 {% endwith %}{% endblock %}
 
 {% block effect_description %}
-{% with station_object=current_user.get(effect_data.station) %}
+{% with station_object=current_user.get(effect_data.station, id_buffer=buffer) %}
 <div class="gb-station-description">{{ station_object.get_static_value('description') }}</div>
 {% endwith %}
 {% endblock %}

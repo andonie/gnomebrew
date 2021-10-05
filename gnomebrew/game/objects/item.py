@@ -77,14 +77,14 @@ class Item(StaticGameObject):
 
         return adjust_val
 
-    def determine_fair_price(self, user) -> float:
+    def determine_fair_price(self, user, **kwargs) -> float:
         """
         Determines the 'fair' price for this item.
         :param user:    Executing user.
         :return:        A number representing this item's fair price considering the item's intrinsic value and
                         possible user upgrades.
         """
-        return self._data['base_value'] * user.get('attr.tavern.price_acceptance', default=1)
+        return self._data['base_value'] * user.get('attr.tavern.price_acceptance', default=1, **kwargs)
 
     _order_list = list()
 
@@ -122,6 +122,14 @@ class ItemCategory(StaticGameObject):
     def __str__(self):
         return f'<ItemCategory {self._data["game_id"]}>'
 
+    def has_item(self, item_name: str):
+        """
+        Checks if an item belongs to this category.
+        :param item_name:   Name of the item to check against.
+        :return:            `True` if the item belongs to this category. Otherwise `False`.
+        """
+        return item_name in self.get_matching_items()
+
     def is_main_category(self):
         """
         Returns `True`, if this object represents a main category. An item can have an arbitrary amount of categories,
@@ -148,6 +156,17 @@ class ItemCategory(StaticGameObject):
             new_data[all_categories[category].get_id()] = [all_items[item_name] for item_name in all_items
                                                            if all_items[item_name].matches_category_name(all_categories[category].get_id())]
         cls._items_by_category = new_data
+
+    def get_category_total_of(self, user: User, **kwargs) -> int:
+        """
+        Returns the total number of items a user owns that all belong to this category.
+        :param user:        target user.
+        :param kwargs:      any resolved IDs we already have.
+        :return:            The sum of all items this user owns in storage that belong to this category.
+        """
+        inventory = user.get('data.storage.content', **kwargs)
+        return sum([inventory[item.get_minimized_id()] for item in self.get_matching_items()
+                     if item.get_minimized_id() in inventory])
 
 
 @global_jinja_fun

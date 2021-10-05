@@ -19,7 +19,7 @@
 
     {% block station_body %}{% endblock %}
     {% block station_recipes %}
-        {% set recipe_list = current_user.get('recipes.' + station_name) %}
+        {% set recipe_list = current_user.get('recipes.' + station_name, id_buffer=buffer) %}
         {% if recipe_list %}
         <div id="recipes.{{ station.get_minimized_id() }}">
             {{ render_object('render.recipe_list', data=recipe_list) | safe }}

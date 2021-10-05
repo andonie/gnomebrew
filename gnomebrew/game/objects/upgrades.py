@@ -39,7 +39,7 @@ def attr(game_id: str, user: User, **kwargs):
 
     # Get all relevant Upgrades
     upgrades = sorted(filter(lambda x: x.relevant_for(game_id),
-                             [StaticGameObject.from_id(x) for x in user.get('data.workshop.upgrades', default=[])]))
+                             [StaticGameObject.from_id(x) for x in user.get('data.workshop.upgrades', **kwargs)]))
 
     # Apply upgrades in sorted order
     for upgrade in upgrades:
@@ -174,7 +174,7 @@ def upgrade(user: User, effect_data: list, **kwargs):
     :param effect_data:     The registered effect data formatted as `['upgrade1', 'upgrade2']`
     """
     # Get Upgrade list (always sorted)
-    user_upgrade_list = user.get('data.workshop.upgrades')
+    user_upgrade_list = user.get('data.workshop.upgrades', **kwargs)
 
     stations_to_update = set()
 

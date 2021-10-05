@@ -13,7 +13,7 @@ from gnomebrew.game.user import html_generator, User, frontend_id_resolver
 @html_generator('html.storage.content')
 def render_storage_content(game_id: str, user: User, **kwargs):
     return render_template(join('snippets', '_storage_content.html'),
-                           content=user.get('data.storage.content'))
+                           content=user.get('data.storage.content', **kwargs))
 
 
 @frontend_id_resolver(r'^data\.storage\.*')
@@ -47,7 +47,7 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
         return 'no_mongo', {}
     else:
         # Give current item selection from Category
-        selected_item = user.get(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", default=None)
+        selected_item = user.get(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", **kwargs)
         if selected_item and selected_item != '_unset':
             # There's an item selected in this category
             return selected_item
@@ -55,7 +55,7 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
             # There is no item selection in this category
             # Instead, choose the item in the category you have the most of.
             cat_item_names = list(map(lambda item_obj: item_obj.get_minimized_id(), target_category.get_matching_items()))
-            cat_user_options = {it_name: amount for it_name, amount in user.get('data.storage.content').items()
+            cat_user_options = {it_name: amount for it_name, amount in user.get('data.storage.content', **kwargs).items()
                                 if it_name in cat_item_names}
             if cat_user_options:
                 # The user has inventory for this item:

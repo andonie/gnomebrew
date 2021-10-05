@@ -128,7 +128,7 @@ function handle_ui_req(data) {
 
 function update_time_difference(success_callback) {
     var t_c1 = Date.now();
-    $.post('/play/request', {type: 'time_sync'}).done(function(response) {
+    $.post('/play/request', {request_type: 'time_sync'}).done(function(response) {
         var t_c2 = Date.now();
         time_difference = t_c1 - (Date.parse(response.now) - ((t_c2-t_c1)/2));
         console.log('set time difference to: ' + time_difference);
@@ -204,7 +204,7 @@ function close_event_modal() {
     var button_text = button.innerHTML;
 
     var request_object = {
-        type: 'event',
+        request_type: 'event',
         target: $('#gb-event-modal').data('target'),
         input: {}
     };
@@ -278,7 +278,7 @@ function two_way_game_request(request_data, trigger_element, output_id, success_
 // Execute Recipe by ID and update the UI
 function execute_recipe(recipe_id, error_target, trigger_element) {
     one_way_game_request({
-        type: 'recipe',
+        request_type: 'recipe',
         action: 'execute',
         recipe_id: recipe_id
     }, error_target, trigger_element);
@@ -286,7 +286,7 @@ function execute_recipe(recipe_id, error_target, trigger_element) {
 
 function cancel_recipe(event_id, error_target, trigger_element) {
     one_way_game_request({
-        type: 'recipe',
+        request_type: 'recipe',
         action: 'cancel',
         event_id: event_id
     }, error_target, trigger_element);
@@ -305,7 +305,7 @@ function market_buy(item_id, error_target, trigger_element, buy_all) {
         }
     }
     one_way_game_request({
-        type: 'market_buy',
+        request_type: 'market_buy',
         item_id: item_id,
         amount: amount
     }, error_target, trigger_element);
@@ -313,14 +313,14 @@ function market_buy(item_id, error_target, trigger_element, buy_all) {
 
 function serve_next(action, error_target, trigger_element) {
     one_way_game_request({
-        type: 'serve_next',
+        request_type: 'serve_next',
         what_do: action
     }, error_target, trigger_element);
 }
 
 function set_price(item_id, error_target, trigger_element) {
     one_way_game_request({
-        type: 'set_price',
+        request_type: 'set_price',
         item: item_id,
         price: Math.round(parseFloat(document.getElementById('data.tavern.prices.' + item_id).value).toFixed(2)*100)
     }, error_target, trigger_element)

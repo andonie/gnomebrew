@@ -12,18 +12,7 @@ from gnomebrew.game.gnomebrew_io import TYPE_ERROR, GameResponse
 import functools
 from flask_socketio import disconnect, join_room
 
-# All Request handlers
-_REQUEST_HANDLERS = dict()
-
-
-def request_handler(func: Callable):
-    """
-    Registering a handler for a player request.
-    :param func:
-    :return:
-    """
-    assert func.__name__ not in _REQUEST_HANDLERS
-    _REQUEST_HANDLERS[func.__name__] = func
+from gnomebrew.game.objects.request import PlayerRequest
 
 
 def authenticated_only(f):
@@ -47,10 +36,11 @@ def authenticated_only(f):
 @app.route('/play/request', methods=['POST'])
 @login_required
 def player_request():
-    if not request.form['type'] in _REQUEST_HANDLERS:
-        return TYPE_ERROR.to_json()
-    response = _REQUEST_HANDLERS[request.form['type']](request.form, current_user)
+    player_request_object = PlayerRequest(request.form)
+    # Create a buffer for this request to store all evaluated IDs
+    response: GameResponse = player_request_object.execute(current_user)
     response.finalize(current_user)
+
     return response.to_json()
 
 
@@ -81,9 +71,8 @@ def test_disconnect():
     pass
 
 
-
-@request_handler
-def time_sync(request_object: dict, user):
+@PlayerRequest.type('time_sync', is_buffered=False)
+def time_sync(user, request_object: dict, **kwargs):
     """
     Used to synchronize host and server for more accurate time displays.
     :param request_object:  Request Object

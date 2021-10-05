@@ -109,7 +109,7 @@ class GameResponse(object):
             self.ui = list()
         self.ui.append(ui_data)
 
-    def finalize(self, user):
+    def finalize(self, user, **kwargs):
         """
         To be called before the GameResponse is returned to the player.
         :return:
@@ -117,7 +117,7 @@ class GameResponse(object):
         if self.ui:
             # Send UI update
             for ui_update in self.ui:
-                user.frontend_update('ui', ui_update)
+                user.frontend_update('ui', ui_update, **kwargs)
 
     def has_failed(self):
         """
@@ -131,17 +131,3 @@ TYPE_ERROR._data = {
     'type': 'fail',
     'fail_msg': 'The Game Request Type is unknown.'
 }
-
-
-class PlayerMsg(object):
-    """
-    Handler class for PlayerMessages.
-    Wraps the input JSON a player sends over.
-    """
-
-    def __init__(self, player_json: dict):
-        """
-        Initialize object
-        :param player_json: The complete JSON object sent by the player
-        """
-        self._data = player_json

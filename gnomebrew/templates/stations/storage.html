@@ -10,14 +10,14 @@
 {% block station_body %}
 <div class="description">
     <div class="descriptor">{{ icon('item.gold') | safe }}</div>
-    <div class="description-value" id="data.storage.content.gold">{{ shorten_cents(game_data.storage.content.gold) }}</div>
+    <div class="description-value {{ css_friendly( 'data.storage.content.gold' ) }}">{{ shorten_cents(current_user.get('data.storage.content.gold', id_buffer=buffer)) }}</div>
 </div>
 <div class="description">
     <div class="descriptor">{{ icon('attr.storage.max_capacity') | safe }}</div>
-    <div class="description-value" id="attr.storage.max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity')) }}</div>
+    <div class="description-value {{ css_friendly('attr.storage.max_capacity') }}">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}</div>
 </div>
 <input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item">
 <div class="gb-table-wrap storage-content" id="storage.content">
-    {% with content=game_data.storage.content %}{% include "snippets/_storage_content.html" %}{% endwith %}
+    {% with content= current_user.get('data.storage.content', id_buffer=buffer) %}{% include "snippets/_storage_content.html" %}{% endwith %}
 </div>
 {% endblock %}

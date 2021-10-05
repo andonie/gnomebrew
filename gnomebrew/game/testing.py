@@ -5,9 +5,10 @@ from typing import Callable
 
 from flask_login import current_user
 
+from gnomebrew.game.objects.game_object import StaticGameObject, update_static_data
+from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.user import User, load_user
 from gnomebrew.game.util import global_jinja_fun
-from gnomebrew.play import request_handler
 from gnomebrew.game.gnomebrew_io import GameResponse
 from markdown import markdown
 from datetime import datetime
@@ -89,11 +90,11 @@ def application_test(**kwargs):
 
 # Executing Tests
 
-@request_handler
-def execute_test(request_object: dict, user: User):
+@PlayerRequest.type('execute_test', is_buffered=False)
+def execute_test(user: User, request_object: dict):
     response = GameResponse()
     request_object = dict(request_object)
-    request_object.pop('type')
+    request_object.pop('request_type')
     if not user.is_operator():
         # User is not authorized to execute tests.
         response.add_fail_msg("You are not authorized to execute tests.")
@@ -183,4 +184,15 @@ def evaluate_game_id(game_id: str, username: str):
     result = str(user.get(game_id))
     response.log(result)
 
+    return response
+
+
+@application_test(name='Reload Static Objects', category='Data')
+def reload_static_objects():
+    """
+    Reloads all static objects from MongoDB. Only after execution will changes in the DB take effect on static objects.
+    """
+    response = GameResponse()
+    update_static_data()
+    response.log('Static Data Updated Successfully')
     return response
