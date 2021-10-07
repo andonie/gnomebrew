@@ -45,31 +45,6 @@ class Effect(GameObject):
 
 # Some basec effects
 
-@Effect.type('delta_inventory')
-def delta_inventory(user: User, effect_data: dict, **kwargs):
-    """
-    Event execution for a change in inventory data.
-    :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
-    """
-    user_inventory = user.get('data.storage.content', **kwargs)
-    max_capacity = user.get('attr.storage.max_capacity', **kwargs)
-    inventory_update = dict()
-    for material in effect_data['delta']:
-        if material not in user_inventory:
-            inventory_update['storage.content.' + material] = min(max_capacity, effect_data['delta'][material])
-            # The new item might be orderable. In that case --> Add it to the price list
-            item_object: Item = Item.from_id('item.' + material)
-            if item_object.is_orderable():
-                inventory_update[f'tavern.prices.{material}'] = item_object.get_static_value('base_value')
-        elif material == 'gold':
-            # Gold is an exception and can grow to infinity always:
-            inventory_update[f'storage.content.{material}'] = user_inventory[material] + effect_data['delta'][material]
-        else:
-            inventory_update['storage.content.' + material] = min(max_capacity,
-                                                                  user_inventory[material] + effect_data['delta'][material])
-    user.update('data', inventory_update, is_bulk=True)
-
 
 @Effect.type('push_data')
 def push_data(user: User, effect_data: dict, **kwargs):

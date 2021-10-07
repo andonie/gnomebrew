@@ -36,10 +36,14 @@ def get_icon(game_id: str):
     """
     splits = game_id.split('.')
     target_directory = join(app.config['ICO_DIR'], splits[0])
-    file_name = f"{'.'.join(splits[1:])}.png"
-    target_path = join(target_directory, file_name)
-    if isfile(target_path):
-        return send_from_directory(target_directory, file_name)
+
+    for possible_image_name in [f"{'.'.join(splits[1:x])}.png" for x in range(len(splits), 1, -1)]:
+        if isfile(join(target_directory, possible_image_name)):
+            return send_from_directory(target_directory, possible_image_name)
+
+    # No image match found. Use best possible default.
+    if isfile(join(target_directory, 'default.png')):
+        return send_from_directory(target_directory, 'default.png')
     else:
         # If Icon does not exist (yet), send default img
         return send_from_directory(app.config['ICO_DIR'], 'default.png')

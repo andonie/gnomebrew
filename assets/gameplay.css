@@ -135,7 +135,8 @@ input {
     margin-top: 5px;
     border-radius: 12px;
     font-size: 0.85em;
-
+    display: flex;
+    align-items: center;
 }
 
 .gb-recipe-outcome {
@@ -158,27 +159,9 @@ input {
     font-size: 0.75em;
 }
 
-.gb-recipe-item {
-    border-radius: 5px;
-    display: flex;
-    flex-flow: row no-wrap;
-    align-items: center;
-    gap: 3px;
-    padding-left: 4px;
-    padding-right: 4px;
-}
 
-.gb-recipe-item strong {
-    color: #822929;
-}
 
-.gb-recipe-item.gb-recipe-category {
-    background: #8bbce7bd;
-}
 
-.gb-recipe-item.gb-recipe-category:hover {
-    background: #ebf6ffbd;
-}
 
 .gb-recipe p {
     margin-bottom: 0px;
@@ -263,12 +246,51 @@ input {
     width: inherit;
 }
 
-.storage-content {
+.station-storage {
+    border: 5px solid #E7BF8B;
+}
+
+.gb-storage-categories {
+    margin: 5px 0px;
+}
+
+.gb-storage-category {
+
+}
+
+.gb-category-header {
     display: flex;
-    flex-direction: column;
-    max-height: inherit;
+    flex-flow: row nowrap;
+    align-items: center;
+    padding: 2px 5px;
+    gap: 2px;
+}
+
+.gb-category-heading-banner {
+    background: #5E484F;
+    cursor: pointer;
+    color: #E7BF8B;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-size: 0.9em;
+    letter-spacing: -0.08em;
+    flex-basis: 100%;
+    align-items: center;
+    padding-left: 4px;
+}
+
+.gb-storage-category-headline {
+    padding-inline: 5px;
+    display: flex;
+}
+
+.gb-storage-category-items {
+
+}
+
+.gb-storage-category-view {
     background: #E7BF8B;
-    padding: 10px;
+    padding-left: 5px;
 }
 
 .gb-storage-category-content {
@@ -277,16 +299,7 @@ input {
     max-height: inherit;
 }
 
-.gb-storage-category {
-    cursor: pointer;
-    background: #5E484F;
-    color: #E7BF8B;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    padding-inline: 5px;
-    margin-top: 5px;
-    display: flex;
-}
+
 
 .gb-storage-item {
     display: flex;
@@ -308,6 +321,15 @@ input {
 .st-cat-indicator {
     transition-duration: 0.4s;
     margin-right: 5px;
+}
+
+.gb-storage-item-view.gb-selected {
+    background: #a63e42;
+    color: #fFcCcc
+}
+
+.gb-storage-item-view.gb-selected:hover {
+    background: #9b0006;
 }
 
 
@@ -390,4 +412,11 @@ input {
 
 .location-name {
     color: black;
+}
+
+
+/* ID SPECIFIC rules */
+
+.storage-gold {
+    color: #ffeed9;
 }

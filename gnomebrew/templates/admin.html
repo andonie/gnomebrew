@@ -69,7 +69,7 @@ function helper_get_selected_test_id() {
 
 function execute_test(source) {
     var request_data = {};
-    request_data.type = 'execute_test';
+    request_data.request_type = 'execute_test';
     request_data.test_id = helper_get_selected_test_id();
     $("." + request_data.test_id + "-parameter").each(function () {
         var parameter_name = $(this).children('.gb-parameter-name').text();

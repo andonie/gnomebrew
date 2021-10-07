@@ -14,16 +14,17 @@ function animate_whole_ui(element) {
         var to_filter = $(this).data('filters');
         $(to_filter).filter(function() {
             return ! $(this).data('filter-match').toLowerCase().includes(value);
-        }).addClass('gb-collapsed');
+        }).hide();
         $(to_filter).filter(function() {
             return $(this).data('filter-match').toLowerCase().includes(value);
-        }).removeClass('gb-collapsed');
+        }).show();
     });
     $(element).find('#storage-close-button').on('click', function(event) {
         $('.gb-sidebar').addClass('sb-toggle');
     });
     $(element).find('.gb-toggle-view').on('click', function(event) {
-        $($(this).data('toggles')).toggleClass('show');
+        $($(this).data('toggles')).toggleClass('gb-toggle-hidden');
+        $(this).toggleClass('gb-toggle-view-active');
         rescale_ui();
     });
 }
@@ -52,52 +53,37 @@ socket = io();
 
 // Invoked when game data is updated
 function handle_update(data) {
-    for(var id in data) {
-        // Pre-Check if ID matches a station that must be reloaded
-        // This would be the case for mechanism that come after a heavier data change
-
-
-        if(typeof data[id] === 'object' && data[id] !== null) {
-            // The update is for a complex object.
-            // Create new object with extended keys and recursively repeat.
-            new_data = {};
-            for(var key in data[id]) {
-                new_data[id + '.' + key] = data[id][key];
-                handle_update(new_data);
+    console.log(data);
+    switch(data.update_type) {
+        case 'inc': // Increment update
+            for (var key in data.updated_elements) {
+                var data_selector = '.' + key;
+                var val_old = $(data_selector).data('value');
+                update_value_at(data_selector, val_old + data.updated_elements[key]['data'], data.updated_elements[key]['display_fun']);
             }
-        } else {
-            // This is a value to be updated in the UI.
-            try {
-                value = data[id];
-                if(typeof value === "number") {
-                    if(is_cent_id(id)) {
-                        value = shorten_cents(value);
-                    } else {
-                        value = shorten_num(value);
-                    }
-                }
-                document.getElementById(id).innerHTML = value;
-            } catch(error) {
-                console.log(error.name + ': ' + error.message);
-                // The ID could not be found.
-                // This might be intended, e.g. when a new storage item is added.
-
-                // Check for such cases:
-                if(id.startsWith('data.storage.content')) {
-                    // Intended case: A new storage element is added and I don't have it yet.
-                    // Consequently, I want to reload the storage content entirely.
-                    reload_element('storage.content');
-                    return;
-                }
-
-                console.error('Unable to handle: ' + JSON.stringify(data))
-
-                var station_name = id.split('.')[1];
-                reload_station(station_name);
-                break; // After the reload, updating any additional data is unnecessary
+            break;
+        case 'set': // Hard-Set update
+            for (var key in data.updated_elements) {
+                var data_selector = '.' + key;
+                var val_old = $(data_selector).data('value');
+                update_value_at(data_selector, data.updated_elements[key]['data'], data.updated_elements[key]['display_fun']);
             }
-        }
+            break;
+        case 'change_attributes': //Change attributes
+            data.attribute_change_data.forEach( job => {
+                console.log(job['selector']);
+                $(job['selector']).attr(job['attr'], job['value'])
+            });
+            break;
     }
+    rescale_ui();
+}
+
+function update_value_at(data_selector, new_val, display_fun_name) {
+    $(data_selector).data('value', new_val);
+    // Decide how shorten numbers of this type
+    target_fun = styling_functions[display_fun_name];
+    $(data_selector).html(target_fun(new_val));
 }
 
 // Invoked when a UI element is supposed to be updated.

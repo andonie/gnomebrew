@@ -67,7 +67,7 @@ def test_connect(auth=None):
 @socketio.on('disconnect')
 def test_disconnect():
     # Nothing to do here. On disconnect, users are automatically signed off.
-    print('disconnected')
+    print(f"User disconnected: {current_user=}")
     pass
 
 

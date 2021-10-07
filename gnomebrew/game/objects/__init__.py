@@ -11,9 +11,10 @@ from gnomebrew.game.objects.station import Station as Station
 from gnomebrew.game.objects.upgrades import Upgrade as Upgrade
 from gnomebrew.game.objects.generation import Generator as Generator
 from gnomebrew.game.objects.quest import Quest as Quest
-from gnomebrew.game.objects.quest import QuestObjective as QuestObjective
+from gnomebrew.game.objects.quest import Objective as Objective
 from gnomebrew.game.objects.condition import Condition as Condition
 from gnomebrew.game.objects.request import PlayerRequest as PlayerRequest
+from gnomebrew.game.objects.adventure import Adventure as Adventure
 
 import gnomebrew.game.objects.names
 import gnomebrew.game.objects.game_statistics

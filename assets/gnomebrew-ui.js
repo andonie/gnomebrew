@@ -1,17 +1,9 @@
 // List of all IDs that are represented in cents rather than in usual values:
-cent_list = ['data.storage.content.gold'];
-cent_regexes = [/data[.]market[.]inventory[.][\w]+[.]price/i]
 
-function is_cent_id(id) {
-    if(cent_list.includes(id)) {
-        return true;
-    }
-    for(var regex of cent_regexes) {
-        if(regex.test(id)) {
-            return true;
-        }
-    }
-    return false;
+styling_functions = {
+    'shorten_num': shorten_num,
+    'shorten_time': shorten_time,
+    'shorten_cents': shorten_cents
 }
 
 // Cosmetic Function To Make Big and small numbers look nice.
@@ -147,14 +139,34 @@ function zoom_out(target_selector) {
 // Updates a selection in game.
 function select(game_id, selected) {
     two_way_game_request({
-        type: 'select',
+        request_type: 'select',
         target_id: game_id,
-        value: $(selected).data('value')
+        value: $(selected).data('select-value')
     }, selected, null, function(response) {
         console.log(response);
+        select_selection = !$(selected).hasClass('gb-selected');
         $($(selected).data('peers')).removeClass('gb-selected');
-        $(selected).addClass('gb-selected');
+        if (select_selection) {
+            // If something was selected already, it is unselected instead.
+            $(selected).addClass('gb-selected');
+        }
     });
+}
+
+function toggle_selection(game_id, toggled) {
+    two_way_game_request({
+        request_type: 'select',
+        target_id: game_id,
+        value: '_toggle'
+    }, toggled, null, function(response) {
+        console.log(response);
+    });
+}
+
+/* TOGGLE Utility */
+
+function toggle_at_selector(selector, toggle_class) {
+    $(selector).toggleClass(toggle_class)
 }
 
 /* ERROR LOGGING */

@@ -12,7 +12,7 @@ from datetime import datetime
 import re
 from functools import reduce
 
-_GAME_ID_RESOLVERS = dict()
+_GET_RESOLVERS = dict()
 _UPDATE_RESOLVERS = dict()
 _UPDATE_LISTENERS = dict()
 _USER_ASSERTIONS = list()
@@ -22,44 +22,54 @@ _HTML_ID_RULES = dict()
 _USR_CACHE = dict()
 
 
-def get_resolver(type: str, dynamic_buffer=False, **kwargs):
+def get_resolver(type: str, dynamic_buffer=False, postfix_start: int=None, **kwargs):
     """
     Registers a function to resolve a game resource identifier.
     :param type: The type of this resolver. A unique identifier for the first part of a game-id, e.g. `data`
     :param dynamic_buffer:  If set to `True`, Gnomebrew assumes this get-result will always be JSON formatted, and thus
                             nested. (e.g. I don't need to resolve 'data.storage.content.gold', when I already have the
                             result of 'data.storage.content' buffered)
+    :param has_postfixes:   If this is set to a number, every split starting `postfix_start` will be considered a postfix
+                            and postfixes for this ID will be observed and called for via `get_postfix` functions.
     :return: The registration wrapper. To be used as an annotation on a function that will serve as the `get` logic.
     The function will resolve game_ids leading with `type` and is expected to have these parameters:
     * `user: User` user for which the ID is to be resolved
     * `game_id: str` full ID (incl. first part that's covered through the name)
     """
-    global _GAME_ID_RESOLVERS
-    assert type not in _GAME_ID_RESOLVERS
-
-
-
-#   # IDs of all Items that have a postfix (and therefore can be addressed with more complexity than plain items).
-#   postfixes_by_type = dict()
-
-#   @classmethod
-#   def postfix(cls, postfix_type: str, get_fun: Callable, update_fun: Callable):
-#       """
-#       Decorator function. Marks an ID-postfix class for this item (e.g. item.fruit_wine.strawberry).
-#       If a Game-ID is called (either get or update) that matches a postfixed item, the given functions `get_fun` and
-#       `update_fun` will directly handle this logic with all parameters forwarded.
-#       """
-#       if postfix_type in cls.postfixes_by_type:
-#           raise Exception(f"{postfix_type} is already a registered Item postfix type")
-#       cls.postfixes_by_type[postfix_type] = dict()
-#       cls.postfixes_by_type[postfix_type]['get'] = get_fun
-#       cls.postfixes_by_type[postfix_type]['update'] = update_fun
-
+    global _GET_RESOLVERS
+    assert type not in _GET_RESOLVERS
 
     def wrapper(fun: Callable):
-        _GAME_ID_RESOLVERS[type] = dict()
-        _GAME_ID_RESOLVERS[type]['fun'] = fun
-        _GAME_ID_RESOLVERS[type]['dynamic_buffer'] = dynamic_buffer
+        _GET_RESOLVERS[type] = dict()
+        _GET_RESOLVERS[type]['fun'] = fun
+        _GET_RESOLVERS[type]['dynamic_buffer'] = dynamic_buffer
+        if postfix_start:
+            # Postfix start is defined.
+            _GET_RESOLVERS[type]['has_postfix'] = True
+            _GET_RESOLVERS[type]['postfix_start'] = postfix_start
+        else:
+            _GET_RESOLVERS[type]['has_postfix'] = False
+        return fun
+
+    return wrapper
+
+
+def get_postfix(type: str):
+    """
+    Decorator function registers a function that can resolve Postfixes for a GET-ADDR.
+    The rule is:
+    If a `get_resolver` is created with a given `postfix_start`, the game will execute the main GET function first on the
+    specified number of '.'-splits. If the given game_id was longer, the remaining splits will be iteratively executed
+    by the function that's marked with *this* decorator.
+    :param type:    The type for which this call decorates a postfix-code.
+    """
+    if type not in _GET_RESOLVERS:
+        raise Exception(f"{type} is not yet a registered get-resolver yet.")
+    if 'postfix_fun' in _GET_RESOLVERS:
+        raise Exception(f"{type} already has a registered postfix function.")
+
+    def wrapper(fun: Callable):
+        _GET_RESOLVERS[type]['postfix_fun'] = fun
         return fun
 
     return wrapper
@@ -125,7 +135,7 @@ def user_assertion(assertion_script: Callable):
     _USER_ASSERTIONS.append(assertion_script)
 
 
-def frontend_id_resolver(game_id_regex):
+def id_update_listener(game_id_regex):
     """
     Registers a resolver when used as @ annotation before a function. The function must take two arguments:
 
@@ -263,8 +273,9 @@ class User(UserMixin):
                             get-request as well as consecutive get-requests, provided the buffer is always forwarded.
         :return:        The result of the query
         """
-        id_type = game_id.split('.')[0]
-        if id_type not in _GAME_ID_RESOLVERS:
+        splits = game_id.split('.')
+        id_type = splits[0]
+        if id_type not in _GET_RESOLVERS:
             raise Exception(f"Don't recognize game IDs starting with {id_type}: {game_id}")
 
         # Always go for the Buffer!
@@ -273,14 +284,24 @@ class User(UserMixin):
             kwargs['id_buffer'] = IDBuffer()
         buffer = kwargs['id_buffer']
         # Use ID Buffer if possible.
-        is_dynamic = _GAME_ID_RESOLVERS[id_type]['dynamic_buffer']
+        resolver_data = _GET_RESOLVERS[id_type]
+        is_dynamic = resolver_data['dynamic_buffer']
         if buffer.contains_id(game_id, dynamic_id=is_dynamic):
             return buffer.evaluate_id(game_id, is_dynamic)
 
-        result = _GAME_ID_RESOLVERS[id_type]['fun'](user=self, game_id=game_id, **kwargs)
+        # If this is postfixed and the critical split length has been reached, remove postfix-info for basic get-request.
+        if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
+            game_id = '.'.join(splits[:resolver_data['postfix_start']])
+
+        result = resolver_data['fun'](user=self, game_id=game_id, **kwargs)
+
+        # If this is postfixed and the critical split length has been reached, apply post-GET postfix operations.
+        if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
+            for split in splits[resolver_data['postfix_start']:]:
+                result = resolver_data['postfix_fun'](result, split)
 
         if 'id_buffer' in kwargs:
-            kwargs['id_buffer'].include(game_id, result, dynamic_id=_GAME_ID_RESOLVERS[id_type]['dynamic_buffer'])
+            kwargs['id_buffer'].include(game_id, result, dynamic_id=is_dynamic)
         return result
 
     def update(self, game_id: str, update, **kwargs):
@@ -301,7 +322,7 @@ class User(UserMixin):
 
         if 'id_buffer' in kwargs:
             # If A Buffer is used currently, make sure it invalidates this ID properly
-            kwargs['id_buffer'].invalidate(game_id, dynamic_id=_GAME_ID_RESOLVERS[id_type]['dynamic_buffer'])
+            kwargs['id_buffer'].invalidate(game_id, dynamic_id=_GET_RESOLVERS[id_type]['dynamic_buffer'])
 
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 

@@ -4,20 +4,57 @@
 <button type="button" class="close" id="storage-close-button" aria-label="Close">
     <span aria-hidden="true">&times;</span>
 </button>
-{{ super() }}
+<h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
 {% endblock %}
 
 {% block station_body %}
-<div class="gb-icon-group">
-    {{ icon('item.gold') | safe }}
-    <span class="data-storage-content-gold gold-counter">{{ shorten_cents(current_user.get('data.storage.content.gold', id_buffer=buffer)) }}</span>
+{% with category_data = get_available_category_data(current_user, storage_ui=True), player_inventory = current_user.get('storage._content', id_buffer=buffer) %}
+<div class="gb-info-container">
+    <div class="gb-info gb-info-default" title="Storage Capacity">
+        {{ icon('attr.storage.max_capacity', class='gb-icon-sm') | safe }}
+        <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}</span>
+    </div>
 </div>
-<div class="gb-icon-group">
-    {{ icon('attr.storage.max_capacity') | safe }}
-    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}}</span>
+
+<div class="gb-storage-categories">
+{% for data_object in category_data %}
+    {% with category = data_object.category %}
+    <button class="storage-category-button gb-toggle-button gb-toggle-view {% if data_object.toggle_on %}gb-toggle-view-active{% endif %}"
+            data-toggles=".{{ css_friendly(category.get_id()) }}" onclick="toggle_selection('selection.cat_toggle.{{ category.get_minimized_id() }}', this)">
+        {{ icon( category.get_id(), class='gb-icon-sm') | safe }}
+    </button>
+    {% endwith %}
+{% endfor %}
 </div>
-<input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item">
-<div class="gb-table-wrap storage-content" id="storage.content">
-    {% with content= current_user.get('data.storage.content', id_buffer=buffer) %}{% include "snippets/_storage_content.html" %}{% endwith %}
+<input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item-view">
+<div class="gb-storage-category-view">
+
+    {% for data_object in category_data %}
+    {% with category=data_object['category'] %}{% with category_selection_id = current_user.get('selection.' + category.get_id()) %}
+    <div class="gb-storage-category {{ css_friendly(category.get_id()) }} {% if not data_object.toggle_on %}gb-toggle-hidden{% endif %}">
+        <div class="gb-category-header gb-toggle-view" data-toggles="#{{ css_friendly(category.get_id()) }}-items">
+            {{ icon(category.get_id(), class='gb-icon-sm') | safe }}
+            <div class="gb-category-heading-banner">{{ category.name() }}</div>
+            <div class="gb-info">
+                {{ icon('special.item_category_selected', class='gb-icon-sm') | safe }}
+                {{ icon(category_selection_id, class='gb-icon-sm selection-it_cat-' + css_friendly(category.get_minimized_id()), id_buffer=buffer) | safe  }}
+            </div>
+        </div>
+        <div class="gb-storage-category-items gb-info-container" id="{{ css_friendly(category.get_id()) }}-items">
+            {% for item in category.get_matching_items() %}
+            {% if item.get_minimized_id() in player_inventory %}
+            <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == current_user.get('data.storage.it_cat_selections.' + category.get_minimized_id(), id_buffer=buffer) %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
+                 data-select-value="{{ item.get_id() }}" data-peers=".{{ css_friendly(category.get_id()) }}-option" onclick="select('selection.{{ category.get_id() }}', this)">
+                {{ icon(item.get_id(), class='gb-icon-sm') | safe }}
+                <span class="storage-{{ css_friendly(item.get_minimized_id()) }}" data-value="{{ player_inventory[item.get_minimized_id()] }}">{{ shorten_num(player_inventory[item.get_minimized_id()]) }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% endwith %}{% endwith %}
+{% endfor %}
 </div>
+{% endwith %}
+<div class="gb-storage-detail-view"></div>
 {% endblock %}

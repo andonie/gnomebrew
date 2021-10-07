@@ -3,7 +3,7 @@ This module covers the functionality of the Market station
 """
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.request import PlayerRequest
-from gnomebrew.game.user import User, user_assertion, frontend_id_resolver
+from gnomebrew.game.user import User, user_assertion, id_update_listener
 from gnomebrew.game.event import Event
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew import mongo
@@ -155,7 +155,7 @@ def market_update(user: User, effect_data: dict, **kwargs):
     _generate_market_update_event(user.get_id(), next_duetime).enqueue()
 
 
-@frontend_id_resolver('^data.market.inventory$')
+@id_update_listener('^data.market.inventory$')
 def full_update_on_market_update(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('ui', {
         'type': 'reload_station',
@@ -163,6 +163,6 @@ def full_update_on_market_update(user: User, data: dict, game_id: str, **kwargs)
     })
 
 
-@frontend_id_resolver(r'^data.market.due$')
+@id_update_listener(r'^data.market.due$')
 def update_market_duetime(user: User, data: dict, game_id: str, **kwargs):
     pass  # Due Time need not be updated, because on inventory update the entire market module will be reloaded

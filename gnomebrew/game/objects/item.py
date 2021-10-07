@@ -1,30 +1,10 @@
+import copy
 from typing import List, Dict, Callable
 
-from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
+from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, GameObject
 from gnomebrew.game.selection import selection_id
-from gnomebrew.game.user import get_resolver, User
+from gnomebrew.game.user import get_resolver, User, get_postfix
 from gnomebrew.game.util import global_jinja_fun
-
-
-@get_resolver('item')
-def item(game_id: str, user: User, **kwargs):
-    splits = game_id.split('.')
-    if len(splits) > 2:
-        # This item is beyond standard length. It is postfixed.
-        base_id = '.'.join(splits[:2])
-        base_item = Item.from_id(base_id)
-        return Item.postfixes_by_type[base_item.get_static_value('postfixed')['postfix_type']]['get'](game_id=game_id,
-                                                                                                      user=user,
-                                                                                                      **kwargs)
-    else:
-        return Item.from_id(game_id)
-
-
-@get_resolver('it_cat')
-def it_cat(game_id: str, user: User, **kwargs):
-    return ItemCategory.from_id(game_id)
-
-
 
 
 @load_on_startup('items')
@@ -52,7 +32,7 @@ class Item(StaticGameObject):
         :return:                `True` if the item belongs into this category. Otherwise `False`.
         """
         assert category_name[:7] == 'it_cat.'
-        return category_name[7:] in self._data['categories']
+        return category_name[7:] in self.get_static_value('categories')
 
     def item_order(self):
         """
@@ -107,15 +87,12 @@ class Item(StaticGameObject):
         cls._order_list = list(
             filter(lambda item: item.is_orderable(), StaticGameObject.get_all_of_type('item').values()))
 
-
-
-# SETTING UP ITEM POSTFIXES
-
-
-
-
-
-
+    def has_storage_cap(self):
+        """
+        :return: `True`, if this item is affected by storage cap. Otherwise `False`. Managed through
+        `disable_storage_cap`
+        """
+        return not self._data['disable_storage_cap'] if 'disable_storage_cap' in self._data else True
 
 
 @load_on_startup('item_categories')
@@ -187,48 +164,44 @@ class ItemCategory(StaticGameObject):
         :param kwargs:      any resolved IDs we already have.
         :return:            The sum of all items this user owns in storage that belong to this category.
         """
-        inventory = user.get('data.storage.content', **kwargs)
+        inventory = user.get('storage._content', **kwargs)
         return sum([inventory[item.get_minimized_id()] for item in self.get_matching_items()
                     if item.get_minimized_id() in inventory])
 
 
-@global_jinja_fun
-def format_player_storage(storage_data: dict):
-    """
-    Formats a player's storage data nicely.
-    :param storage_data: The value of `data.storage.content`
-    :return:    An 'ordered' dict that will contain dicts ordered by item categories (main categories only), e.g.
-    ```
-    {
-        <ItemCategory it_cat.mundane>: {
-            <Item water>: 100,
-            <Item simple_beer>: 200
-        },
-        <ItemCategory it_cat.material>: {
-            <Item wood>: 1
-        }
-    }
-    ```
-    The order of the keys is ordered by item main category. Within the category, the order is arbitrary.
-    Also omits 'item.gold' since it has a special role in-game.
-    """
-    to_be_sorted = dict()
 
-    for item in storage_data:
-        if item == 'gold':
-            # Gold is special case. Ignore
-            continue
-        item_object: Item = Item.from_id(f"item.{item}")
-        main_category: ItemCategory = next(filter(lambda cat: cat.is_main_category(),
-                                                  map(lambda cat_str: ItemCategory.from_id('it_cat.' + cat_str),
-                                                      item_object.get_static_value('categories'))))
-        if main_category not in to_be_sorted:
-            to_be_sorted[main_category] = dict()
-        to_be_sorted[main_category].update({item_object: storage_data[item]})
+# GAME ID STUFF
 
-    ret = dict()
-    for key in sorted(to_be_sorted.keys()):
-        # Insertion order is guaranteed iteration order. This way the Storage is rendered consistently.
-        ret[key] = to_be_sorted[key]
 
-    return ret
+@get_resolver('item', dynamic_buffer=False, postfix_start=2)
+def item(game_id: str, user: User, **kwargs) -> Item:
+    return Item.from_id(game_id)
+
+
+@get_postfix('item')
+def append_postfix(old: Item, split: str) -> Item:
+    new_data = copy.deepcopy(old.get_json())
+    if 'postfixed' not in new_data:
+        raise Exception(f'Cannot process postfix for {str(old)}')
+
+    new_data['game_id'] = f"{new_data['game_id']}.{split}"
+    if 'postfix' not in new_data:
+        new_data['postfix'] = dict()
+    if new_data['postfixed']['postfix_type'] == 'it_cat':
+        # The post fix adds an item from a given Item Category.
+        cat_item = Item.from_id(f"item.{split}")
+        new_data['name'] = f"{cat_item.get_static_value('postfix_name_addition', default='')}{new_data['name']}"
+        new_data['postfix']['src_item'] = cat_item.get_minimized_id()
+        new_data['description'] = f"{new_data['description']}{cat_item.get_static_value('postfix_description_addition', default='')}"
+    elif new_data['postfix_type'] == 'quality':
+        new_data['name'] = f"{new_data['name']} ({split})"
+        new_data['postfixed']['quality'] = split
+    else:
+        raise Exception(f"Could not process postfix {split} of {str(item)}.")
+    return Item(new_data)
+
+
+@get_resolver('it_cat')
+def it_cat(game_id: str, user: User, **kwargs):
+    return ItemCategory.from_id(game_id)
+

@@ -2,13 +2,13 @@
 This module manages the game's in-loading
 """
 from os.path import join
-from typing import Type, Any, Callable
+from typing import Type, Any, Callable, Union
 
 from flask import url_for, render_template
 
 from gnomebrew import mongo
 from gnomebrew.game import boot_routine
-from gnomebrew.game.user import get_resolver, User
+from gnomebrew.game.user import get_resolver, User, update_resolver
 from gnomebrew.game.util import global_jinja_fun
 
 
@@ -19,6 +19,9 @@ class GameObject:
 
     def __init__(self, data):
         self._data = data
+
+    def __str__(self):
+        return f"<GameObject: {self._data=}>"
 
     def get_json(self) -> dict:
         """
@@ -39,6 +42,8 @@ class GameObject:
             return self._data[key]
         elif 'default' in kwargs:
             return kwargs['default']
+        else:
+            raise Exception(f"No data with key {key} found in {self.name()}.")
 
     def has_static_key(self, key: str):
         """
@@ -63,7 +68,7 @@ class GameObject:
         Therefore, this ID is only guaranteed to be unique within the same class of static game objects.
         :return:    A trimmed ID, e.g. turns `item.wood` into `wood` or `recipe.simple_beer` to `simple_beer`.
         """
-        return self._data['game_id'].split('.')[1]
+        return '.'.join(self._data['game_id'].split('.')[1:])
 
     def get_class_code(self):
         """
@@ -86,6 +91,65 @@ class GameObject:
         """
         return self._data['description']
 
+    def has_postfixes(self) -> bool:
+        return 'postfixed' in self._data
+
+    def is_postfixed(self) -> bool:
+        """
+        :return: `True` if this game object is postfixed.
+        """
+        return 'postfix' in self._data
+
+    def get_postfix_data(self, postfix_id: str, **kwargs):
+        """
+        Returns the value of given postfix data.
+        :param postfix_id:  Postfix-ID to evaluate (e.g. 'quality', 'src_item')
+        :return:    The value of the given postfix ID.
+        """
+        if 'postfixed' in self._data and postfix_id in self._data['postfixed']:
+            return self._data['postfixed'][postfix_id]
+        elif 'default' in kwargs:
+            return kwargs['default']
+        else:
+            raise Exception(f"Cannot find {postfix_id} for {str(self)}")
+
+    @staticmethod
+    def _collection_key_replace(e: Union[dict, list, Any], to_replace: str, replace_with: str):
+        """
+        Recursively cleans up a dictionary's keys to be BSON compatible
+        :param e:   An object to clean. A dict's keys and child keys will be replaced. A list's elements will be
+                    iterated. All recursively. Any other input will be ignored.
+        :param  to_replace Character to replace
+        :param replace_with Character to replace `to_replace` with.
+        """
+        # If element is a dict, clean keys
+        if isinstance(e, dict):
+            for key in list([key for key in e if to_replace in key]):
+                new_key = key.replace(to_replace, replace_with)
+                e[new_key] = e[key]
+                del e[key]
+
+            for key in e:
+                GameObject._collection_key_replace(e[key], to_replace, replace_with)
+
+        elif isinstance(e, list):
+            for sub_element in e:
+                GameObject._collection_key_replace(sub_element, to_replace, replace_with)
+
+    def clean_keys(self):
+        """
+        Utility function. Ensures all data in this object is easy to store in MongoDB.
+        For that, all '.' will be replaced with '-', a character that is unused for Game-IDs otherwise.
+        """
+        GameObject._collection_key_replace(self._data, '.', '-')
+
+    def dirty_keys(self):
+        """
+        Utility function. Ensures all data in this object is stored in GB Game ID format (any '-' in keys
+        are replaced with '.')
+        """
+        GameObject._collection_key_replace(self._data, '-', '.')
+
 
 class StaticGameObject(GameObject):
     """
@@ -98,6 +162,8 @@ class StaticGameObject(GameObject):
 
     def __init__(self, db_data):
         GameObject.__init__(self, db_data)
+        # Clean up own data in to remove `-` from keys and replace with `.`
+        self.dirty_keys()
 
     @staticmethod
     def from_id(game_id) -> 'StaticGameObject':
@@ -106,7 +172,8 @@ class StaticGameObject(GameObject):
         :param game_id: The stations game_id
         :return:    A `Station` object corresponding to the given ID
         """
-        global _static_lookup_total
+        if game_id not in _static_lookup_total:
+            raise Exception(f"{game_id=} cannot be found in static data loaded from database.")
         return _static_lookup_total[game_id]
 
     @staticmethod
@@ -126,6 +193,84 @@ class StaticGameObject(GameObject):
         :return:            `True` if this prefix is known. Otherwise `False`
         """
         return prefix in _static_lookup_tiered
+
+
+class PublicGameObject(GameObject):
+    """
+    Wraps/describes a game object that is stored on DB Server in dedicated collection and is accessible to **any user on
+    server** via it's unique `game_id`.
+    """
+
+    _public_id_lookup = dict()
+
+    @classmethod
+    def setup(cls, collection_name: str, game_id_prefix: str):
+        """
+        Decorates a `PublicGameObject` class to set it up as a publicly accessible datatype.
+        :param collection_name: the name of the MongoDB-collection that is managing the JSON data of this object type
+        :param game_id_prefix: Basic Prefix to associate this class with (e.g. 'adventure')
+        """
+        if game_id_prefix in cls._public_id_lookup:
+            raise Exception(f"{collection_name} is already a registered collection.")
+
+        id_data = dict()
+        id_data['mongo_collection'] = collection_name
+        cls._public_id_lookup[game_id_prefix] = id_data
+
+        # Check if Mongo Collection with that name already exists. If not, create it.
+        if collection_name not in mongo.db.list_collection_names():
+            # Create Collection with proper name
+            mongo.db[collection_name].create_index('game_id')
+            print(f'Collection {collection_name} did not yet exist. Created game_id index for {collection_name} now.')
+
+        # Register a GET resolver for the data
+        get_resolver(type=game_id_prefix, dynamic_buffer=True, postfix_start=2)(
+            cls.generate_get_resolver(game_id_prefix))
+
+        # Register an UPDATE resolver for the data
+        update_resolver(game_id_prefix)(cls.generate_update_resolver(game_id_prefix))
+
+        # Need to return identity function for annotation/decoration placement
+        return lambda x: x
+
+    @classmethod
+    def generate_get_resolver(cls, id_prefix: str) -> Callable:
+        name = cls._public_id_lookup[id_prefix]['mongo_collection']
+        target_collection = mongo.db[name]
+
+        def resolve_id_get(game_id: str, user: User, **kwargs) -> 'PublicGameObject':
+            result = target_collection.find_one({"game_id": game_id}, {'_id': 0})
+            if not result:
+                if 'default' in kwargs and kwargs['default']:
+                    return kwargs['default']
+                else:
+                    raise Exception(f"Cannot resolve {game_id}")
+            return PublicGameObject(dict(result))
+
+        return resolve_id_get
+
+
+    @classmethod
+    def generate_update_resolver(cls, id_prefix: str) -> Callable:
+        target_collection = mongo.db[cls._public_id_lookup[id_prefix]['mongo_collection']]
+        def resolve_id_update(user: User, game_id: str, update, **kwargs):
+            core_query = {"game_id": game_id}
+            if 'delete' in kwargs and kwargs['delete']:
+                target_collection.delete_one(core_query)
+                return None
+            mongo_command = '$set' if 'mongo_command' not in kwargs else kwargs['mongo_command']
+            if 'is_bulk' in kwargs and kwargs['is_bulk']:
+                # Bulk update. Assume `update` to be a dict that contains all values to be set
+                mongo_content = dict()
+                for key in update:
+                    mongo_content[f"{game_id}.{key}"] = update[key]
+            else:
+                mongo_content = {game_id: update}
+
+            target_collection.update_one(core_query, {mongo_command: update})
+            return mongo_command, mongo_content
+
+        return resolve_id_update
 
 
 # List of updates to run on reload
@@ -183,7 +328,8 @@ def update_static_data():
                 entity_type = read_type
             else:
                 assert read_type == entity_type
-            assert doc['game_id'] not in base_dict
+            if doc['game_id'] in base_dict:
+                raise Exception(f"Game ID {doc['game_id']} is used on multiple DB documents.")
             base_dict[doc['game_id']] = job['class'](doc)
         flat_lookup.update(base_dict)
         tiered_lookup[entity_type] = base_dict
@@ -202,8 +348,6 @@ def update_static_data():
         if listener_fun is not None:
             # Listener Function exists. Execute
             listener_fun()
-
-
 
 
 @global_jinja_fun

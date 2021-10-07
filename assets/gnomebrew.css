@@ -50,11 +50,6 @@ h4 {
     image-rendering: crisp-edges;
 }
 
-.navbar .gb-brand {
-    font-family: 'Press Start 2P';
-    color: #A63E42;
-}
-
 
 .nongame-content {
     background: #C4A47A;
@@ -66,7 +61,140 @@ h4 {
     height: unset;
 }
 
-/* Formatting Stuff */
+/* GB INFO */
+
+.gb-info-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+    gap: 5px;
+}
+
+.gb-info {
+    display: flex;
+    flex-direction: row;
+    gap: 3px;
+    padding-left: 4px;
+    padding-right: 4px;
+    align-items: center;
+    border-radius: 5px;
+}
+
+.gb-info-default {
+    background: #E7BF8B;
+}
+
+.gb-info-default:hover {
+    background: #FFEED9;
+}
+
+.gb-info-alt {
+    background: #ADC4DD;
+}
+
+.gb-info-alt:hover {
+    background: #DFEEFF;
+}
+
+.gb-info-highlight {
+    background: #E39F84;
+}
+
+.gb-info-highlight:hover {
+    background: #FFD0BE;
+}
+
+.gb-info-highlight strong {
+    color: #822929;
+}
+
+.gb-info-storage {
+    background: #F78562;
+}
+
+.gb-info-storage:hover {
+    background: #F4A78F;
+}
+
+/* NAVBAR */
+
+.gb-navbar {
+    background: #E7BF8B;
+    display: flex;
+    flex-direction: row;
+    letter-spacing: -0.1em;
+    aling-items: center;
+    gap: 20px;
+    min-height: 75px;
+}
+
+.gb-navbar-links {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.gb-navbar-links a {
+    font-family: 'Press Start 2P';
+    font-size: 0.9em;
+    color: #2d67a4;
+}
+
+.gb-navbar-links a:hover {
+    text-decoration: none;
+    color: #5492d2;
+}
+
+.gb-navbar-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 8px;
+    background: #BE8251;
+    gap: 6px;
+    padding: 0px 5px;
+}
+
+.gb-brand {
+    font-family: 'Press Start 2P';
+    color: #A63E42;
+    font-size: 1.4em;
+    margin-right: 1em;
+}
+
+.gb-brand:hover {
+    color: #A63E42;
+    text-decoration: none;
+}
+
+.storage-gold {
+    font-family: 'Press Start 2P';
+}
+
+/* BUTTONS */
+
+.gb-button {
+    border-width: 3.5px;
+    border-color: #5e484f;
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 20px;
+    background: #aca7a9;
+    transition: all 0.1s;
+}
+
+.gb-button:hover {
+    background: #99958f;
+    cursor: pointer;
+}
+
+.gb-button:active {
+    background: #FFEED9;
+}
 
 .gb-button:hover img {
     filter: saturate(160%);
@@ -77,6 +205,21 @@ h4 {
 .gb-button:active img {
     filter: saturate(160%) drop-shadow(2px 2px 2px #5e484f);
     -webkit-filter: saturate(160%) drop-shadow(2px 2px 2px #5e484f);
+}
+
+.gb-toggle-button {
+    border-width: 3.5px;
+    border-color: #5e484f;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 1px;
+    border-top-right-radius: 1px;
+    border-bottom-right-radius: 5px;
+    background: #aca7a9;
+    padding: 2px;
+}
+
+.gb-toggle-button.gb-toggle-view-active {
+    background: #FFEED9;
 }
 
 .row-margin-05 {
@@ -113,25 +256,6 @@ h4 {
     z-index: -10;
 }
 
-.gb-button {
-    border-width: 3.5px;
-    border-color: #5e484f;
-    border-top-left-radius: 20px;
-    border-bottom-left-radius: 5px;
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 20px;
-    background: #aca7a9;
-}
-
-.gb-button:hover {
-    background: #99958f;
-    cursor: pointer;
-}
-
-.gb-button:active {
-    background: #FFEED9;
-}
-
 .gb-top-buttons {
     display: flex;
     flex-direction: row;
@@ -150,12 +274,30 @@ h4 {
 /* GB TOGGLE VIEW */
 
 .gb-toggle-view {
-    transition: .3s transform ease-in-out;
+    transition: all 0.3s;
     cursor: pointer;
+}
+
+.gb-toggle {
+    transition: all 0.3s;
+}
+
+.gb-toggle-hidden {
+    display: none;
 }
 
 .gb-minimized {
     display: none;
+}
+
+/* GB Selection Feature */
+
+.gb-selected {
+
+}
+
+.gb-selected:hover {
+
 }
 
 /* SIDEBAR */
@@ -174,18 +316,13 @@ h4 {
     z-index: 100;
     transition: all 0.3s;
     padding: 10px;
-    background: #E7BF8B;
 }
 
 /* Toggle used to activate/deactivate the sidebar */
 .gb-sidebar.sb-toggle {
-    margin-left: -250px;
+    margin-left: -250px;gb
 }
 
-/* GB NAVBAR */
-.gb-navbar {
-    background: #E7BF8B;
-}
 
 .gb-link {
     cursor: pointer;

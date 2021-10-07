@@ -5,7 +5,7 @@
 {% if item_id is not defined %}{% set item_id = data.item_id %}{% endif %}
 {% if amount is not defined %}{% set amount = data.amount %}{% endif %}
 {% if shorten_fun is not defined %}{% set shorten_fun=shorten_num %}{% endif %}
-<div class="{% if class is defined %} {{ class }}{% endif %} gb-hover" title="{% if item_id.startswith('it_cat') %}Any {{ current_user.get(item_id).get_static_value('name_individual_entity') }}{% endif %}">
+<div class="{% if class is defined %} {{ class }}{% endif %} gb-hover" title="{% if item_id.startswith('it_cat') %}Any {{ current_user.get(item_id).get_static_value('name_individual_entity') }}{% else %}{{ current_user.get(item_id).name() }}{% endif %}">
     {{ icon(item_id, class='gb-icon-sm gb-outcome-icon') | safe }}
     <span class="gb-outcome-amount">{{ shorten_fun(amount) }}</span>
 </div>

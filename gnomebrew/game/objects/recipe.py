@@ -1,6 +1,7 @@
 """
 Contains Recipe logic/implementation
 """
+import copy
 import datetime
 from bisect import bisect_left
 from datetime import datetime, timedelta
@@ -11,7 +12,7 @@ from typing import List, Dict
 
 from gnomebrew import mongo
 from gnomebrew.game import event as event
-from gnomebrew.game.objects.item import ItemCategory
+from gnomebrew.game.objects.item import ItemCategory, Item
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.request import PlayerRequest
@@ -34,6 +35,24 @@ def recipes(game_id: str, user: User, **kwargs):
     return [r for r in Recipe.get_recipes_by_station(splits[1]) if r.can_execute(user,
                                                                                  user_upgrades=user_ws_data['upgrades'],
                                                                                  user_otr=user_ws_data['finished_otr'])]
+
+
+def _find_best_postfix(postfix_result: dict, total_cost: dict) -> str:
+    """
+    Tries to identify the most appropriate postfix for a recipe's result using the real player cost and the postfix data.
+    :param postfix_result:   `postfix_result` object data.
+    :param total_cost:       Real cost the player invested in this recipe.
+    :return:                The most appropriate postfix for this situation.
+    """
+    pf_type = postfix_result['postfix_type']
+    if pf_type == 'it_cat':
+        target_category: ItemCategory = ItemCategory.from_id(postfix_result['cat'])
+        tg_item_names = [item.get_minimized_id() for item in target_category.get_matching_items() if item.get_id() in total_cost]
+        if not tg_item_names:
+            raise Exception(f"This recipe was created without the necessary ingredients. Did not find items of cateogory {target_category.name()}")
+        return max(tg_item_names, key=lambda it_name: total_cost[f"item.{it_name}"])
+    else:
+        raise Exception(f"I don't know how to handle recipe postfix for {postfix_result}")
 
 
 @load_on_startup('recipes')
@@ -62,25 +81,28 @@ class Recipe(StaticGameObject):
         # ~~~~ Check if prerequisites are met ~~~~
 
         # 0.5. If Item Categories are involved, convert the categories to additional hard material Cost
-        total_cost = self._data['cost'].copy()
+        total_cost = copy.deepcopy(self._data['cost'])
 
-        if 'it_cat' in total_cost:
-            for category in total_cost['it_cat']:
-                selected_cat_item = user.get(f"selection.it_cat.{category}", default=None, **kwargs)
-                if not selected_cat_item:
-                    response.add_fail_msg(f"Cannot find an item in your inventory matching the category {ItemCategory.from_id(f'selection.it_cat.{category}').name()}.")
-                    return response
-                if selected_cat_item in total_cost:
-                    total_cost[selected_cat_item] += total_cost['it_cat'][category]
-                else:
-                    total_cost[selected_cat_item] = total_cost['it_cat'][category]
-            del total_cost['it_cat']
+        # Replace any item CATEGORY ingredients with the actual items to be used this time around:
+        for item_category in [ItemCategory.from_id(cost_name) for cost_name in self._data['cost'] if cost_name.startswith('it_cat.')]:
+            sl_category_item = user.get(f'selection.it_cat.{item_category.get_minimized_id()}', default=None, **kwargs)
+            if not sl_category_item:
+                response.add_fail_msg(
+                    f"Cannot find an item in your inventory matching the category {ItemCategory.from_id(f'it_cat.{item_category}').name()}.")
+                return response
+            if sl_category_item in total_cost:
+                total_cost[sl_category_item] += total_cost[item_category.get_id()]
+            else:
+                total_cost[sl_category_item] = total_cost[item_category.get_id()]
+            del total_cost[item_category.get_id()]
+
 
         # 1. Hard Material Cost
-        player_inventory = user.get('data.storage.content', **kwargs)
-        if not all([x in player_inventory and player_inventory[x] >= total_cost[x] for x in
-                    total_cost.keys() if x != 'it_cat']):
-            response.add_fail_msg('Not enough resources to execute recipe.')
+        player_inventory = user.get('storage._content', **kwargs)
+        insufficent_items = [Item.from_id(item_id).name() for item_id in total_cost
+                             if item_id[5:] not in player_inventory or player_inventory[item_id[5:]] < total_cost[item_id]]
+        if insufficent_items:
+            response.add_fail_msg(f"You are missing resources: {', '.join(insufficent_items)}")
 
         # 2. Available Slots
         slots_list = user.get(f"slots.{self._data['station']}", **kwargs)
@@ -100,13 +122,12 @@ class Recipe(StaticGameObject):
             response.add_fail_msg('Recipe not unlocked yet.')
 
         # 5. Inventory change event can theoretically improve player inventory
-        if 'delta_inventory' in self._data['result']:
-            max_capacity = user.get('attr.storage.max_capacity', **kwargs)
-            at_max_capacity = [item for item in self._data['result']['delta_inventory']
-                               if item in player_inventory and player_inventory[item] == max_capacity]
-            if len(at_max_capacity) == len(self._data['result']['delta_inventory']):
-                # Everything is at max capacity
+        delta_inventory = next(filter(lambda effect_dict: effect_dict['effect_type']=='delta_inventory', self._data['result']), None)
+        if delta_inventory:
+            max_capacity = user.get('attr.storage.max_capacity')
+            if all([item in player_inventory and player_inventory[item] >= max_capacity for item in delta_inventory['delta']]):
                 response.add_fail_msg('You are at storage capacity for all resulting items.')
+
 
         # ~~~~ If all requirements are met, execute Recipe ~~~~
         if response.has_failed():
@@ -114,8 +135,9 @@ class Recipe(StaticGameObject):
 
         # Remove material from Inventory now
         update_data = dict()
+        print(f"{total_cost=}")
         for material in total_cost:
-            update_data[material] = player_inventory[material] - total_cost[material]
+            update_data[material[5:]] = player_inventory[material[5:]] - total_cost[material]
         if update_data:
             user.update('data.storage.content', update_data, is_bulk=True)
 
@@ -126,7 +148,7 @@ class Recipe(StaticGameObject):
             seconds=self._data['base_time'])
 
         # If the recipe is a one-time recipe, add a push to the result that ensures the finished recipe is logged
-        result: list = self._data['result'].copy()
+        result: list = copy.deepcopy(self._data['result'])
         if self.is_one_time():
             result.append({
                 'effect_type': 'push_data',
@@ -138,6 +160,17 @@ class Recipe(StaticGameObject):
                 'type': 'reload_element',
                 'element': f"recipes.{self._data['station']}"
             })
+
+        # Check if result list has postfixes to add to results
+        if 'postfix_result' in self._data:
+            postfix_blueprint = self._data['postfix_result']
+            postfix = _find_best_postfix(postfix_blueprint, total_cost)
+            for target_dict in [effect_data[postfix_blueprint['target_attribute']] for effect_data in result if effect_data['effect_type'] == postfix_blueprint['target_effect_type']]:
+                keys = list(target_dict.keys())
+                for key in keys:
+                    target_dict[f"{key}.{postfix}"] = target_dict[key]
+                    del target_dict[key]
+
 
         # Enqueue the update event that triggers on recipe completion
         event.Event.generate_event_from_recipe_data(target=user.get_id(),
@@ -221,6 +254,9 @@ class Recipe(StaticGameObject):
         """
         return render_template(join('snippets', '_recipe_'))
 
+    def get_execution_time(self):
+        return self._data['base_time']
+
     # Maps a station to a list of recipes associated with this station
     _station_recipe_map = dict()
 
@@ -263,8 +299,14 @@ class Recipe(StaticGameObject):
             'type': 'reload_element',
             'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
         })
-        cost = recipe_event['cost']
+        cost = recipe_event['cost'] # No need to copy before edit because this data is from an event and will be
+                                    # deleted after this call finishes.
         if cost:
+            # If this recipe-related event had *cost* associated with it, make sure to add that cost back to storage.
+            for key in list(cost.keys()):
+                target_item = user.get(key.replace('-', '.'))
+                cost[target_item.get_minimized_id()] = cost[key]
+                del cost[key]
             user.update('data.storage.content', cost, command='$inc', is_bulk=True)
         response.succeess()
         return response
@@ -296,7 +338,6 @@ def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str,
         if max_slots:
             # _station is slotted. Add the necessary input to return value
             ret[_station] = list()
-            print(f"{mongo_result=}")
             if _station in mongo_result:
                 # By Default, add the implicit occupied state
                 for item in mongo_result[_station]:

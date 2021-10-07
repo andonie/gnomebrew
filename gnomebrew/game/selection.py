@@ -42,10 +42,9 @@ def select(user, request_object: dict, **kwargs):
     target_id = request_object['target_id']
     value = request_object['value']
     # Ensure target ID is valid selection.
-    match = next([ selection_data for selection_id, selection_data in selection_ids.items()
-                   if selection_id==target_id or (selection_data['is_generic'] and target_id.startswith(selection_id))], None)
+    match = next(filter(lambda data: data[0]==target_id or (data[1]['is_generic'] and target_id.startswith(data[0])), selection_ids.items()), None)
     if match:
-        match['fun'](game_id=target_id, user=user, set_value=value, **kwargs)
+        match[1]['fun'](game_id=target_id, user=user, set_value=value, **kwargs)
         response.succeess()
     else:
         response.add_fail_msg(f"Could not find a selection ID {target_id}")

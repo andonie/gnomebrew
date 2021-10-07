@@ -8,10 +8,10 @@ from flask import render_template
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import WorldLocation
-from gnomebrew.game.objects.static_object import render_object
+from gnomebrew.game.objects.game_object import render_object
 from gnomebrew.game.objects.world import get_world_location
 from gnomebrew.game.testing import application_test
-from gnomebrew.game.user import User, html_generator, frontend_id_resolver
+from gnomebrew.game.user import User, html_generator, id_update_listener
 from gnomebrew.game.util import global_jinja_fun, transpose_matrix, shift_matrix
 
 
@@ -73,14 +73,14 @@ def generate_current_divination_map_html(game_id: str, user: User, **kwargs) -> 
 
 
 @global_jinja_fun
-def generate_current_divination_map(user: User) -> List[List[WorldLocation]]:
+def generate_current_divination_map(user: User, **kwargs) -> List[List[WorldLocation]]:
     """
     Helper function. Generate a given user's current divination map.
     :param user:    a user. Assumes user has access to the divination table.
     :return:        A user's current divination map as a quasi-matrix
     """
-    divination_radius = user.get('attr.divination_table.divination_radius', default=5)
-    matrix = get_locations_around(center=user.get('data.divination_table.current_focus'),
+    divination_radius = user.get('attr.divination_table.divination_radius', default=5, **kwargs)
+    matrix = get_locations_around(center=user.get('data.divination_table.current_focus', **kwargs),
                                   radius=divination_radius)
     # Shift matrix so that [0][0] is in the center instead of at the technical beginning
     matrix = shift_matrix(matrix, divination_radius, divination_radius)
@@ -107,7 +107,7 @@ def reformat_divination_map_for_display(divination_map: List[List[WorldLocation]
     return transpose_matrix(shift_matrix(divination_map, radius, radius))
 
 
-@frontend_id_resolver(r'data\.divination_table\.current_focus')
+@id_update_listener(r'data\.divination_table\.current_focus')
 def reload_map_on_focus_update(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('ui', {
         'type': 'reload_element',

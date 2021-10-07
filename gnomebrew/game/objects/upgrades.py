@@ -1,3 +1,4 @@
+import copy
 import re
 from bisect import bisect_left
 from os.path import join
@@ -29,7 +30,7 @@ def attr(game_id: str, user: User, **kwargs):
         val = station.get_base_value('.'.join(splits[2:]))
         if type(val) is list or type(val) is dict:
             # If the value is a reference, make sure we use a copy for this operation
-            val = val.copy()
+            val = copy.deepcopy(val)
     except (KeyError, AssertionError):
         # Key does not exist. --> default
         if 'default' in kwargs:

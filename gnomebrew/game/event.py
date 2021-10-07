@@ -11,7 +11,7 @@ from gnomebrew.game import boot_routine
 import datetime
 
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.objects.game_object import StaticGameObject
+from gnomebrew.game.objects.game_object import StaticGameObject, GameObject
 from gnomebrew.game.user import User, load_user, html_generator
 import threading
 
@@ -71,14 +71,14 @@ class EventThread(object):
                     exit()
 
 
-class Event(object):
+class Event(GameObject):
 
     def __init__(self, mongo_data: dict):
         """
         Intialize an event based on the data from MongoDB
         :param mongo_data:  mongoDB data to initialize this object with
         """
-        self._data = mongo_data
+        GameObject.__init__(self, mongo_data)
         if 'event_id' not in self._data:
             self._data['event_id'] = str(uuid.uuid4())
 
@@ -92,6 +92,8 @@ class Event(object):
         Executes the event's logic.
         :return:
         """
+        # Ensure all data is 'dirty' (dots in dict-keys) up
+        self.dirty_keys()
         # Get user object that represents the target
         user: User = load_user(self._data['target'])
 
@@ -161,6 +163,8 @@ class Event(object):
         be executed.
         """
         self._data['since'] = datetime.datetime.utcnow()
+        # Clean Up object data
+        self.clean_keys()
         mongo.db.events.insert_one(self._data)
 
 

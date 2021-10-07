@@ -6,18 +6,17 @@
 {% endwith %}
 {% endblock %}
 
-{% block navbar_extras %}
-<script>
-add_startup(function() {
-    $('#storage-toggle').on('click', function(event) {
-        $('.gb-sidebar').toggleClass('sb-toggle');
-    });
-});
-</script>
-<li class="navbar-item">
-    {{ icon('special.storage', class='nav-link gb-link gb-icon', href='#', id='storage-toggle') | safe }}
-</li>
+{% block brand %}<a class="gb-brand" href="#" onclick="$('.gb-sidebar').toggleClass('sb-toggle')">Gnomebrew</a>{% endblock %}
+{% block navbar_content %}
+
+<div class="gb-navbar-item">
+    {{ icon('item.gold') | safe }}
+    <span class="storage-gold">{{ shorten_cents(current_user.get('storage.gold')) }}</span>
+</div>
+{{ super() }}
 {% endblock %}
+
+{% block navbar_extras %}{% endblock %}
 
 {% block sidebar_outer %}
 <div class="gb-sidebar" id="gb.sidebar">

@@ -1,6 +1,7 @@
 """
 This package contains some test routines for Gnomebrew
 """
+import json
 from typing import Callable
 
 from flask_login import current_user
@@ -91,7 +92,7 @@ def application_test(**kwargs):
 # Executing Tests
 
 @PlayerRequest.type('execute_test', is_buffered=False)
-def execute_test(user: User, request_object: dict):
+def execute_test(user: User, request_object: dict, **kwargs):
     response = GameResponse()
     request_object = dict(request_object)
     request_object.pop('request_type')
@@ -161,6 +162,29 @@ def user_assertions(username: str):
         response.succeess()
 
     return response
+
+
+@application_test(name='Update Game ID', category='Mechanics')
+def update_game_id(game_id: str, update_json: str, username: str):
+    response = GameResponse()
+    if username and username != "":
+        user = load_user(username)
+        if not user:
+            response.add_fail_msg(f"Could not load user {username}")
+    else:
+        # TODO implement default update execution without user
+        pass
+
+    update = json.loads(update_json)
+
+    user.update(game_id, update)
+
+    response.log(f"Added {update=}\nto {game_id=}")
+
+    return response
+
+
+
 
 
 @application_test(name='Evaluate Game ID', category='Mechanics')

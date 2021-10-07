@@ -14,7 +14,7 @@ from flask import render_template
 from gnomebrew.game.objects import PlayerRequest
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.item import Item
-from gnomebrew.game.user import User, load_user, frontend_id_resolver, user_assertion, html_generator
+from gnomebrew.game.user import User, load_user, id_update_listener, user_assertion, html_generator
 from gnomebrew.game.event import Event
 from gnomebrew.game.util import random_normal, random_uniform, is_weekday, fuzzify
 from gnomebrew.game.gnomebrew_io import GameResponse
@@ -502,7 +502,7 @@ class Patron(Person):
                 user.update(f"data.storage.content.{bonus_item.get_minimized_id()}", current_storage - 1)
 
         # Check if enough of the required product is in storage
-        storage = user.get('data.storage.content', **kwargs)
+        storage = user.get('storage._content', **kwargs)
         for item in target_order:
             if storage[item] < target_order[item]:
                 response.add_fail_msg(
@@ -803,12 +803,12 @@ def _process_user(user: User, tavern_data: dict, patron_list: list):
 
 ## FRONTEND DATA
 
-@frontend_id_resolver(r'^data\.tavern\.name$')
+@id_update_listener(r'^data\.tavern\.name$')
 def normal_update_for_tavern_name(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('update', data)
 
 
-@frontend_id_resolver(r'data\.tavern\.prices')
+@id_update_listener(r'data\.tavern\.prices')
 def reload_prices_on_price_update(user: User, data: dict, game_id: str, **kwargs):
     user.frontend_update('ui', {
         'type': 'reload_element',
@@ -816,7 +816,7 @@ def reload_prices_on_price_update(user: User, data: dict, game_id: str, **kwargs
     })
 
 
-@frontend_id_resolver(r'^data\.tavern\.[\w\-\.]+$')
+@id_update_listener(r'^data\.tavern\.[\w\-\.]+$')
 def ignore_tavern_data(user: User, data: dict, game_id: str, **kwargs):
     """
     This implementation is a little dirty, because the above function matches the tavern queue only and this function
