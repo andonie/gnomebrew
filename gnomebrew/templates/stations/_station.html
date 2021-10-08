@@ -4,7 +4,7 @@
         {% block station_header %}
         <h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
         {% block station_subtitle %}{% endblock %}
-        <div class="station-warning gb-error" id="{{station.get_id() }}-warning"></div>
+        <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos"></div>
         {% endblock %}
     </div>
     {% block slots %}

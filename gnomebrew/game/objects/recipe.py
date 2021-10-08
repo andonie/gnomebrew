@@ -77,6 +77,7 @@ class Recipe(StaticGameObject):
         :return:        The Game Response object summarizing the transaction.
         """
         response = GameResponse()
+        response.set_ui_target(f"#station-{self.get_static_value('station')}-infos")
 
         # ~~~~ Check if prerequisites are met ~~~~
 
@@ -99,16 +100,18 @@ class Recipe(StaticGameObject):
 
         # 1. Hard Material Cost
         player_inventory = user.get('storage._content', **kwargs)
-        insufficent_items = [Item.from_id(item_id).name() for item_id in total_cost
+        insufficent_items = [Item.from_id(item_id).get_id() for item_id in total_cost
                              if item_id[5:] not in player_inventory or player_inventory[item_id[5:]] < total_cost[item_id]]
         if insufficent_items:
             response.add_fail_msg(f"You are missing resources: {', '.join(insufficent_items)}")
+            response.player_info(f"You are missing resources.", 'missing:', insufficent_items)
 
         # 2. Available Slots
         slots_list = user.get(f"slots.{self._data['station']}", **kwargs)
         slots_available = len([slot for slot in slots_list if slot['state'] == 'free'])
         if slots_available < self._data['slots']:
             response.add_fail_msg(f"Not enough slots available in {self._data['station']}")
+            response.player_info(f"Not enough slots available to execute.", 'not enough', 'special.slots')
 
         # 3. One Time Recipes
         if self.is_one_time():
@@ -116,17 +119,23 @@ class Recipe(StaticGameObject):
             if not self._otr_check(user):
                 # The recipe is already logged in the list of finished one-time-recipes. This cannot be crafted again.
                 response.add_fail_msg("This recipe can't be run more than once.")
+                response.player_info('This recipe was one-time and is already executed.', 'cannot execute')
 
         # 4. Recipe Already Available
         if not self.requirements_met(user):
             response.add_fail_msg('Recipe not unlocked yet.')
+            response.player_info('Recipe not unlocked yet', self.get_id(), 'unavailable')
 
         # 5. Inventory change event can theoretically improve player inventory
         delta_inventory = next(filter(lambda effect_dict: effect_dict['effect_type']=='delta_inventory', self._data['result']), None)
         if delta_inventory:
             max_capacity = user.get('attr.storage.max_capacity')
-            if all([item in player_inventory and player_inventory[item] >= max_capacity for item in delta_inventory['delta']]):
+            at_capacity_results = [f"item.{item}" for item in delta_inventory['delta']
+                                   if item in player_inventory and player_inventory[item] >= max_capacity]
+            if len(at_capacity_results) == len(delta_inventory['delta'].keys()):
                 response.add_fail_msg('You are at storage capacity for all resulting items.')
+                response.player_info('You are at storage capacity for all resulting items.', 'attr.storage.max_capacity'
+                                     ,'full:', *at_capacity_results)
 
 
         # ~~~~ If all requirements are met, execute Recipe ~~~~

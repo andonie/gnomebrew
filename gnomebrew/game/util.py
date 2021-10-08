@@ -200,3 +200,18 @@ def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
     """
     return [[matrix[(x + d_x) % len(matrix)][(y + d_y) % len(matrix[0])] for y in range(len(matrix[0]))] for x in
             range(len(matrix))]
+
+
+game_id_regex = re.compile(r"^\w+(\.\w+)+$")
+
+@global_jinja_fun
+def is_game_id_formatted(string: str) -> bool:
+    """
+    Tests if a given String is formatted like a Game ID, following its conventions and rules.
+    :param string:  String to test.
+    :return:        `True`, if the string is formatted like a Game ID, otherwise `False`. Does not check if the ID
+                    resolves.
+    """
+    if game_id_regex.match(string):
+        return True
+    return False

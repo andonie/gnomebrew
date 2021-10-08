@@ -169,6 +169,43 @@ function toggle_at_selector(selector, toggle_class) {
     $(selector).toggleClass(toggle_class)
 }
 
+
+/* PLAYER INFO */
+
+var info_cnt = 0;
+
+function display_info(target_selector, info_html, duration) {
+    var info = $(info_html);
+    var info_id = 'player_info_' + info_cnt;
+    info.attr('id', info_id);
+    console.log(info);
+    info_cnt++;
+    $(target_selector).append(info);
+    rescale_ui();
+
+    var STEP = 0.1;
+    var PRE_CNT = duration;
+    var cnt = 0;
+    var target = document.getElementById(info_id);
+    target.style.opacity = 1;
+
+    var fadeEffect = setInterval(function() {
+        if(cnt < PRE_CNT) {
+            cnt++;
+            return;
+        }
+        if (target.style.opacity > 0) {
+            target.style.opacity -= STEP;
+        } else {
+            // Animation Done. Clean Up
+            $( target ).remove();
+            rescale_ui();
+            clearInterval(fadeEffect);
+        }
+    }, 100);
+}
+
+
 /* ERROR LOGGING */
 
 function global_error(error_msg) {

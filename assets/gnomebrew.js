@@ -107,6 +107,9 @@ function handle_ui_req(data) {
         case 'add_station':
             add_station(data.station);
             break;
+        case 'player_info':
+            display_info(data.target, data.content, data.duration);
+            break;
     }
     // After any UI update, Masonry gets card blanche to update the grid
     rescale_ui();
@@ -232,9 +235,6 @@ function one_way_game_request(request_data, error_target, trigger_element) {
     };
 
     $.post('/play/request', request_data).done(function(response){
-        if(response.type != 'success') {
-            error_msg(error_target, response.fail_msg);
-        }
         reset_element();
     }).fail(function() {
         error_msg(error_target, 'Could not connect to Gnomebrew Server!');

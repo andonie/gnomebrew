@@ -368,7 +368,10 @@ def icon(game_id: str, **kwargs):
         element_addition = f' title="{entity.name()}"'
 
     if 'class' not in kwargs:
-        kwargs['class'] = 'gb-icon'
+        if 'img_class' in kwargs: # Added because python compiler did not like class= in python code :(
+            kwargs['class'] = kwargs['img_class']
+        else:
+            kwargs['class'] = 'gb-icon'
 
     if 'href' in kwargs:
         element_addition += f' href="{kwargs["href"]}"'

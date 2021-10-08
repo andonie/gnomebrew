@@ -7,6 +7,8 @@ interaction.
 """
 
 from gnomebrew import socketio
+from gnomebrew.game.objects.game_object import icon
+from gnomebrew.game.util import css_friendly, is_game_id_formatted
 
 
 class GameResponse(object):
@@ -60,6 +62,30 @@ class GameResponse(object):
             self._data['fail_msg'] = msg
         self._data['type'] = 'fail'
 
+
+    def player_info(self, core_message, *info_elements, **kwargs):
+        """
+        Shorthand code to efficiently communicate from backend to frontend.
+        Generates one info element with an arbitrary number of info content.
+        :param info_elements: Info elements. Game IDs will automatically be recognized and turned into an icon of the ID.
+                              All other elements will be added straight into the info box in a wrapper div.
+        """
+        new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{core_message}">'
+        for element in info_elements:
+            if is_game_id_formatted(element):
+                new_info += icon(element, img_class='gb-icon-sm')
+            else:
+                new_info += f'<div class="gb-info-content">{element}</div>'
+        new_info += '</div>'
+        self.add_ui_update({
+            'type':  'player_info',
+            'target': self.get_ui_target(),
+            'content': new_info,
+            'duration': 40
+        })
+
+
+
     def log(self, log: str):
         """
         Adds to the log message of this game response.
@@ -109,6 +135,28 @@ class GameResponse(object):
             self.ui = list()
         self.ui.append(ui_data)
 
+    def set_ui_target(self, target_selector: str):
+        """
+        Sets the UI target for this Game Responses UI updates.
+        Any `player_info` invokes called AFTER this is set will ensure that the info will be added to the selector's
+        result's info container.
+        :param target_selector: Selector of container that should add UI targets now.
+        """
+        self.ui_target = target_selector
+
+    def get_ui_target(self, **kwargs) -> str:
+        """
+        :keyword  default   If set, `default` will be returned instead of an exception.
+        :return:  The current UI target or `default` if set.
+        """
+        try:
+            return self.ui_target
+        except AttributeError as a:
+            if 'default' in kwargs:
+                return kwargs['default']
+            else:
+                raise a
+
     def finalize(self, user, **kwargs):
         """
         To be called before the GameResponse is returned to the player.
@@ -125,6 +173,7 @@ class GameResponse(object):
         :return:    `True` if this is a fail response, else `False`
         """
         return self._data['type']=='fail' if 'type' in self._data else False
+
 
 TYPE_ERROR = GameResponse()
 TYPE_ERROR._data = {
