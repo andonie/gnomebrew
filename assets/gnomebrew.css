@@ -158,6 +158,15 @@ h4 {
     padding: 0px 5px;
 }
 
+.gb-navbar-item.gb-navbar-item-clickable {
+    cursor: pointer;
+    background: #a63e42;
+}
+
+.gb-navbar-hidden {
+    display: none;
+}
+
 .gb-brand {
     font-family: 'Press Start 2P';
     color: #A63E42;

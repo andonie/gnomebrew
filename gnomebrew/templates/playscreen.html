@@ -13,6 +13,15 @@
     {{ icon('item.gold') | safe }}
     <span class="storage-gold">{{ shorten_cents(current_user.get('storage.gold')) }}</span>
 </div>
+{% with prompt_heads = get_prompt_head_dict(current_user) %}
+{% for prompt_type in prompt_heads %}
+<div class="gb-navbar-container">
+    <div class="gb-navbar-item gb-navbar-item-clickable{% if prompt_heads[prompt_type] is none %} gb-navbar-hidden{% endif %}" id="{{ css_friendly(prompt_type) }}-prompt" onclick="request_prompt('{{ prompt_type }}', this)">
+    {{ icon('special.prompt.' + prompt_type) | safe }}
+    </div>
+</div>
+{% endfor %}
+{% endwith %}
 {{ super() }}
 {% endblock %}
 
@@ -27,17 +36,7 @@
 {% endblock %}
 
 {% block app_content %}
-<div id="gb_prompt_container">
-    {% with prompt_list = current_user.get('data.special.prompts', id_buffer=buffer) %}
-    {% if prompt_list %}
-    {{ render_object('render.prompt', data=prompt_list[0]) | safe }}
-    <script>
-        add_startup(function () {
-            show_event_modal();
-        });
-    </script>
-    {% endif %}{% endwith %}
-</div>
+<div id="gb_prompt_container"></div>
 {% with user_stations = get_unlocked_station_list(current_user, id_buffer=buffer),
         slots= current_user.get('slots._all', id_buffer=buffer) %}
 <div class="grid" id="station-grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 300, "gutter": 5}'>

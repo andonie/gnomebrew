@@ -1,0 +1,11 @@
+{#
+ # Renders a prompt content.
+ # Expects `data` to be the JSON data of the prompt.
+ #}
+{% if data.prompt_content.content_type == 'plain' %}{{ data.prompt_content.content | safe }}
+{% elif data.prompt_content.content_type == 'input' %}
+{% with input_data = data.prompt.input[data.prompt_content.input_id] %}
+<input type="{{ input_data.input_type }}" {% if input_data.placeholder is defined %}placeholder="{{ input_data.placeholder }}"{% endif %}
+data-input-id="{{ input_data.input_id }}">
+{% endwith %}{% endif %}
+

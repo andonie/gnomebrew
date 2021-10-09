@@ -43,7 +43,7 @@ def player_request():
     """
     player_request_object = PlayerRequest(request.form)
 
-    log('gb_system', f"received", 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
+    log('gb_system', f"received", 'request', request.form['request_type'], f'usr:{current_user.get_id()}', verbose=player_request_object)
 
     # Create a buffer for this request to store all evaluated IDs
     try:
@@ -52,6 +52,9 @@ def player_request():
     except Exception as e:
         log_exception('gb_system', e, 'request', level=logging.ERROR)
         return TYPE_ERROR.to_json()
+
+
+    log('gb_system', f"processed", 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
 
     return response.to_json()
 

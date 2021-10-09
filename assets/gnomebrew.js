@@ -102,7 +102,7 @@ function handle_ui_req(data) {
             reload_element(data.element);
             break;
         case 'prompt':
-            display_event(data.html_content);
+            display_prompt(data.prompt_html);
             break;
         case 'add_station':
             add_station(data.station);
@@ -166,8 +166,8 @@ function add_station(station_name) {
 
 /* INGAME EVENT */
 
-function display_event(event_html) {
-    document.getElementById('gb_prompt_container').innerHTML = event_html
+function display_prompt(prompt_html) {
+    document.getElementById('gb_prompt_container').innerHTML = prompt_html
     show_event_modal();
 }
 
@@ -189,22 +189,42 @@ function close_event_modal() {
         input: {}
     };
 
+    console.log(request_object);
+
     // If applicable, collect any and all inputs set by user
-    $('#gb-event-modal-inputs :input').each(function(index){
-        var id = $(this).data('id');
+    $('#gb-event-modal input').each(function(index){
+        console.log('HI');
+        var id = $(this).data('input-id');
         var val = $(this).val();
         request_object.input[id] = val;
     });
 
+    console.log(request_object);
+
     console.log('I have this request at the Ready: ' + JSON.stringify(request_object));
 
     $.post('/play/request', request_object).done(function(response) {
+        console.log('PROMPT RESPONSE RECEIVED:');
+        console.log(response);
         if(response.type != 'success') {
             error_msg('gb-event-modal-warning', response.fail_msg);
             button.innerHTML = button_text;
             return;
         }
-        // Success! We now want to close the modal now
+        // Success!
+        // We take the up-to-date notification info from the server and apply it to the message buttons.
+        for (var prompt_selector in response['prompt_states']) {
+            console.log(response['prompt_states'][prompt_selector]);
+            console.log($(prompt_selector));
+            if(response['prompt_states'][prompt_selector]) {
+                console.log($(prompt_selector));
+                $(prompt_selector).removeClass('gb-navbar-hidden')
+            } else {
+                console.log($(prompt_selector));
+                $(prompt_selector).addClass('gb-navbar-hidden')
+            }
+        }
+        // We now want to close the modal now
         button.innerHTML = button_text;
         $('#gb-event-modal').modal('hide');
     }).fail(function(response) {
@@ -250,6 +270,18 @@ function two_way_game_request(request_data, trigger_element, output_id, success_
         console.log(e);
         reset_element();
     });
+}
+
+// Request a prompt ID to be shown
+function request_prompt(prompt_type, trigger_element) {
+    console.log({
+        request_type: 'give_prompt',
+        prompt_type: prompt_type
+    });
+    one_way_game_request({
+        request_type: 'give_prompt',
+        prompt_type: prompt_type
+    }, null, trigger_element);
 }
 
 // Execute Recipe by ID and update the UI

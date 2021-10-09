@@ -48,7 +48,11 @@ COLORS = {
     'CRITICAL': YELLOW,
     'ERROR': RED,
     'game_id': BLUE,
-    'gb_core': MAGENTA
+    'gb_core': MAGENTA,
+    'gb_system': RED,
+    'prompt': YELLOW,
+    'effect': BLUE,
+    'event': WHITE
 }
 
 def _color_string(color, string: str):
@@ -98,6 +102,7 @@ class ColoredLogger(logging.Logger):
 
 logging.setLoggerClass(ColoredLogger)
 
+
 def log(category: str, message: str, *args, **kwargs):
     """
     Standard logging interface method for Gnomebrew.
@@ -108,7 +113,15 @@ def log(category: str, message: str, *args, **kwargs):
     :param args         Can be used to log additional parameters in brackets. Values will be added in brackets before
                         actual messaage content starts.
     :keyword level      If `level` is set, will overwrite the category's default level.
+    :keyword verbose    If this variable is set, it will will be added as the verbose content if the `verbose` flag for
+                        the given category is currently set.
     """
+    config = _log_lookup[category]
+    message = _format_message(category, message, *args, **kwargs)
+    config['logger'].log(kwargs['level'] if 'level' in kwargs else config['default_level'], message)
+
+
+def _format_message(category: str, message: str, *args, **kwargs):
     if category not in _log_lookup:
         raise Exception(f"Logging with category '{category}' is not configured.")
     config = _log_lookup[category]
@@ -118,7 +131,9 @@ def log(category: str, message: str, *args, **kwargs):
             # Escalate any message that fits the filter
             kwargs['level'] = logging.ERROR
     brackets = ''.join([f"[{_color_string(CYAN, arg)}]" for arg in args])
-    config['logger'].log(kwargs['level'] if 'level' in kwargs else config['default_level'], f"{brackets} {message}")
+    verbose_addtion = '' if 'verbose' not in kwargs or 'verbose' not in config or not config['verbose'] else f": {kwargs['verbose']}"
+    message = f"{brackets} {message}{verbose_addtion}"
+    return message
 
 
 def log_execution_time(fun: Callable, category: str, message: str, *args, **kwargs) -> Any:
@@ -146,10 +161,9 @@ def log_exception(category: str, exception: Exception, *args, **kwargs):
     :param category:    Log category
     :param exception:   Exception that occured
     """
-    type, value, traceback = sys.exc_info()
-    print('THIS IS NOT CODED YET :(')
-    print(type, value, traceback)
-    log(category, f"Exception occured: {''.join(traceback.format_list(stack))}", *args, **kwargs)
+    config = _log_lookup[category]
+    message = _format_message(category, str(exception), *args, **kwargs)
+    config['logger'].exception(message)
 
 # Describes Log kwargs that are not allowed because they are used by program logic
 _invalid_kwargs = ['logger']
@@ -191,3 +205,4 @@ config_log('gb_system', default_level=logging.INFO, log_level=logging.INFO)
 config_log('gb_core', default_level=logging.INFO, log_level=logging.INFO)
 config_log('effect', default_level=logging.INFO, log_level=logging.INFO)
 config_log('event', default_level=logging.INFO, log_level=logging.INFO)
+config_log('prompt', default_level=logging.INFO, log_level=logging.INFO, verbose=True)

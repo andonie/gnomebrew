@@ -16,6 +16,8 @@ class DataObject:
         Initializes the dataobject wrapper. This is a lightweight container designed to wrap data.
         :param data:    The JSON data to wrap.
         """
+        if not data:
+            raise Exception(f"Invalid data added: {data=}")
         self._data = data
 
     def get_json(self) -> dict:

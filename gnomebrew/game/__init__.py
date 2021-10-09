@@ -6,6 +6,8 @@ boot routines marked `@boot_routine`.
 import os
 from typing import Callable
 import logging
+import gnomebrew.index
+
 
 from gnomebrew import log
 

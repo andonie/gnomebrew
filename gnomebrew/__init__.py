@@ -12,8 +12,10 @@ from gnomebrew.logging import log
 app = Flask(__name__)
 
 # Load Configuration
-log('gb_core', 'Loading Config', 'boot_routines')
+log('gb_core', 'Loading Config')
 app.config.from_envvar('GNOMEBREW_CONFIG')
+
+log('gb_core', f'Booting server at {app.config["SERVER_NAME"]}:')
 
 # Load Database (flask-pymongo)
 log('gb_core', 'Starting PyMongo', 'boot_routines')

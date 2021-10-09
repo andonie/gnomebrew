@@ -1,0 +1,41 @@
+{#
+ # Renders a Prompt.
+ # Expects the variable `data` containing the prompt data.
+ #}
+
+<div class="modal fade gb-modal" tabindex="-1" role="dialog" id="gb-event-modal" data-target="{{ data.prompt_id }}">
+    <div class="modal-dialog gb-event-modal" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                {% block event_header %}
+                <h4 class="modal-title">{{ data.title }}</h4>
+                {% if not prompt_data_has_input(data) %}
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                {% endif %}
+                {% endblock %}
+            </div>
+            <div class="modal-body">
+                <div class="prompt-infos gb-info-container" id="gb-prompt-infos"></div>
+                {% block event_body %}
+                {% for content in data.content %}
+                {{ render_object('render.prompt_content', data={'prompt': data, 'prompt_content': content}) | safe }}
+                {% endfor %}
+                {% endblock %}
+                {% if data.effect is defined %}
+                <div class="gb-info-container">
+                    {% for effect_data in data.effect %}{{ render_object('render.effect', data=data.effect_data) | safe }}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                {% block event_footer %}
+                <button id="gb-event-modal-button" type="button" class="btn btn-secondary" onclick="close_event_modal()">
+                    {% if prompt_data_has_input(data) %}Confirm{% else %}OK{% endif %}
+                </button>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>

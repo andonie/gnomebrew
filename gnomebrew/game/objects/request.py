@@ -2,6 +2,7 @@
 This module manages Player Requests as game objects.
 """
 from typing import Callable
+import re
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.game_object import GameObject
@@ -58,3 +59,22 @@ class PlayerRequest(GameObject):
         result = PlayerRequest.request_types[self.get_static_value('request_type')]['fun'](user=user, request_object=self._data, **kwargs)
 
         return result
+
+    _input_regex = re.compile(r"input\[(\w+)\]")
+
+    @staticmethod
+    def parse_inputs(request_object) -> dict:
+        """
+        Parses form input from a given request object into a `dict`.
+        :param request_object:  Request data from frontend.
+        :return:                Dictionary mapping all input-ids to the given value.
+                                If no input was given, returns an empty `dict`.
+        """
+        parsed_inputs = dict()
+        print(request_object)
+        for key in request_object:
+            match = PlayerRequest._input_regex.match(key)
+            if match:
+                parsed_inputs[match.group(1)] = request_object[key]
+
+        return parsed_inputs

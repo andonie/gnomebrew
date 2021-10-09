@@ -3,6 +3,7 @@ This module manages the game's in-loading
 """
 from os.path import join
 from typing import Type, Any, Callable, Union
+from uuid import uuid4
 
 from flask import url_for, render_template
 
@@ -19,8 +20,11 @@ class GameObject(DataObject):
     Wraps any game logic entity that is to be displayed in some form to the player.
     """
 
-    def __init__(self, data):
+    def __init__(self, data, uuid: str = None):
         DataObject.__init__(self, data)
+        if uuid != None:
+            if uuid not in self._data:
+                self._data[uuid] = uuid4()
 
     def __str__(self):
         return f"<GameObject: {self._data=}>"
