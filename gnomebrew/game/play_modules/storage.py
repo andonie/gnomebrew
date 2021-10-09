@@ -7,6 +7,7 @@ from typing import List
 
 from flask import render_template, url_for
 
+from gnomebrew import log
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import StaticGameObject
 from gnomebrew.game.objects.item import ItemCategory, Item
@@ -63,7 +64,6 @@ def category_toggle(game_id: str, user: User, set_value, **kwargs):
         return user.get(target_data_id, default=True, **kwargs)
     elif set_value == '_toggle':
         # Special case. Just toggle the current value.
-        print('YO')
         user.update(target_data_id, not user.get(target_data_id, default=True, **kwargs))
     else:
         # Update Category Toggle
@@ -105,13 +105,17 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
             # There is no item selection in this category
             # Instead, choose the item in the category you have the most of.
 
-            result = 'item.' + _best_option_for_category(user, target_category)
-            if not result:
-                if 'default' in kwargs:
-                    return kwargs['default']
-                else:
-                    raise Exception(f"No selection avaiable for {game_id} for user {user.get_id()}")
-            return result
+            best_item = _best_option_for_category(user, target_category)
+            if best_item:
+                result = 'item.' + best_item
+                if result:
+                    return result
+
+            # No valid result was found
+            if 'default' in kwargs:
+                return kwargs['default']
+            else:
+                raise Exception(f"No selection avaiable for {game_id} for user {user.get_id()}")
 
 
 def _best_option_for_category(user, target_category, **kwargs):
@@ -215,13 +219,14 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     :param user:            The user to execute on.
     :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
     """
+    log('effect', f'executing effect', 'delta_inventory', f'usr:{user.get_id()}')
     user_inventory = user.get('storage._content', **kwargs)
     max_capacity = user.get('attr.storage.max_capacity', **kwargs)
     inventory_update = dict()
     for material in effect_data['delta']:
         item_object: Item = user.get('item.' + material)
         if material not in user_inventory:
-            inventory_update['storage.' + material] = min(max_capacity, effect_data['delta'][material])
+            inventory_update['storage.content.' + material] = min(max_capacity, effect_data['delta'][material])
             # The new item might be orderable. In that case --> Add it to the price list
             if item_object.is_orderable():
                 # inventory_update[f'tavern.prices.{item_object.get_minimized_id()}'] = item_object.get_static_value('base_value')
@@ -232,9 +237,12 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
             # Gold is an exception and can grow to infinity always:
             inventory_update[f"storage.content.{material}"] = user_inventory[material] + effect_data['delta'][material]
         else:
-            inventory_update[f"storage.content.{material}"] = min(max_capacity,
-                                                                  user_inventory[material] + effect_data['delta'][
-                                                                      material])
+            if material not in user_inventory:
+                user_inventory[f"storage.content.{material}"] = min(max_capacity, effect_data['delta'][material])
+            else:
+                inventory_update[f"storage.content.{material}"] = min(max_capacity,
+                                                                      user_inventory[material] + effect_data['delta'][
+                                                                          material])
 
     user.update('data', inventory_update, is_bulk=True)
 
@@ -258,6 +266,5 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
             to_append['category'] = category
             to_append['toggle_on'] = user.get(f"selection.cat_toggle.{category.get_minimized_id()}")
             result.append(to_append)
-
 
     return result

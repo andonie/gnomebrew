@@ -22,7 +22,7 @@ from gnomebrew.game.util import global_jinja_fun
 
 
 @get_resolver('recipe')
-def recipe(game_id: str, user: User):
+def recipe(game_id: str, user: User, **kwargs):
     return Recipe.from_id(game_id)
 
 
@@ -104,7 +104,7 @@ class Recipe(StaticGameObject):
                              if item_id[5:] not in player_inventory or player_inventory[item_id[5:]] < total_cost[item_id]]
         if insufficent_items:
             response.add_fail_msg(f"You are missing resources: {', '.join(insufficent_items)}")
-            response.player_info(f"You are missing resources.", 'missing:', insufficent_items)
+            response.player_info(f"You are missing resources.", 'missing:', *insufficent_items)
 
         # 2. Available Slots
         slots_list = user.get(f"slots.{self._data['station']}", **kwargs)
@@ -144,7 +144,6 @@ class Recipe(StaticGameObject):
 
         # Remove material from Inventory now
         update_data = dict()
-        print(f"{total_cost=}")
         for material in total_cost:
             update_data[material[5:]] = player_inventory[material[5:]] - total_cost[material]
         if update_data:

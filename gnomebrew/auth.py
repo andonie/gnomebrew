@@ -8,6 +8,8 @@ from flask_login import login_user, current_user, logout_user, login_required
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
 
+from gnomebrew.logging import log
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -28,6 +30,7 @@ def login():
         # Login correct.
         login_user(_usr, remember=form.remember_me.data)
         flash(f'Welcome back, {_usr.get_name()}')
+        log('gb_system', _usr.get_id(), 'login')
 
         # Next redirect
         next_page = request.args.get('next')
@@ -59,5 +62,7 @@ def register():
 
 @app.route('/logout')
 def logout():
+    username = current_user.get_id()
     logout_user()
+    log('gb_system', username, 'logout')
     return redirect(url_for('index'))

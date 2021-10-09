@@ -2,6 +2,7 @@
 This module houses the gameplay-interface view: HTTP and SocketIO interactions between server and client.
 """
 import datetime
+import logging
 
 from gnomebrew import app, socketio
 from flask_socketio import emit
@@ -13,6 +14,7 @@ import functools
 from flask_socketio import disconnect, join_room
 
 from gnomebrew.game.objects.request import PlayerRequest
+from gnomebrew.logging import log, log_execution_time, log_exception
 
 
 def authenticated_only(f):
@@ -36,10 +38,20 @@ def authenticated_only(f):
 @app.route('/play/request', methods=['POST'])
 @login_required
 def player_request():
+    """
+    Core Interface Function. Expects player data in request and evaluates it accordingly.
+    """
     player_request_object = PlayerRequest(request.form)
+
+    log('gb_system', f"received", 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
+
     # Create a buffer for this request to store all evaluated IDs
-    response: GameResponse = player_request_object.execute(current_user)
-    response.finalize(current_user)
+    try:
+        response: GameResponse = log_execution_time(lambda: player_request_object.execute(current_user), 'gb_system', 'processed', 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
+        response.finalize(current_user)
+    except Exception as e:
+        log_exception('gb_system', e, 'request', level=logging.ERROR)
+        return TYPE_ERROR.to_json()
 
     return response.to_json()
 
@@ -67,7 +79,7 @@ def test_connect(auth=None):
 @socketio.on('disconnect')
 def test_disconnect():
     # Nothing to do here. On disconnect, users are automatically signed off.
-    print(f"User disconnected: {current_user=}")
+    log('gb_system', f"user disconnected", current_user.get_id())
     pass
 
 

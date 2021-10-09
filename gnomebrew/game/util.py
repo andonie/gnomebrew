@@ -203,6 +203,7 @@ def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
 
 
 game_id_regex = re.compile(r"^\w+(\.\w+)+$")
+game_id_split_regex = re.compile(r"\w+")
 
 @global_jinja_fun
 def is_game_id_formatted(string: str) -> bool:
@@ -213,5 +214,17 @@ def is_game_id_formatted(string: str) -> bool:
                     resolves.
     """
     if game_id_regex.match(string):
+        return True
+    return False
+
+
+@global_jinja_fun
+def is_game_split_formatted(string: str) -> bool:
+    """
+    Tests if a given string is formatted like one 'split' of a Game ID (which is an element between `.` characters).
+    :param string:  String to test.
+    :return:        `True` if `string` is formatted correctly. Otherwise `False`.
+    """
+    if game_id_split_regex.match(string):
         return True
     return False

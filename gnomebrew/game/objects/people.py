@@ -15,11 +15,17 @@ class Person(GeneratedGameObject):
         self._data = data
 
     _race_postfixes = {
-        'human': 'light',
-        'dwarf': 'dark',
-        'orc': 'green',
-        'elf': 'light',
-        'half_elf': 'light'
+        'Human': 'light',
+        'Dwarf': 'dark',
+        'Orc': 'green',
+        'Elf': 'light',
+        'Half Elf': 'light'
+    }
+
+    GENDER_CHOICES = {
+        'male': 498,
+        'female': 498,
+        'nonbinary': 4
     }
 
     def get_styling_postfix(self):
@@ -64,11 +70,7 @@ def generate_person(gen: Generator):
 def generate_gender(gen: Generator):
     if gen.get_env_var('Race') == 'warforged':
         return 'nonbinary'
-    choices = {
-        'male': 498,
-        'female': 498,
-        'nonbinary': 4
-    }
+
     return gen.choose(choices)
 
 

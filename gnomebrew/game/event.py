@@ -3,7 +3,6 @@ This module manages events and event dispatching
 """
 import time
 import traceback
-import uuid
 from typing import Callable
 
 from gnomebrew import mongo
@@ -15,6 +14,7 @@ from gnomebrew.game.objects.game_object import StaticGameObject, GameObject
 from gnomebrew.game.user import User, load_user, html_generator
 import threading
 
+from gnomebrew.logging import log, log_exception
 
 _EVENT_FUNCTIONS = dict()
 _SLEEP_TIME = .5
@@ -46,14 +46,13 @@ class EventThread(object):
             for event_data in self.mongo.db.events.find(query):
                 # Do something
                 event = Event(mongo_data=event_data)
+                log('event', 'executing', event.get_type(), event.get_type(), f'usr:{event.get_target_username()}')
                 try:
                     event.execute()
                 except Exception as err:
                     # An error occured managing the event.
                     # In this case, just log the traceback but still remove the event.
-                    print('--------------\nException in Event Thread:')
-                    traceback.print_exc()
-                    print('--------------')
+                    log_exception('event', err, f"usr:{event.get_target_username()}")
 
                 if event.is_remove_on_trigger():
                     remove_ids.append(event_data['_id'])
@@ -61,7 +60,6 @@ class EventThread(object):
             self.mongo.db.events.remove({'_id': {'$in': remove_ids}})
 
             end_time = datetime.datetime.utcnow()
-            #print(f'Total time: {(end_time - start_time).total_seconds() }')
             sleep_time = _SLEEP_TIME - (end_time - start_time).total_seconds()
             if sleep_time > 0:
                 try:
@@ -80,7 +78,7 @@ class Event(GameObject):
         """
         GameObject.__init__(self, mongo_data)
         if 'event_id' not in self._data:
-            self._data['event_id'] = str(uuid.uuid4())
+            self._data['event_id'] = GameObject.generate_uuid()
 
     """
     Wrapper Class for Events
@@ -109,7 +107,7 @@ class Event(GameObject):
         Returns the target user
         :return: the username of the
         """
-        pass
+        return self._data['target']
 
     def get_due_time(self) -> datetime.datetime:
         """
@@ -142,7 +140,7 @@ class Event(GameObject):
         """
         data = dict()
         data['target'] = target
-        data['type'] = 'recipe'
+        data['event_type'] = 'recipe'
         data['effect'] = result
         # for effect_type in data['effect']:
         #     if type(data['effect'][effect_type]) is dict:
@@ -167,6 +165,8 @@ class Event(GameObject):
         self.clean_keys()
         mongo.db.events.insert_one(self._data)
 
+    def get_type(self) -> str:
+        return self._data['event_type']
 
 
 @boot_routine

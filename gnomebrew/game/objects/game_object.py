@@ -8,50 +8,22 @@ from flask import url_for, render_template
 
 from gnomebrew import mongo
 from gnomebrew.game import boot_routine
+from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.user import get_resolver, User, update_resolver
 from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.logging import log
 
 
-class GameObject:
+class GameObject(DataObject):
     """
-    Describes any object in Gnomebrew
+    Wraps any game logic entity that is to be displayed in some form to the player.
     """
 
     def __init__(self, data):
-        self._data = data
+        DataObject.__init__(self, data)
 
     def __str__(self):
         return f"<GameObject: {self._data=}>"
-
-    def get_json(self) -> dict:
-        """
-        Returns a JSON representation of the object.
-        :return: a JSON representation of the object.
-        """
-        return self._data
-
-    def get_static_value(self, key: str, **kwargs):
-        """
-        Returns a value of this game-object.
-        :param key:     associated key to get the value from.
-        :return:        associated value.
-        :raise          Exception if value not found.
-        :keyword default    If set, will return `default` instead of an exception.
-        """
-        if key in self._data:
-            return self._data[key]
-        elif 'default' in kwargs:
-            return kwargs['default']
-        else:
-            raise Exception(f"No data with key {key} found in {self.name()}.")
-
-    def has_static_key(self, key: str):
-        """
-        Checks if a key is part of this object.
-        :param key: key to check.
-        :return:    `True` if key exists, otherwise `False`
-        """
-        return key in self._data
 
     def get_id(self):
         """
@@ -112,43 +84,6 @@ class GameObject:
             return kwargs['default']
         else:
             raise Exception(f"Cannot find {postfix_id} for {str(self)}")
-
-    @staticmethod
-    def _collection_key_replace(e: Union[dict, list, Any], to_replace: str, replace_with: str):
-        """
-        Recursively cleans up a dictionary's keys to be BSON compatible
-        :param e:   An object to clean. A dict's keys and child keys will be replaced. A list's elements will be
-                    iterated. All recursively. Any other input will be ignored.
-        :param  to_replace Character to replace
-        :param replace_with Character to replace `to_replace` with.
-        """
-        # If element is a dict, clean keys
-        if isinstance(e, dict):
-            for key in list([key for key in e if to_replace in key]):
-                new_key = key.replace(to_replace, replace_with)
-                e[new_key] = e[key]
-                del e[key]
-
-            for key in e:
-                GameObject._collection_key_replace(e[key], to_replace, replace_with)
-
-        elif isinstance(e, list):
-            for sub_element in e:
-                GameObject._collection_key_replace(sub_element, to_replace, replace_with)
-
-    def clean_keys(self):
-        """
-        Utility function. Ensures all data in this object is easy to store in MongoDB.
-        For that, all '.' will be replaced with '-', a character that is unused for Game-IDs otherwise.
-        """
-        GameObject._collection_key_replace(self._data, '.', '-')
-
-    def dirty_keys(self):
-        """
-        Utility function. Ensures all data in this object is stored in GB Game ID format (any '-' in keys
-        are replaced with '.')
-        """
-        GameObject._collection_key_replace(self._data, '-', '.')
 
 
 class StaticGameObject(GameObject):
@@ -221,7 +156,8 @@ class PublicGameObject(GameObject):
         if collection_name not in mongo.db.list_collection_names():
             # Create Collection with proper name
             mongo.db[collection_name].create_index('game_id')
-            print(f'Collection {collection_name} did not yet exist. Created game_id index for {collection_name} now.')
+            log('gb_system', f"Created game_id index for collection.",
+                f"mongo:{collection_name}")
 
         # Register a GET resolver for the data
         get_resolver(type=game_id_prefix, dynamic_buffer=True, postfix_start=2)(
@@ -383,7 +319,7 @@ def icon(game_id: str, **kwargs):
 
 
 @global_jinja_fun
-def render_object(game_id: str, data: Any, verbose: bool = False, **kwargs) -> str:
+def render_object(game_id: str, data: Any, **kwargs) -> str:
     """
     Renders an object to it's HTML representation.
     @:param game_id: Fully qualified ID of the render template; e.g. of a `render.structure`
@@ -393,10 +329,8 @@ def render_object(game_id: str, data: Any, verbose: bool = False, **kwargs) -> s
     """
     splits = game_id.split('.')
     assert splits[0] == 'render'
+    log('game_id', 'rendering object', f'id:{game_id}')
     template = render_template(join('render', f"{''.join(splits[1:])}.html"), data=data, **kwargs)
-    if verbose:
-        print(f"~~~~ Rendering: {game_id=} on: {data=} ~~~~")
-        print(template)
     return template
 
 

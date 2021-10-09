@@ -13,6 +13,7 @@ from flask import render_template
 
 from gnomebrew.game.objects import PlayerRequest
 from gnomebrew.game.objects.effect import Effect
+from gnomebrew.game.objects.game_object import GameObject
 from gnomebrew.game.objects.item import Item
 from gnomebrew.game.user import User, load_user, id_update_listener, user_assertion, html_generator
 from gnomebrew.game.event import Event
@@ -23,7 +24,6 @@ from gnomebrew.game.testing import application_test
 from gnomebrew.game.objects.people import Person
 
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 # Calculation Constants:
 TWO_PI = math.pi * 2
@@ -51,15 +51,6 @@ class Patron(Person):
 
     ## FUNDAMENTALS
 
-    @staticmethod
-    def from_id(uuid, user: User, **kwargs):
-        """
-        Returns a patron from a specific user.
-        :param user:    a user
-        :param uuid:    a UUID
-        :return:        A patron corresponding to the given UUID on the given user. `None` if not existing
-        """
-        return Patron(user.get(f"data.tavern.patrons.{uuid}", **kwargs))
 
     def __init__(self, data: dict):
         # Generate Patron Base Attributes Randomly:
@@ -95,7 +86,7 @@ class Patron(Person):
         # In play, gold values only make sense in cents, so format the actual budget to an int
         self._data['budget'] = int(self._data['budget'] * user.get('attr.tavern.budget_multiplicator', default=1, **kwargs))
         self._data['tab'] = dict()
-        uuid = str(uuid4())
+        uuid = GameObject.generate_uuid()
         self._data['id'] = uuid
         return uuid
 

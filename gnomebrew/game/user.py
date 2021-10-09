@@ -5,6 +5,7 @@ from os.path import join
 from typing import Callable, Union, List
 
 from gnomebrew import mongo, login_manager, socketio
+from gnomebrew.logging import log
 from flask_login import UserMixin
 from flask import render_template
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -293,7 +294,9 @@ class User(UserMixin):
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
             game_id = '.'.join(splits[:resolver_data['postfix_start']])
 
+        log('game_id', f"Now resolving", game_id)
         result = resolver_data['fun'](user=self, game_id=game_id, **kwargs)
+        log('game_id', f"Resolved", game_id)
 
         # If this is postfixed and the critical split length has been reached, apply post-GET postfix operations.
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
@@ -423,7 +426,7 @@ def data(user: User, game_id: str, **kwargs):
         if 'default' in kwargs:
             return kwargs['default']
         else:
-            raise e
+            raise Exception(f"Could not evaluate {game_id=} at {user=}")
     return result
 
 

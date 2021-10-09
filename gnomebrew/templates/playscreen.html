@@ -27,15 +27,16 @@
 {% endblock %}
 
 {% block app_content %}
-<div id="ingame_event">
-    {% if current_user.get('ingame_event.queued', id_buffer=buffer) %}
-    {{ current_user.get('html.ingame_event.next', id_buffer=buffer) | safe }}
+<div id="gb_prompt_container">
+    {% with prompt_list = current_user.get('data.special.prompts', id_buffer=buffer) %}
+    {% if prompt_list %}
+    {{ render_object('render.prompt', data=prompt_list[0]) | safe }}
     <script>
         add_startup(function () {
             show_event_modal();
         });
     </script>
-    {% endif %}
+    {% endif %}{% endwith %}
 </div>
 {% with user_stations = get_unlocked_station_list(current_user, id_buffer=buffer),
         slots= current_user.get('slots._all', id_buffer=buffer) %}

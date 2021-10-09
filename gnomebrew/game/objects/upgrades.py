@@ -138,7 +138,6 @@ class Upgrade(StaticGameObject):
         ]
 
         for attribute in self._data['effect']:
-            print(f"{attribute=}")
             for regex in regexes:
                 match = regex.match(attribute)
                 if match:

@@ -5,20 +5,27 @@ from flask_login import LoginManager
 from flask_pymongo import PyMongo
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
-import logging
+from gnomebrew.logging import log
+
 
 # Start App
 app = Flask(__name__)
 
-# SocketIO Setup
-socketio = SocketIO(app, logger=False)
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-
 # Load Configuration
+log('gb_core', 'Loading Config', 'boot_routines')
 app.config.from_envvar('GNOMEBREW_CONFIG')
 
 # Load Database (flask-pymongo)
+log('gb_core', 'Starting PyMongo', 'boot_routines')
 mongo = PyMongo(app)
+
+# SocketIO Setup
+log('gb_core', 'Starting SocketIO', 'boot_routines')
+socketio = SocketIO(app, logger=False)
+
+
+
+
 
 # Load Bootsrap Handler
 bootstrap = Bootstrap(app)

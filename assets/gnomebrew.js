@@ -101,8 +101,8 @@ function handle_ui_req(data) {
         case 'reload_element':
             reload_element(data.element);
             break;
-        case 'event':
-            fetch_and_display_event();
+        case 'prompt':
+            display_event(data.html_content);
             break;
         case 'add_station':
             add_station(data.station);
@@ -166,18 +166,9 @@ function add_station(station_name) {
 
 /* INGAME EVENT */
 
-function fetch_and_display_event() {
-    $.post('/play/game_id/html.ingame_event.next').done(function(response) {
-        if(response === '') {
-            // This should not happen. Reload should only be executed when an event awaits being displayed.
-            global_error('Could not fetch event content! Tell Mike about this.');
-            return;
-        }
-        document.getElementById('ingame_event').innerHTML = response
-        show_event_modal();
-    }).fail(function(response) {
-        global_error('Connection issue with Gnomebrew server.');
-    });
+function display_event(event_html) {
+    document.getElementById('gb_prompt_container').innerHTML = event_html
+    show_event_modal();
 }
 
 function show_event_modal() {
@@ -193,8 +184,8 @@ function close_event_modal() {
     var button_text = button.innerHTML;
 
     var request_object = {
-        request_type: 'event',
-        target: $('#gb-event-modal').data('target'),
+        request_type: 'prompt',
+        target_id: $('#gb-event-modal').data('target'),
         input: {}
     };
 
@@ -256,7 +247,7 @@ function two_way_game_request(request_data, trigger_element, output_id, success_
         success_logic(response);
         reset_element();
     }).fail(function(e) {
-        console.print(e);
+        console.log(e);
         reset_element();
     });
 }

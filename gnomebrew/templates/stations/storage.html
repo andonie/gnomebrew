@@ -43,7 +43,7 @@
         <div class="gb-storage-category-items gb-info-container" id="{{ css_friendly(category.get_id()) }}-items">
             {% for item in category.get_matching_items() %}
             {% if item.get_minimized_id() in player_inventory %}
-            <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == current_user.get('data.storage.it_cat_selections.' + category.get_minimized_id(), id_buffer=buffer) %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
+            <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == current_user.get('data.storage.it_cat_selections.' + category.get_minimized_id(), default=None, id_buffer=buffer) %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
                  data-select-value="{{ item.get_id() }}" data-peers=".{{ css_friendly(category.get_id()) }}-option" onclick="select('selection.{{ category.get_id() }}', this)">
                 {{ icon(item.get_id(), class='gb-icon-sm') | safe }}
                 <span class="storage-{{ css_friendly(item.get_minimized_id()) }}" data-value="{{ player_inventory[item.get_minimized_id()] }}">{{ shorten_num(player_inventory[item.get_minimized_id()]) }}</span>
