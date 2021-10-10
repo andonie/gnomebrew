@@ -32,7 +32,6 @@ function animate_whole_ui(element) {
         // For some browsers, `attr` is undefined; for others,
         // `attr` is false.  Check for both.
         if (typeof attr !== 'undefined' && attr !== false) {
-            console.log('IN THERE');
             console.log($(this).data('toggles'));
             var classname = 'toggle-'+ $(this).data('toggles').substring(1)
             console.log(classname);

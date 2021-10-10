@@ -307,9 +307,6 @@ img {
     margin-bottom: 5px;
 }
 
-.toggle-gb-sidebar-left {
-    padding-left: 240px;
-}
 
 .gb-icon-group {
     display: flex;
@@ -403,6 +400,31 @@ img {
     margin-left: -250px;
 }
 
+.quest-sidebar {
+    position: fixed;
+    min-width: 300px;
+    max-width: 300px;
+    height: 92vh;
+    transition: all 0.3s;
+    right: 0px;
+    z-index: 1;
+}
+
+.quest-sidebar.gb-toggle {
+    right: 300px;
+}
+
+.toggle-gb-sidebar-left {
+    padding-left: 240px;
+}
+
+.toggle-quest-sidebar {
+    padding-right: 300000px;
+}
+
+.quest-sidebar.gb-toggle-hidden {
+    right: -300px;
+}
 
 .gb-link {
     cursor: pointer;
@@ -500,6 +522,10 @@ img {
 
     .gb-sidebar {
         margin-top: -90px;
+    }
+
+    .quest-sidebar {
+
     }
 
     .gb-grid {

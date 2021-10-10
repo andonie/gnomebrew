@@ -1,0 +1,11 @@
+{% extends "stations/_station.html" %}
+
+{% block station_header %}
+<button type="button" class="close gb-toggle-view gb-toggle-view-active" data-toggles=".quest-sidebar" id="quest-close-button" data-display="#quest-icon" data-inform=".gb-main">
+    <span aria-hidden="true">&times;</span>
+</button>
+<h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
+{% endblock %}
+
+{% block station_body %}
+{% endblock %}

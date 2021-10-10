@@ -26,7 +26,7 @@
 {% endfor %}
 {% endwith %}
 <div class="mobile-whitespace"></div>
-<div class="gb-navbar-item gb-navbar-item-clickable">
+<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view" data-toggles=".quest-sidebar" id="quest-icon" data-display="#quest-icon" data-inform=".gb-main">
     {{ icon('station.quest') | safe }}
 </div><div class="gb-navbar-line-end"></div>
 {{ super() }}
@@ -39,6 +39,9 @@
     {% block sidebar %}
     {{ current_user.get('html.station.storage', id_buffer=buffer) | safe }}
     {% endblock %}
+</div>
+<div class="quest-sidebar" id="gb-sidebar-right">
+    {{ current_user.get('html.station.quest') | safe }}
 </div>
 {% endblock %}
 
