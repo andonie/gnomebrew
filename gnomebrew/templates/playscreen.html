@@ -40,7 +40,7 @@
     {{ current_user.get('html.station.storage', id_buffer=buffer) | safe }}
     {% endblock %}
 </div>
-<div class="quest-sidebar" id="gb-sidebar-right">
+<div class="quest-sidebar gb-toggle-hidden" id="gb-sidebar-right">
     {{ current_user.get('html.station.quest') | safe }}
 </div>
 {% endblock %}
