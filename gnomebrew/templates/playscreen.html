@@ -43,13 +43,10 @@
 {% endblock %}
 
 {% block app_content %}
-<div id="gb_prompt_container"></div>
 {% with user_stations = get_unlocked_station_list(current_user, id_buffer=buffer),
         slots= current_user.get('slots._all', id_buffer=buffer) %}
-<div class="grid" id="station-grid" data-masonry='{"itemSelector": ".grid-item", "columnWidth": 300, "gutter": 5}'>
     {% for station in user_stations if not station.has_special_ui() %}
     {{ current_user.get('html.station.' + station.get_minimized_id(), slots=slots, id_buffer=buffer)|safe }}
     {% endfor %}
-</div>
 {% endwith %}
 {% endblock %}

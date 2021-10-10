@@ -220,17 +220,7 @@ input {
 }
 
 
-.station-grid {
-    position: relative;
-}
 
-.station {
-    background: #BE8251;
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 5px;
-    z-index: -100;
-}
 
 /* STORAGE */
 

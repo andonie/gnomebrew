@@ -43,8 +43,7 @@ function shorten_time(val) {
 
 
 function rescale_ui(e) {
-    $('.grid').masonry();
-    $('.grid').css('height', 'inherit');
+
 }
 
 window.onresize = rescale_ui

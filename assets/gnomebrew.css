@@ -17,37 +17,42 @@ h4 {
     font-size: 0.9em;
 }
 
+.gb-root {
+    display: flex;
+    flex-flow: column;
+}
+
 /* IMAGES */
+
+img {
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
 
 .gb-icon {
     max-width: 32px;
     margin: 5px;
     min-width: 32px;
-    image-rendering: crisp-edges;
 }
 
 .gb-icon-sm {
     width: 16px;
     height: 16px;
-    image-rendering: crisp-edges;
 }
 
 .gb-icon-md {
     width: 24px;
     height: 24px;
-    image-rendering: crisp-edges;
 }
 
 .gb-icon-lg {
     width: 64px;
     height: 64px;
-    image-rendering: crisp-edges;
 }
 
 .gb-icon-xl {
     width: 128px;
     height: 128px;
-    image-rendering: crisp-edges;
 }
 
 
@@ -269,7 +274,41 @@ h4 {
 }
 
 .gb-main {
-    width: 100%;
+    margin: 0px 2vh;
+    width: 96vw;
+    height: 90vh;
+    overflow: scroll;
+    transition: all 0.3s;
+}
+
+.gb-grid {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 5px;
+    height: inherit;
+    align-content: flex-start;
+}
+
+.grid-item {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content:flex-start;
+}
+
+.station {
+    background: #BE8251;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 5px;
+}
+
+.toggle-gb-sidebar-left {
+    padding-left: 240px;
 }
 
 .gb-icon-group {
@@ -446,10 +485,6 @@ h4 {
     display: unset;
 }
 
-/* MASONRY */
-.grid-item {
-    width: 300px;
-}
 
 @media screen and (max-width:767px) {
     .grid-item {
@@ -465,6 +500,14 @@ h4 {
 
     .gb-sidebar {
         margin-top: -90px;
+    }
+
+    .gb-grid {
+        flex-wrap: nowrap;
+    }
+
+    .gb-main {
+        padding: 0px;
     }
 }
 
