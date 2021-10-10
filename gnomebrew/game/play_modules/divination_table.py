@@ -55,7 +55,6 @@ def get_locations_around(center: str, radius: int) -> List[List[WorldLocation]]:
                         next_y = next_y % WorldLocation.COORDINATE_LIMIT
 
                     # print(f"{c2=}, {c2=}")
-                    print(f"{next_x=}, {next_y=}")
                     result[c1][c2] = next_parent.generate_sub_location((next_x, next_y))
 
     return result

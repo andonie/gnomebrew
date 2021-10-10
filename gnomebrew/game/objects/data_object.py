@@ -5,6 +5,8 @@ The `DataObject` class wraps any such data with rich features and a dedicated in
 import uuid
 from typing import Union, Any
 
+from gnomebrew import log
+
 
 class DataObject:
     """
@@ -18,6 +20,8 @@ class DataObject:
         """
         if not data:
             raise Exception(f"Invalid data added: {data=}")
+        if not isinstance(data, dict):
+            log('gb_system', f'object data was not a dict. Was: {str(data)}')
         self._data = data
 
     def get_json(self) -> dict:

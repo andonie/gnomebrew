@@ -1,0 +1,12 @@
+{#
+ # Renders a Quest.
+ # Expects a Quest JSON as `data`
+ #}
+<div class="gb-quest{% if class is defined %} {{ class }}{% endif %}">
+    <div class="gb-quest-title">{{ data.name }}</div>
+    <div class="gb-quest-subtitle">{{ format_markdown( data.description ) | safe }}</div>
+    {% if 'details' in data %}<div class="gb-quest-details">{{ format_markdown( data.details ) }}</div>{% endif %}
+    <div class="gb-quest-objective">
+     {% for objective in data.objectives %}{{ render_object('render.condition', data=objective) }}{% endfor %}
+    </div>
+</div>

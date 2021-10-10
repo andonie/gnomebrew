@@ -5,6 +5,7 @@ generic strings like adjectives.
 """
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects import Person
 from gnomebrew.game.objects.generation import generation_type, Generator, Environment
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.static_data import dataframes
@@ -36,7 +37,10 @@ def generate_first_name(gen: Generator):
     if gen.rand_int_limited(50) > 40:
         return f"{gen.generate('First Name')} {gen.generate('First Name')}"
 
-    gender = gen.get_env_var('Gender')
+    gender = gen.get_env_var('Gender', default=None)
+    if gender is None:
+        # No gender was defined. Choose at random
+        gender = gen.choose(Person.GENDER_CHOICES)
     race = gen.get_env_var('Race', default='human')
 
     data_source = f"{race}_{gender}_names"

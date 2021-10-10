@@ -1,0 +1,5 @@
+{#
+ # Renders a Quest List.
+ # Expects JSON-data of a Quest-list as `data`
+ #}
+<div class="gb-quest-list{% if class is defined %} {{ class }}{% endif %}">{% for quest in data %}{{ render_object('render.quest', data=quest) | safe }}{% endfor %}</div>

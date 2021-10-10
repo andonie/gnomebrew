@@ -12,7 +12,7 @@ from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.static_data import dataframes
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.util import random_uniform
-from gnomebrew.game.objects.static_object import load_on_startup, StaticGameObject
+from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, GameObject
 
 
 class Environment:
@@ -450,7 +450,7 @@ class Generator:
         return generated
 
 
-class GeneratedGameObject:
+class GeneratedGameObject(GameObject):
     """
     Describes a game object that, unlike e.g. a `StaticGameObject` is not read from a data repository but instead
     generated dynamically on the fly.
@@ -587,7 +587,7 @@ def apply_processing_rule(gen: Generator, old, new):
     """
     rule_name = next(iter(new))
     assert rule_name in _processing_rules
-    return _processing_rules[rule_name](gen, old, new)
+    return _processing_rules[rule_name](gen, old, new[rule_name])
 
 
 @processing_rule('move_towards')

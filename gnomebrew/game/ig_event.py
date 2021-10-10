@@ -7,10 +7,9 @@ from flask import render_template, render_template_string
 from gnomebrew import mongo
 
 from gnomebrew.game.objects.game_object import StaticGameObject
-from gnomebrew.game.user import get_resolver, update_resolver, User, frontend_id_resolver, html_generator, \
+from gnomebrew.game.user import get_resolver, update_resolver, User, id_update_listener, html_generator, \
     update_listener
 from gnomebrew.game.event import Event
-from gnomebrew.play import request_handler
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.game_object import load_on_startup
 
@@ -121,20 +120,20 @@ class IngameEvent(StaticGameObject):
         :return:                    The ready-to-use listener function.
         """
 
-        def on_update(user: User, mongo_command: str, update: dict):
+        def on_update(user: User, mongo_command: str, update: dict, **kwargs):
             if basic_check(user, value=update[target_game_id]) and self._data['game_id'] not in user.get(
-                    'ingame_event.finished'):
+                    'ingame_event.finished', **kwargs):
                 self._check_and_fire_if_ready(user)
 
         return on_update
 
-    def _check_and_fire_if_ready(self, user: User):
+    def _check_and_fire_if_ready(self, user: User, **kwargs):
         """
         This function tests if this event is appropriate to fire NOW. If it is, it fires the event now.
         :param user:    a user to test for
         """
-        if self.requirements_met(user) and self._data['game_id'] not in user.get('ingame_event.queued') and \
-                (not self.is_one_time() or self._data['game_id'] not in user.get('ingame_event.finished')):
+        if self.requirements_met(user) and self._data['game_id'] not in user.get('ingame_event.queued', **kwargs) and \
+                (not self.is_one_time() or self._data['game_id'] not in user.get('ingame_event.finished', **kwargs)):
             # This event is due to fire!
             self.enqueue(user)
 
@@ -262,7 +261,7 @@ class IngameEvent(StaticGameObject):
         Performs an overall check on the user to see if any ingame events are due to be fired.
         :param user:    a user.
         """
-        finished = user.get('ingame_event.finished')
+        finished = user.get('ingame_event.finished', **kwargs)
         for ig_event in [ingame_event for ingame_event in ig_event_list
                          if ingame_event.get_id() not in finished and ingame_event.requirements_met(user)]:
             ig_event.enqueue(user, **kwargs)
@@ -406,16 +405,6 @@ def update_ig_event(user: User, game_id: str, update, **kwargs):
         game_id: update
     }
 
-
-@frontend_id_resolver(r'^ingame_event\.')
-def match_and_ignore_any_ingame_event(user: User, data: dict, game_id: str, **kwargs):
-    """
-    Ignore any and all ingame_event frontend updates
-    """
-    print(f'RECEIVED {game_id=}')
-    pass
-
-
 @get_resolver('ig_event')
 def get_ig_event(game_id: str, user):
     """
@@ -440,7 +429,7 @@ def display_next_event_if_applicable(game_id: str, user: User, **kwargs) -> str:
     return user.get(next_event).render_html()
 
 
-@request_handler
+
 def event(request_object: dict, user: User):
     """
     Called, when a user confirms/closes an event modal. The response type (success/fail) defines whether or not the
@@ -454,23 +443,16 @@ def event(request_object: dict, user: User):
     # Get the respective Game Event object
     target_event: IngameEvent = user.get(request_object['target'])
 
-    parsed_inputs = dict()
-    if target_event.has_inputs():
-        for i in range(200):
-            next_key = f'input[{i}]'
-            if next_key in request_object:
-                parsed_inputs[i] = request_object[next_key]
-            else:
-                break
 
-        target_event.validate_inputs(parsed_inputs, response)
-        # If any validation failed, the response has a corresponding fail msg and we can return
-        if response.has_failed():
-            return response
-
-    # Validation successful or no validation necessary. The event can be closed now.
-    target_event.close_event(user, parsed_inputs)
-
+#
+    #    target_event.validate_inputs(parsed_inputs, response)
+    #    # If any validation failed, the response has a corresponding fail msg and we can return
+    #    if response.has_failed():
+    #        return response
+#
+    ## Validation successful or no validation necessary. The event can be closed now.
+    #target_event.close_event(user, parsed_inputs)
+#
     response.succeess()
     return response
 
