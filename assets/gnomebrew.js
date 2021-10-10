@@ -23,9 +23,29 @@ function animate_whole_ui(element) {
         $('.gb-sidebar').addClass('sb-toggle');
     });
     $(element).find('.gb-toggle-view').on('click', function(event) {
-        $($(this).data('toggles')).toggleClass('gb-toggle-hidden');
+        var target = $($(this).data('toggles'));
+        target.toggleClass('gb-toggle-hidden');
         var display_target = $($(this).data('display'));
-        if ($($(this).data('toggles')).hasClass('gb-toggle-hidden')) {
+        var is_hidden = $($(this).data('toggles')).hasClass('gb-toggle-hidden');
+
+        var attr = $(this).attr('data-inform');
+        // For some browsers, `attr` is undefined; for others,
+        // `attr` is false.  Check for both.
+        if (typeof attr !== 'undefined' && attr !== false) {
+            console.log('IN THERE');
+            console.log($(this).data('toggles'));
+            var classname = 'toggle-'+ $(this).data('toggles').substring(1)
+            console.log(classname);
+            var info_target = $($(this).data('inform'));
+            console.log(info_target);
+            if(is_hidden) {
+                info_target.removeClass(classname);
+            } else {
+                info_target.addClass(classname);
+            }
+        }
+
+        if (is_hidden) {
             display_target.removeClass('gb-toggle-view-active');
         } else {
             display_target.addClass('gb-toggle-view-active');
