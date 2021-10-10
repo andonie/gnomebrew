@@ -16,19 +16,19 @@
     <body>
         <script src="{{ url_for('static_res', res='gnomebrew-startup.js') }}"></script>
         {% block navbar %}
-        <nav class="gb-navbar navbar sticky-top navbar-expand-sm">
+        <nav class="gb-navbar">
             {% block brand %}<a class="gb-brand" href="{{ url_for('index') }}">Gnomebrew</a>{% endblock %}
             {% block navbar_content %}
             <div class="gb-navbar-links">
                 {% block navbar_extras %}{% endblock %}
-                    {% if current_user.is_authenticated %}
-                    <a class="" href="{{ url_for('logout') }}">Logout</a>
-                    <a class="" href="{{ url_for('settings') }}">Settings</a>
-                    {% if current_user.is_operator() %}
-                    <a class="" href="{{ url_for('admin') }}">Admin</a>
-                    {% endif %}
-                    {% else %}
+                    {% if not current_user.is_authenticated %}
                     <a class="" href="{{ url_for('login') }}">Login</a>
+                    {% else %}
+                    {% if current_user.is_operator() %}
+                        <a class="" href="{{ url_for('admin') }}">Admin</a>
+                    {% endif %}
+                    <a class="" href="{{ url_for('settings') }}">Settings</a>
+                    <a class="" href="{{ url_for('logout') }}">Logout</a>
                     {% endif %}
             </div>
             {% endblock %}

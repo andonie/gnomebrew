@@ -239,6 +239,7 @@ input {
 }
 
 .station-storage.grid-item {
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
     max-height: inherit;
@@ -418,5 +419,6 @@ input {
 /* ID SPECIFIC rules */
 
 .storage-gold {
-    color: #ffeed9;
+    color: #a63e42;
+    margin-right: 5px;
 }

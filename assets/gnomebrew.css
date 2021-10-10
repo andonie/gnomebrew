@@ -125,16 +125,27 @@ h4 {
     background: #E7BF8B;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     letter-spacing: -0.1em;
+    align-items: center;
     aling-items: center;
-    gap: 20px;
-    min-height: 75px;
+    gap: 4px 4px;
+    min-height: 65px;
+    padding: 5px 10px;
+}
+
+.gb-navbar-whitespace {
+    flex-grow: 1;
+}
+
+.gb-navbar-line-end {
+    flex-basis: 100%;
 }
 
 .gb-navbar-links {
     display: flex;
     flex-direction: row;
-    gap: 20px;
+    gap: 15px;
 }
 
 .gb-navbar-links a {
@@ -153,14 +164,36 @@ h4 {
     flex-direction: row;
     align-items: center;
     border-radius: 8px;
-    background: #BE8251;
-    gap: 6px;
+    margin: 0px 5px;
     padding: 0px 5px;
 }
 
 .gb-navbar-item.gb-navbar-item-clickable {
     cursor: pointer;
-    background: #a63e42;
+    padding: 0px;
+    background: #aca7a9;
+    border-width: 4px;
+    border-color: red;
+    border-color: #5e484f;
+    border-style: outset;
+    border-color: #5e484f;
+    transition: all 0.1s;
+}
+
+.gb-navbar-item.gb-toggle-view-active {
+    background: #FFEED9;
+}
+
+.gb-navbar-item.gb-navbar-item-clickable.gb-toggle-view-active:hover {
+    background: #EAD8C3;
+}
+
+.gb-navbar-item.gb-navbar-item-clickable:hover {
+    background: #99958f;
+}
+
+.gb-navbar-item.gb-navbar-item-clickable:active {
+    background: #FFEED9;
 }
 
 .gb-navbar-hidden {
@@ -292,7 +325,7 @@ h4 {
 }
 
 .gb-toggle-hidden {
-    display: none;
+    /*display: none;*/
 }
 
 .gb-minimized {
@@ -324,12 +357,11 @@ h4 {
     height: 92vh;
     z-index: 100;
     transition: all 0.3s;
-    padding: 10px;
 }
 
 /* Toggle used to activate/deactivate the sidebar */
-.gb-sidebar.sb-toggle {
-    margin-left: -250px;gb
+.gb-sidebar.gb-toggle-hidden {
+    margin-left: -250px;
 }
 
 
@@ -422,6 +454,17 @@ h4 {
 @media screen and (max-width:767px) {
     .grid-item {
         width: 90vw;
+    }
+
+    .mobile-whitespace {
+        flex-grow: 1;
+    }
+    .mobile-line-end {
+        flex-basis: 100%;
+    }
+
+    .gb-sidebar {
+        margin-top: -90px;
     }
 }
 

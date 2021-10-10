@@ -1,7 +1,7 @@
 {% extends "stations/_station.html" %}
 
 {% block station_header %}
-<button type="button" class="close" id="storage-close-button" aria-label="Close">
+<button type="button" class="close gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-close-button" aria-label="Close" data-display="#storage-icon">
     <span aria-hidden="true">&times;</span>
 </button>
 <h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>

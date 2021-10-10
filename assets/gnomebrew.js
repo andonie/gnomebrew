@@ -24,7 +24,12 @@ function animate_whole_ui(element) {
     });
     $(element).find('.gb-toggle-view').on('click', function(event) {
         $($(this).data('toggles')).toggleClass('gb-toggle-hidden');
-        $(this).toggleClass('gb-toggle-view-active');
+        var display_target = $($(this).data('display'));
+        if ($($(this).data('toggles')).hasClass('gb-toggle-hidden')) {
+            display_target.removeClass('gb-toggle-view-active');
+        } else {
+            display_target.addClass('gb-toggle-view-active');
+        }
         rescale_ui();
     });
 }
