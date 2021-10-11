@@ -65,6 +65,56 @@ img {
 #station-grid {
     height: unset;
 }
+.gb-title-wrapper {
+    display: flex;
+    flex-flow: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.station-header {
+    display: flex;
+    flex-flow: row;
+    gap: 5px;
+    background: #5e484f;
+    border-radius: 30px;
+    align-items: center;
+    border: 3px solid #e7bf8b;
+    padding-left: 5px;
+    flex-grow: 1;
+}
+
+.station-header:hover {
+    cursor: pointer;
+    background: #80646D;
+}
+
+.station-header h3 {
+    max-length: 50px;
+    color: #e7bf8b;
+    margin: 0px;
+    letter-spacing: -3px;
+    font-size: 1em;
+}
+
+/* GB Foldout */
+
+.gb-toggle.gb-foldout {
+    transition: all 0.4s;
+}
+
+.gb-foldout {
+    transform: scaleY(1);
+    opacity: 1;
+    max-height: 100vh;
+}
+
+.gb-foldout.gb-toggle-hidden {
+    transform: scaleY(0) translate(0, -100%);
+    opacity: 0;
+    max-height: 0;
+}
 
 /* GB INFO */
 
@@ -80,6 +130,9 @@ img {
 
 .gb-info {
     display: flex;
+    font-family: 'Press Start 2P';
+    font-size: 0.6em;
+    letter-spacing: -2px;
     flex-direction: row;
     gap: 3px;
     padding-left: 4px;
@@ -525,7 +578,7 @@ img {
     }
 
     .quest-sidebar {
-
+        margin-top: -90px;
     }
 
     .gb-grid {

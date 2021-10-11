@@ -1,11 +1,8 @@
 {% extends "stations/_station.html" %}
 
-{% block station_header %}
-<button type="button" class="close gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-close-button" aria-label="Close" data-display="#storage-icon" data-inform=".gb-main">
-    <span aria-hidden="true">&times;</span>
-</button>
-<h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
-{% endblock %}
+{% block station_actions %}<div class="gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-close-button" aria-label="Close" data-display="#storage-icon" data-inform=".gb-main">
+    {{ icon('special.cancel') | safe }}
+</div>{% endblock %}
 
 {% block station_body %}
 {% with category_data = get_available_category_data(current_user, storage_ui=True), player_inventory = current_user.get('storage._content', id_buffer=buffer) %}

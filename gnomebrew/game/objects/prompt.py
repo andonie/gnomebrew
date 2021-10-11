@@ -8,6 +8,7 @@ from gnomebrew import log
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import PlayerRequest
 from gnomebrew.game.objects.data_object import DataObject
+from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import GameObject, render_object
 from gnomebrew.game.user import User, get_resolver
 from gnomebrew.game.util import global_jinja_fun
@@ -321,3 +322,21 @@ def min_length(input_data: dict, data, response: GameResponse):
     if len(data) < input_data['min_length']:
         response.add_fail_msg(f"Minimum length is {input_data['min_length']}")
         response.player_info(f'Input must be longer than {input_data["min_length"]}', 'must be', 'special.greater_than', str(input_data['min_length']))
+
+
+
+# Effect Compatibility
+
+@Effect.type('queue_prompts')
+def execute_queue_prompt(user: User, effect_data: dict, **kwargs):
+    # Assert effect_data is well-formatted.
+
+    for prompt_object in effect_data['prompts']:
+        # Perform __init__ for typechecking
+        Prompt(prompt_object)
+
+
+    raise Exception('todo')
+
+    # Execute Queue Prompts
+    # user.update()

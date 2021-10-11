@@ -1,12 +1,16 @@
 {% set station_name = station.get_minimized_id() %}
 <div class="station grid-item station-{{ station_name }}" id="{{ station.get_id() }}">
-    <div class="station-header">
-        {% block station_header %}
-        <h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
-        {% block station_subtitle %}{% endblock %}
-        <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos"></div>
-        {% endblock %}
+    <div class="gb-title-wrapper">
+        <div class="station-header gb-toggle-view" data-toggles="#{{ css_friendly(station.get_id()) }}-content">
+            {% block station_header %}
+            {{ icon( station.get_id() ) | safe }}
+            <h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
+            {% endblock %}
+        </div>
+        {% block station_actions %}{% endblock %}
     </div>
+    {% block station_subtitle %}{% endblock %}
+    <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos">{% block infos %}{% endblock %}</div>
     {% block slots %}
     {% if station_name in slots %}
     <div class="slots" id="slots.{{ station_name }}">
@@ -17,13 +21,15 @@
     {% endif %}
     {% endblock %}
 
-    {% block station_body %}{% endblock %}
-    {% block station_recipes %}
-        {% set recipe_list = current_user.get('recipes.' + station_name, id_buffer=buffer) %}
-        {% if recipe_list %}
-        <div id="recipes.{{ station.get_minimized_id() }}">
-            {{ render_object('render.recipe_list', data=recipe_list) | safe }}
-        </div>
-        {% endif %}
-    {% endblock %}
+    <div class="gb-toggle gb-foldout" id="{{ css_friendly(station.get_id()) }}-content">
+        {% block station_body %}{% endblock %}
+        {% block station_recipes %}
+            {% set recipe_list = current_user.get('recipes.' + station_name, id_buffer=buffer) %}
+            {% if recipe_list %}
+            <div id="recipes.{{ station.get_minimized_id() }}">
+                {{ render_object('render.recipe_list', data=recipe_list) | safe }}
+            </div>
+            {% endif %}
+        {% endblock %}
+    </div>
 </div>

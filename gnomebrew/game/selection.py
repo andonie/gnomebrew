@@ -105,3 +105,32 @@ def selection_update(user: User, game_id: str, update, **kwargs):
     else:
         raise Exception(f"Cannot interpret {game_id=}")
 
+
+
+# Generic Selection Helper Classes
+
+@selection_id('selection._bool', is_generic=True)
+def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs):
+    """
+    Helper Method. Any selection in here will be a boolean and any subname can be used by any application.
+    :param game_id:     Target ID (e.g. 'selection._bool.alchemy_is_restart')
+    :param user:        Target user
+    :param set_value:   If `None`: Read out current boolean content or `default`. If set to a boolean, will
+                        update the selection to this boolean.
+    :param kwargs:      can have `default`
+    """
+    splits = game_id.split('.')
+    assert len(splits) == 3
+    if set_value == None:
+        # Set value was none. -> Read output.
+        current_data = user.get('data.special.selection._bool', **kwargs)
+        if splits[2] in current_data:
+            return current_data[splits[2]]
+        else:
+            if 'default' in kwargs:
+                return kwargs['default']
+            else:
+                raise Exception(f"Selection for {game_id} does not exist for user {user.get_id()}. No default was given.")
+    else:
+        # Update the value
+        user.update(f"data.special.selection._bool", set_value, **kwargs)

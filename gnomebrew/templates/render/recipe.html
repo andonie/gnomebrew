@@ -13,7 +13,7 @@
             </div>
         </div>
     </div>
-    <div id="{{ css_friendly(recipe.get_id()) }}-description" class="gb-recipe-fine-print gb-toggle gb-toggle-hidden">
+    <div id="{{ css_friendly(recipe.get_id()) }}-description" class="gb-recipe-fine-print gb-toggle gb-foldout gb-toggle-hidden">
         {{ format_markdown(recipe.description()) | safe }}
     </div>
 </div>

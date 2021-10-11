@@ -6,7 +6,7 @@
 {% with recipe_list = data %}
 <div class="gb-recipe-list">
     <h6 class="gb-toggle-view" data-toggles="#{{ recipe_list[0].get_static_value('station') }}-recipe-container">Recipes</h6>
-    <div class="gb-toggle gb-toggle-on" id="{{ recipe_list[0].get_static_value('station') }}-recipe-container">
+    <div class="gb-toggle gb-foldout" id="{{ recipe_list[0].get_static_value('station') }}-recipe-container">
         {% if recipe_list|length > 1 %}
         <div class="gb-search gb-icon-group">
             {{ icon( 'special.search', class='gb-icon gb-recipe-icon') | safe }}

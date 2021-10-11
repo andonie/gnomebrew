@@ -6,6 +6,7 @@ from flask import render_template
 from gnomebrew.game.event import Event
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
+from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, get_resolver, html_generator
 from gnomebrew.game.util import global_jinja_fun
 
@@ -113,3 +114,20 @@ def get_unlocked_station_list(user: User, **kwargs) -> List[Station]:
     station_data = user.get('data', **kwargs)
     return [ station for station in Station.get_all_of_type('station').values()
              if station.get_minimized_id() in station_data and not station.has_special_ui()]
+
+
+@selection_id('selection.station.collapsed', is_generic=True)
+def process_alchemy_recipe_selection(game_id: str, user: User, set_value, **kwargs):
+    # Check Game ID formatting
+    splits = game_id.split('.')
+    if len(splits) != 4:
+        raise Exception(f'Game ID {game_id} is malformatted.')
+
+    target_location = f'data.special.station_selections.{splits[3]}'
+
+    if set_value:
+        user.update(target_location, set_value)
+    else:
+        # Read out the current selection.
+        return user.get(target_location, default=False, **kwargs)
+
