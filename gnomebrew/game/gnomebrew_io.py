@@ -70,7 +70,7 @@ class GameResponse(object):
         :param info_elements: Info elements. Game IDs will automatically be recognized and turned into an icon of the ID.
                               All other elements will be added straight into the info box in a wrapper div.
         """
-        new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{core_message}">'
+        new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-warning"}" title="{core_message}">'
         for element in info_elements:
             if is_game_id_formatted(element):
                 new_info += icon(element, img_class='gb-icon-sm')

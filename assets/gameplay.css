@@ -44,25 +44,42 @@ input {
 .slots {
     margin-top: 5px;
     margin-bottom: 5px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .slot-ext {
     position: relative;
-    width: 100%;
-    background-color: #E7BF8B;
+    flex-basis: 48%;
+    z-index: 1;
+    background-color: #aca7a9;
     margin-bottom: 5px;
-    border-radius: 10px;
+    border-radius: 20px;
+    color: #5e484f;
+    font-family: 'Press Start 2P';
+    letter-spacing: -5px;
+}
+
+.slot-frame {
+    border: 4px solid #5e484f;
+    border-radius: 20px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .slot-bar {
-    height: 20px;
-    background-color: #7DA0AC;
-    width: 0%;
-    border-radius: 10px;
+    height: 30px;
+    background-color: #E7BF8B;
+    width: 100%;
+    z-index: 2;
+    border-radius: 40px;
+    clip-path: inset(0px 40px 40px 30px);
 }
-
-
-
 
 .slot-desc {
     position: absolute;
@@ -71,12 +88,24 @@ input {
     transform: translate(-50%, -50%);
     font-size: 0.8em;
     display: flex;
-    flex-diretion: row;
-    justify-content: center;
+    flex-direction: row;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
+    z-index: 100;
 }
 
+.slot-result {
+    height: fit-content;
+}
+
+.slot-timer {
+    inline-size: min-content;
+}
+
+.gb-icon-sm.slot-icon {
+    margin-bottom: 2px;
+}
 
 
 .description {

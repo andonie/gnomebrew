@@ -10,13 +10,20 @@
         {% block station_actions %}{% endblock %}
     </div>
     {% block station_subtitle %}{% endblock %}
-    <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos">{% block infos %}{% endblock %}</div>
+    <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos">
+        {% block infos %}{% if station_name in slots %}
+        <div class="gb-info gb-info-default" title="Capacity">
+            {{ icon('special.capacity', class='gb-icon-sm') | safe }}
+            <span class="attr-{{ station.get_minimized_id() }}-slots">{{ shorten_num(current_user.get('attr.' + station.get_minimized_id() + '.slots', id_buffer=buffer)) }}</span>
+        </div>
+        {% endif %}{% endblock %}
+    </div>
     {% block slots %}
     {% if station_name in slots %}
     <div class="slots" id="slots.{{ station_name }}">
-        {% for slot in slots[station_name] %}
+        {% for slot in slots[station_name] %}{% if slot.state == 'occupied' %}
         {{ render_object('render.slot', data=slot) | safe }}
-        {% endfor %}
+        {% endif %}{% endfor %}
     </div>
     {% endif %}
     {% endblock %}

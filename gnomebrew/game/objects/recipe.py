@@ -111,7 +111,7 @@ class Recipe(StaticGameObject):
         slots_available = len([slot for slot in slots_list if slot['state'] == 'free'])
         if slots_available < self._data['slots']:
             response.add_fail_msg(f"Not enough slots available in {self._data['station']}")
-            response.player_info(f"Not enough slots available to execute.", 'not enough', 'special.slots')
+            response.player_info(f"Not enough capacity to execute.", 'special.at_limit')
 
         # 3. One Time Recipes
         if self.is_one_time():

@@ -4,15 +4,15 @@
     {{ icon('special.cancel') | safe }}
 </div>{% endblock %}
 
+{% block infos %}
+<div class="gb-info gb-info-default" title="Storage Capacity">
+    {{ icon('attr.storage.max_capacity', class='gb-icon-sm') | safe }}
+    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}</span>
+</div>
+{% endblock %}
+
 {% block station_body %}
 {% with category_data = get_available_category_data(current_user, storage_ui=True), player_inventory = current_user.get('storage._content', id_buffer=buffer) %}
-<div class="gb-info-container">
-    <div class="gb-info gb-info-default" title="Storage Capacity">
-        {{ icon('attr.storage.max_capacity', class='gb-icon-sm') | safe }}
-        <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.storage.max_capacity', id_buffer=buffer)) }}</span>
-    </div>
-</div>
-
 <div class="gb-storage-categories">
 {% for data_object in category_data %}
     {% with category = data_object.category %}

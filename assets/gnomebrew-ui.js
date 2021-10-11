@@ -78,7 +78,8 @@ function animate_slot(slot) {
             return;
         }
         // Set % width based on time passed
-        progress_bar.style.width = (((now-since_time_server)/(due_time_server-since_time_server))*100) + '%';
+        var inset = 'inset(0 200px 0px ' + (((now-since_time_server)/(due_time_server-since_time_server))*100) + '%)';
+        $(progress_bar).css('clip-path', inset);
         progress_desc.innerHTML = shorten_time(Math.ceil((due_time_server-now)/1000));
     }, 50);
 }

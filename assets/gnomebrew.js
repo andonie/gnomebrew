@@ -290,14 +290,12 @@ function one_way_game_request(request_data, error_target, trigger_element) {
         if(reset_element) {
             reset_element();
         }
-        console.log('FINISHED FULLY');
     }).fail(function() {
         error_msg(error_target, 'Could not connect to Gnomebrew Server!');
         if(reset_element) {
             reset_element();
         }
     });
-    console.log('FINISHED REQUEST');
 }
 
 // Wrapper for all Game requests that do print output
