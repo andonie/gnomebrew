@@ -224,8 +224,11 @@ input {
 
 /* STORAGE */
 
+
+
 #station.storage-content {
     background: #E7BF8B;
+    max-width: inherit;
 }
 
 .station-storage.grid-item {
@@ -239,6 +242,7 @@ input {
 
 .station-storage {
     border: 5px solid #E7BF8B;
+    max-width: inherit;
 }
 
 .gb-storage-categories {

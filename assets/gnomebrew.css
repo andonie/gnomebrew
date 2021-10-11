@@ -362,6 +362,7 @@ img {
     border-radius: 5px;
     padding: 10px;
     margin-bottom: 5px;
+    max-width: inherit;
 }
 
 
@@ -369,12 +370,8 @@ img {
     display: flex;
     flex-flow: row nowrap;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-}
-
-.gb-icon-group input {
-    flex-basis: 100%;
 }
 
 .gb-icon-group .gb-icon {
@@ -601,7 +598,8 @@ img {
 }
 
 .gb-filter {
-    min-width: 0px;
+    max-width: 220px;
+    flex-basis: 100%;
 }
 
 
