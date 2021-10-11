@@ -279,6 +279,8 @@ class User(UserMixin):
         if id_type not in _GET_RESOLVERS:
             raise Exception(f"Don't recognize game IDs starting with {id_type}: {game_id}")
 
+        log('game_id', 'received', f'id:{game_id}')
+
         # Always go for the Buffer!
         if 'id_buffer' not in kwargs or not kwargs['id_buffer']:
             # No Buffer yet.
@@ -294,9 +296,9 @@ class User(UserMixin):
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
             game_id = '.'.join(splits[:resolver_data['postfix_start']])
 
-        log('game_id', f"Now resolving", game_id)
+        log('game_id', f"resolving", f"id:{game_id}")
         result = resolver_data['fun'](user=self, game_id=game_id, **kwargs)
-        log('game_id', f"Resolved", game_id)
+        log('game_id', f"resolved", f"id:{game_id}")
 
         # If this is postfixed and the critical split length has been reached, apply post-GET postfix operations.
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:

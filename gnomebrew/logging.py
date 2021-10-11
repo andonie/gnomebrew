@@ -201,7 +201,7 @@ def config_log(category: str, **kwargs):
 # Configure basic logging categories in Gnombrew
 
 config_log('game_id', default_level=logging.INFO, log_level=logging.WARNING)
-config_log('gb_system', default_level=logging.INFO, log_level=logging.INFO)
+config_log('gb_system', default_level=logging.INFO, log_level=logging.INFO, verbose=False)
 config_log('gb_core', default_level=logging.INFO, log_level=logging.INFO)
 config_log('effect', default_level=logging.INFO, log_level=logging.INFO)
 config_log('event', default_level=logging.INFO, log_level=logging.INFO)

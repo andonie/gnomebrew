@@ -3,6 +3,7 @@ This module manages user selection.
 """
 from typing import Type, Callable, Union
 
+from gnomebrew import log
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.user import User, get_resolver, update_resolver
@@ -109,8 +110,15 @@ def selection_update(user: User, game_id: str, update, **kwargs):
 
 # Generic Selection Helper Classes
 
+valid_str_bool_mappings = {
+    'false': False,
+    'true': True,
+    'False': False,
+    'True': True
+}
+
 @selection_id('selection._bool', is_generic=True)
-def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs):
+def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs) -> bool:
     """
     Helper Method. Any selection in here will be a boolean and any subname can be used by any application.
     :param game_id:     Target ID (e.g. 'selection._bool.alchemy_is_restart')
@@ -124,8 +132,16 @@ def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs):
     if set_value == None:
         # Set value was none. -> Read output.
         current_data = user.get('data.special.selection._bool', **kwargs)
-        if splits[2] in current_data:
-            return current_data[splits[2]]
+        name = splits[2]
+        if name in current_data:
+            result = current_data[name]
+            if isinstance(result, str):
+                if result in valid_str_bool_mappings:
+                    return valid_str_bool_mappings[result]
+                else:
+                    raise Exception(f"Invalid Data was saved in selection: {result=} at {game_id}")
+            else:
+                return result
         else:
             if 'default' in kwargs:
                 return kwargs['default']
@@ -133,4 +149,4 @@ def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs):
                 raise Exception(f"Selection for {game_id} does not exist for user {user.get_id()}. No default was given.")
     else:
         # Update the value
-        user.update(f"data.special.selection._bool", set_value, **kwargs)
+        user.update(f"data.special.selection._bool.{splits[2]}", set_value, **kwargs)

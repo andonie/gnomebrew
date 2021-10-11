@@ -85,6 +85,10 @@ img {
     flex-grow: 1;
 }
 
+.station-header.gb-toggle-view-active {
+    background: #8E616F;
+}
+
 .station-header:hover {
     cursor: pointer;
     background: #80646D;

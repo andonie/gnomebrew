@@ -28,6 +28,8 @@ function animate_whole_ui(element) {
         var display_target = $($(this).data('display'));
         var is_hidden = $($(this).data('toggles')).hasClass('gb-toggle-hidden');
 
+        // UPDATE CSS CLASSES
+
         var attr = $(this).attr('data-inform');
         // For some browsers, `attr` is undefined; for others,
         // `attr` is false.  Check for both.
@@ -50,6 +52,18 @@ function animate_whole_ui(element) {
             display_target.addClass('gb-toggle-view-active');
         }
         rescale_ui();
+
+        // IF REQUESTED ATTEMPT TO SYNC DATA:
+
+
+         var sync_id = $(this).attr('data-sync');
+        if (typeof sync_id !== 'undefined' && sync_id !== false) {
+            // We have data to sync requested.
+            // By default, the engine stores `True` for visible/open, not for hidden, so invert the bit.
+            // Attempt to send selection to server.
+            sync_selection(sync_id, !is_hidden);
+        }
+
     });
 }
 
@@ -261,20 +275,29 @@ function close_event_modal() {
 
 // Wrapper for all Game Requests that do not require a direct reaction to the response
 function one_way_game_request(request_data, error_target, trigger_element) {
-    trigger_element.disabled = true;
-    $(trigger_element).addClass('gb-pending');
+    var reset_element = null;
+    if(trigger_element) {
+        trigger_element.disabled = true;
+        $(trigger_element).addClass('gb-pending');
 
-    var reset_element = function(){
-        trigger_element.disabled = false;
-        $(trigger_element).removeClass('gb-pending');
-    };
+        reset_element = function(){
+            trigger_element.disabled = false;
+            $(trigger_element).removeClass('gb-pending');
+        };
+    }
 
     $.post('/play/request', request_data).done(function(response){
-        reset_element();
+        if(reset_element) {
+            reset_element();
+        }
+        console.log('FINISHED FULLY');
     }).fail(function() {
         error_msg(error_target, 'Could not connect to Gnomebrew Server!');
-        reset_element();
+        if(reset_element) {
+            reset_element();
+        }
     });
+    console.log('FINISHED REQUEST');
 }
 
 // Wrapper for all Game requests that do print output
@@ -359,4 +382,10 @@ function set_price(item_id, error_target, trigger_element) {
     }, error_target, trigger_element)
 }
 
-
+function sync_selection(game_id, value) {
+    one_way_game_request({
+        request_type: 'select',
+        target_id:  game_id,
+        value: value,
+    }, null, null);
+}
