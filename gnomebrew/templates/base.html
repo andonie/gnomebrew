@@ -38,7 +38,7 @@
             {% endblock %}
             <div class="gb-wrapper">
                 {% block sidebar_outer %}{% endblock %}
-                <div class="gb-main toggle-gb-sidebar-left">
+                <div class="gb-main{% if current_user.get('selection._bool.storage_expanded', default=True, id_buffer=id_buffer) %} toggle-gb-sidebar-left{% endif %}">
                     {% block content %}
                     {% with messages = get_flashed_messages() %}
                     {% if messages %}

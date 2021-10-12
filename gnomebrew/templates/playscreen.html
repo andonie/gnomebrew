@@ -13,7 +13,7 @@
     {{ icon('item.gold') | safe }}
 </div>
 <div class="mobile-line-end"></div>
-<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-icon" data-display="#storage-icon" data-inform=".gb-main">
+<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.storage_expanded', default=True, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles="#gb-sidebar-left" id="storage-icon" data-display="#storage-icon" data-inform=".gb-main" data-sync="selection._bool.storage_expanded">
     {{ icon('station.storage') | safe }}
 </div>
 {% with prompt_heads = get_prompt_head_dict(current_user) %}
@@ -26,7 +26,7 @@
 {% endfor %}
 {% endwith %}
 <div class="mobile-whitespace"></div>
-<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view" data-toggles=".quest-sidebar" id="quest-icon" data-display="#quest-icon" data-inform=".gb-main">
+<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.quest_expanded', default=False, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles=".quest-sidebar" id="quest-icon" data-display="#quest-icon" data-inform=".gb-main" data-sync="selection._bool.quest_expanded">
     {{ icon('station.quest') | safe }}
 </div><div class="gb-navbar-line-end"></div>
 {{ super() }}
@@ -35,12 +35,12 @@
 {% block navbar_extras %}{% if 'feedback' in current_user.get('data.special.roles') %}<a class="" href="{{ url_for('feedback') }}">Feedback</a>{% endif %}{% endblock %}
 
 {% block sidebar_outer %}
-<div class="gb-sidebar storage-sidebar" id="gb-sidebar-left">
+<div class="gb-sidebar storage-sidebar{% if not current_user.get('selection._bool.storage_expanded', default=True, id_buffer=id_buffer) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-left">
     {% block sidebar %}
     {{ current_user.get('html.station.storage', id_buffer=buffer) | safe }}
     {% endblock %}
 </div>
-<div class="quest-sidebar gb-toggle-hidden" id="gb-sidebar-right">
+<div class="quest-sidebar{% if not current_user.get('selection._bool.quest_expanded', default=False, id_buffer=id_buffer) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-right">
     {{ current_user.get('html.station.quest') | safe }}
 </div>
 {% endblock %}
