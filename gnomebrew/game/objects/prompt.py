@@ -3,6 +3,7 @@ Manages ingame prompts to the player.
 A prompt is an object that describes the prompt.
 """
 from typing import Callable
+from uuid import uuid4
 
 from gnomebrew import log
 from gnomebrew.game.gnomebrew_io import GameResponse
@@ -10,7 +11,8 @@ from gnomebrew.game.objects import PlayerRequest
 from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import GameObject, render_object
-from gnomebrew.game.user import User, get_resolver
+from gnomebrew.game.testing import application_test
+from gnomebrew.game.user import User, get_resolver, id_update_listener, load_user
 from gnomebrew.game.util import global_jinja_fun
 
 
@@ -328,15 +330,57 @@ def min_length(input_data: dict, data, response: GameResponse):
 # Effect Compatibility
 
 @Effect.type('queue_prompts')
-def execute_queue_prompt(user: User, effect_data: dict, **kwargs):
+def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
     # Assert effect_data is well-formatted.
 
+    prompt_types = list()
     for prompt_object in effect_data['prompts']:
-        # Perform __init__ for typechecking
-        Prompt(prompt_object)
-
-
-    raise Exception('todo')
+        # Input typechecking
+        if 'prompt_type' not in prompt_object:
+            raise Exception(f"Malformatted effect data: {effect_data}")
+        if prompt_object['prompt_type'] not in prompt_types:
+            prompt_types.append(prompt_object['prompt_type'])
+        if 'prompt_id' not in prompt_object:
+            prompt_object['prompt_id'] = uuid4()
 
     # Execute Queue Prompts
-    # user.update()
+    user.update('data.special.prompts', effect_data['prompts'], mongo_command='$push')
+
+    # Ensure user has the given prompt type visible
+    for prompt_type in prompt_types:
+        user.frontend_update('ui', {
+            'type': 'update_class',
+            'action': 'remove_class',
+            'target': f'#{prompt_type}-prompt',
+            'class_data': 'gb-navbar-hidden'
+        })
+
+@application_test(name='Add Prompt', context='Prompt')
+def add_prompt(username: str, prompt_content: str):
+    response = GameResponse()
+    if not User.user_exists(username):
+        response.add_fail_msg(f"User {username} does not exist.")
+        return response
+    user = load_user(username)
+
+    prompt_data = {
+        'prompt_type': 'main',
+        'prompt_id': '1236634',
+        'title': 'Name your Tavern',
+        'content': [
+            {
+                'content_type': 'plain',
+                'content': prompt_content
+            }
+        ],
+        'effects': []
+    }
+    effect_data = {
+        'effect_type': 'queue_prompts',
+        'prompts': [prompt_data]
+    }
+
+    Effect(effect_data).execute_on(user)
+
+    return response
+

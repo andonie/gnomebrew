@@ -2,20 +2,23 @@
 This file manages the basic '/' view and generic views
 """
 
-from gnomebrew import app
-from flask import render_template, send_from_directory, redirect, url_for
+from gnomebrew import app, forms
+from flask import render_template, send_from_directory, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from os.path import isfile, join
 from gnomebrew.game.user import IDBuffer
 
+supported_browsers = ['firefox', 'chrome']
 
 @app.route('/')
-@login_required
 def index():
+    browser = request.user_agent.browser
+    if browser not in supported_browsers:
+        flash("Currently, Gnomebrew is optimized for Firefox and Chrome and it's suggested to use either. Your browser might still work.")
     if current_user.is_authenticated:
         return render_template('playscreen.html', buffer=IDBuffer())
     else:
-        return redirect(url_for('login'))
+        return render_template('public_page.html')
 
 
 @app.route('/res/<res>')
@@ -62,4 +65,18 @@ def get_font(font_name: str):
 @app.route('/settings')
 @login_required
 def settings():
-    return render_template('settings.html')
+    return render_template('settings.html', pw_form=forms.PasswordResetForm())
+
+
+@app.route('/feedback', methods=['GET', 'POST'])
+@login_required
+def feedback():
+    form = forms.FeedbackForm()
+    if form.validate_on_submit():
+        # Valid Form Submitted
+        print(f"I RECEIVED {form.feedback=} {form.about=}")
+        flash("Thank you for your feedback! It is recorded.")
+        return redirect(url_for('index'))
+    else:
+        # Show Register Page
+        return render_template('single_form.html', form=form, title="Feedback")

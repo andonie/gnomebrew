@@ -31,11 +31,11 @@ function shorten_time(val) {
     if(val <= 60) { //seconds
         return Math.floor(val) + ' s';
     } else if(val <= 60*60) { //minutes
-        return Math.floor(val/60) + ' m, ' + shorten_time(val % 60);
+        return Math.floor(val/60) + ' m ' + shorten_time(val % 60);
     } else if(val <= 60*60*24) { //hours
-        return Math.floor(val/(60*60)) + ' h, ' + shorten_time(val % (60*60));
+        return Math.floor(val/(60*60)) + ' h ' + shorten_time(val % (60*60));
     } else {
-        return Math.floor(val/(60*60*24)) + ' days, ' + shorten_time(val % (60*60*24));
+        return Math.floor(val/(60*60*24)) + ' days ' + shorten_time(val % (60*60*24));
     }
 }
 
@@ -69,12 +69,8 @@ function animate_slot(slot) {
         var now = Date.now() - time_difference;
         if(now > due_time_server) {
             // We are finished! Stop animation and clean up.
-            progress_bar.style.width = '0%';
-            progress_desc.innerHTML = '...';
-            icon.innerHTML = '';
-            slot.dataset.state = 'free';
             clearInterval(animation);
-            cancel_button.parentNode.removeChild(cancel_button);
+            $(slot).remove();
             return;
         }
         // Set % width based on time passed

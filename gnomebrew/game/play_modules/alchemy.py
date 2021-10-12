@@ -37,5 +37,8 @@ def restart_alchemy_effect(user: User, effect_data: dict, **kwargs):
     recipe = user.get(next_recipe_id, **kwargs)
 
     # We always want to attempt executing this recipe.
-    recipe.check_and_execute(user, **kwargs)
+    response = recipe.check_and_execute(user, **kwargs)
+
+    # We want to execute any frontend-info the response received.
+    response.finalize(user)
 

@@ -1,6 +1,29 @@
-{% extends 'snippets/_content_page.html' %}
+{% extends 'base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
 
-{% block ng_content %}
-<h4>This is the settings window</h4>
-<p>I swear, I'm gonna code something here eventually!</p>
+{% block app_content %}
+<h3>Game Settings</h3>
+
+<div class="gb-tabbed-view">
+    <div class="gb-tabs">
+        <div class="gb-icon-group gb-icon-group-pill gb-tab-selected" data-target="#tab-password">
+            {{ icon('special.account') | safe }}
+            Account
+        </div>
+        <div class="gb-icon-group gb-icon-group-pill" data-target="#tab-preferences">
+            {{ icon('special.preferences') | safe }}
+            Preferences
+        </div>
+    </div>
+    <div class="gb-tab-view">
+        <div class="gb-tab" id="tab-password">
+            <h4>Reset Password</h4>
+            {{ wtf.quick_form(pw_form) }}
+        </div>
+        <div class="gb-tab" id="tab-preferences">
+
+        </div>
+    </div>
+</div>
+
 {% endblock %}

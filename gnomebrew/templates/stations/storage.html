@@ -16,8 +16,8 @@
 <div class="gb-storage-categories">
 {% for data_object in category_data %}
     {% with category = data_object.category %}
-    <button class="storage-category-button gb-toggle-button gb-toggle-view {% if data_object.toggle_on %}gb-toggle-view-active{% endif %}"
-            data-toggles=".{{ css_friendly(category.get_id()) }}" onclick="toggle_selection('selection.cat_toggle.{{ category.get_minimized_id() }}', this)">
+    <button class="storage-category-button gb-toggle-button gb-toggle-view {% if data_object.visible %}gb-toggle-view-active{% endif %}"
+            data-toggles=".{{ css_friendly(category.get_id()) }}" id="{{ css_friendly(category.get_id()) }}-toggle" data-display="#{{ css_friendly(category.get_id()) }}-toggle" data-sync="selection._bool.cat_{{ category.get_minimized_id() }}_visible">
         {{ icon( category.get_id(), class='gb-icon-sm') | safe }}
     </button>
     {% endwith %}
@@ -27,8 +27,8 @@
 <div class="gb-storage-category-view">
 
     {% for data_object in category_data %}
-    {% with category=data_object['category'] %}{% with category_selection_id = current_user.get('selection.' + category.get_id()) %}
-    <div class="gb-storage-category {{ css_friendly(category.get_id()) }} {% if not data_object.toggle_on %}gb-toggle-hidden{% endif %}">
+    {% with category=data_object['category'], cat_collapsed=data_object['collapsed'], cat_visible=data_object['visible'] %}{% with category_selection_id = current_user.get('selection.' + category.get_id()) %}
+    <div class="gb-storage-category {{ css_friendly(category.get_id()) }} gb-foldout {% if not data_object.visible %}gb-toggle-hidden{% endif %}">
         <div class="gb-category-header gb-toggle-view" data-toggles="#{{ css_friendly(category.get_id()) }}-items">
             {{ icon(category.get_id(), class='gb-icon-sm') | safe }}
             <div class="gb-category-heading-banner">{{ category.name() }}</div>
@@ -37,7 +37,7 @@
                 {{ icon(category_selection_id, class='gb-icon-sm selection-it_cat-' + css_friendly(category.get_minimized_id()), id_buffer=buffer) | safe  }}
             </div>
         </div>
-        <div class="gb-storage-category-items gb-info-container" id="{{ css_friendly(category.get_id()) }}-items">
+        <div class="gb-storage-category-items gb-info-container gb-foldout" id="{{ css_friendly(category.get_id()) }}-items">
             {% for item in category.get_matching_items() %}
             {% if item.get_minimized_id() in player_inventory %}
             <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == current_user.get('data.storage.it_cat_selections.' + category.get_minimized_id(), default=None, id_buffer=buffer) %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"

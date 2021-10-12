@@ -1,4 +1,6 @@
+{% extends "stations/_station.html" %}
 
+{% block station_header_outer %}
 <div class="station grid-item station-quest" id="{{ station.get_id() }}">
     <div class="gb-title-wrapper">
         <div class="gb-toggle-view gb-toggle-view-active" data-toggles=".quest-sidebar" id="quest-close-button" data-display="#quest-icon" data-inform=".gb-main">
@@ -11,3 +13,6 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block station_body %}Body{% endblock %}

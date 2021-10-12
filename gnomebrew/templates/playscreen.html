@@ -32,7 +32,7 @@
 {{ super() }}
 {% endblock %}
 
-{% block navbar_extras %}{% endblock %}
+{% block navbar_extras %}{% if 'feedback' in current_user.get('data.special.roles') %}<a class="" href="{{ url_for('feedback') }}">Feedback</a>{% endif %}{% endblock %}
 
 {% block sidebar_outer %}
 <div class="gb-sidebar storage-sidebar" id="gb-sidebar-left">

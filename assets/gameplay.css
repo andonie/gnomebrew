@@ -276,6 +276,12 @@ input {
 
 .gb-storage-categories {
     margin: 5px 0px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: flex-start;
+    align-content: center;
 }
 
 .gb-storage-category {
@@ -314,7 +320,7 @@ input {
 
 .gb-storage-category-view {
     background: #E7BF8B;
-    padding-left: 5px;
+    padding: 5px;
 }
 
 .gb-storage-category-content {
@@ -367,6 +373,8 @@ input {
     border-top-right-radius: 0px;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 0px;
+    width: 400px;
+    height: 90vh;
 }
 
 .station-quest h3 {

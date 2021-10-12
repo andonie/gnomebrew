@@ -6,6 +6,7 @@ import traceback
 from typing import Callable
 
 from gnomebrew import mongo
+from gnomebrew.logging import log, log_exception
 from gnomebrew.game import boot_routine
 import datetime
 
@@ -37,13 +38,16 @@ class EventThread(object):
         self.thread.start()
 
     def run(self):
+        log('event', 'Event Thread starting')
+        due_event_buffer = list()
         while True:
             # Find all events that are due
             start_time = datetime.datetime.utcnow()
             query = {'due_time': {'$lt': start_time}}
-            remove_ids = list()
-
-            for event_data in self.mongo.db.events.find(query):
+            due_event_buffer = list(self.mongo.db.events.find(query))
+            remove_ids = [event['_id'] for event in due_event_buffer]
+            self.mongo.db.events.remove({'_id': {'$in': remove_ids}})
+            for event_data in due_event_buffer:
                 # Do something
                 event = Event(mongo_data=event_data)
                 log('event', 'executing', event.get_type(), event.get_type(), f'usr:{event.get_target_username()}')
@@ -57,15 +61,13 @@ class EventThread(object):
                 if event.is_remove_on_trigger():
                     remove_ids.append(event_data['_id'])
 
-            self.mongo.db.events.remove({'_id': {'$in': remove_ids}})
-
             end_time = datetime.datetime.utcnow()
             sleep_time = _SLEEP_TIME - (end_time - start_time).total_seconds()
             if sleep_time > 0:
                 try:
                     time.sleep(sleep_time)
                 except KeyboardInterrupt:
-                    print('Shutting down event thread')
+                    log('event', 'Keyboard Interrupt detected. Event thread stopped.')
                     exit()
 
 

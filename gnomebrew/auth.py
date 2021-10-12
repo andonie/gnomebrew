@@ -65,4 +65,5 @@ def logout():
     username = current_user.get_id()
     logout_user()
     log('gb_system', username, 'logout')
+    flash(f"See you later, {username}! Your game continues while you're away.")
     return redirect(url_for('index'))

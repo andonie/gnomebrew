@@ -437,7 +437,7 @@ def generate_slot_html(game_id: str, user: User, **kwargs):
     """
     station_name = game_id.split('.')[2]
     return ''.join([render_object('render.slot', data=slot_data)
-                    for slot_data in user.get(f"slots.{station_name}", **kwargs)])
+                    for slot_data in user.get(f"slots.{station_name}", **kwargs) if slot_data['state'] == 'occupied'])
 
 
 @html_generator('html.recipes', is_generic=True)

@@ -126,6 +126,7 @@ function update_value_at(data_selector, new_val, display_fun_name) {
 
 // Invoked when a UI element is supposed to be updated.
 function handle_ui_req(data) {
+    console.log(data);
     switch(data.type) {
         case 'slot':
             occupy_slot(data);
@@ -147,6 +148,16 @@ function handle_ui_req(data) {
             break;
         case 'player_info':
             display_info(data.target, data.content, data.duration);
+            break;
+        case 'update_class':
+            console.log("YEAH");
+            console.log(data);
+            if (data.action === 'add_class' ) {
+                $(data.target).addClass(data.class_data);
+            }
+            if (data.action === 'remove_class' ) {
+                $(data.target).removeClass(data.class_data);
+            }
             break;
     }
     // After any UI update, Masonry gets card blanche to update the grid

@@ -264,7 +264,9 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
                 any([item for item in category.get_matching_items() if item.get_minimized_id() in player_storage]):
             to_append = dict()
             to_append['category'] = category
-            to_append['toggle_on'] = user.get(f"selection.cat_toggle.{category.get_minimized_id()}")
+            to_append['collapsed'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_collapsed", default=True)
+            to_append['visible'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_visible", default=True)
+            to_append['cat_order'] = category.get_static_value('cat_order') if category.has_static_key('cat_order') else 50
             result.append(to_append)
 
-    return result
+    return sorted(result, key=lambda cat: cat['cat_order'])
