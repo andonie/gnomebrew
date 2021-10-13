@@ -1,0 +1,5 @@
+{#
+ # Renders a list of objectives from user data for a given quest.
+ # Expects quest objective dict as `data`.
+ #}
+{% for objective in data %}{{ render_object('render.objective_state', data=data[objective]) | safe }}{% endfor %}

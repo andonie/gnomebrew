@@ -229,7 +229,6 @@ def resolve_give_prompt(user: User, request_object: dict, **kwargs):
     prompt = None
     for prompt_identifier in prompt_identifiers:
         if prompt_identifier in request_object:
-            print(f"{prompt_identifier=} {request_object=}")
             result = next(filter(lambda prompt_data: prompt_data[prompt_identifier] == request_object[prompt_identifier], prompt_list), None)
             if result:
                 prompt = Prompt(result)
@@ -334,6 +333,8 @@ def min_length(input_data: dict, data, response: GameResponse):
 def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
     # Assert effect_data is well-formatted.
 
+    display_immediately = None
+
     prompt_types = list()
     for prompt_object in effect_data['prompts']:
         # Input typechecking
@@ -343,11 +344,20 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
             prompt_types.append(prompt_object['prompt_type'])
         if 'prompt_id' not in prompt_object:
             prompt_object['prompt_id'] = generate_uuid()
+        if 'show_immediately' in prompt_object and prompt_object['show_immediately']:
+            display_immediately = prompt_object
 
     # Execute Queue Prompts
     user.update('data.special.prompts', {'$each': effect_data['prompts']}, mongo_command='$push')
 
-    # Ensure user has the given prompt type visible
+    # If there is a prompt to display immediately, do so now.
+    if display_immediately:
+        user.frontend_update('ui', {
+            'type': 'prompt',
+            'prompt_html': Prompt(display_immediately).render_html(user)
+        })
+
+    # Ensure user has the given prompts type visible
     for prompt_type in prompt_types:
         user.frontend_update('ui', {
             'type': 'update_class',

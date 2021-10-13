@@ -14,6 +14,6 @@
     <div class="gb-progress-bar"></div>
     <div class="gb-info-container"></div>
     <div class="gb-foldout gb-toggle-hidden" id="{{ foldout_id }}">{{ data.foldout }}</div>
-    {% for objective in data.current_objectives %}{{ render_object('render.objective_state', data=objective) | safe }}{% endfor %}
+    <div class="quest-objectives" id="quest-objectives.{{ css_friendly(data.quest_id.split('.')[1]) }}">{{ render_object('render.objective_list', data=data.current_objectives) | safe }}</div>
     {% endwith %}
 </div>
