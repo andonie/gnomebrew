@@ -1,0 +1,12 @@
+{#
+ # Renders an objective in its current state as given by the player data.
+ #}
+<div class="quest-objective">
+    {% with foldout_id = css_friendly(generate_uuid()) %}
+    <div class="quest-obj-indicator {% if data.state == 1 %}obj-achieved{% endif %}"></div>
+    <div class="obj-content gb-toggle-view" data-toggles="#{{ foldout_id }}">
+     <h4>{{ format_markdown(data.name) | safe }}</h4><div class="gb-foldout gb-toggle-hidden" id="{{ foldout_id }}">{{ format_markdown(data.description) | safe }}</div>
+     <div class="gb-info-container">{% for info in data.infos %}{{ render_info(*info, info_class='gb-info-default') | safe }}{% endfor %}</div>
+    </div>
+    {% endwith %}
+</div>

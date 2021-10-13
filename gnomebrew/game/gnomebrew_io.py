@@ -7,8 +7,7 @@ interaction.
 """
 
 from gnomebrew import socketio
-from gnomebrew.game.objects.game_object import icon
-from gnomebrew.game.util import css_friendly, is_game_id_formatted
+from gnomebrew.game.util import css_friendly, is_game_id_formatted, render_info
 
 
 class GameResponse(object):
@@ -70,17 +69,12 @@ class GameResponse(object):
         :param info_elements: Info elements. Game IDs will automatically be recognized and turned into an icon of the ID.
                               All other elements will be added straight into the info box in a wrapper div.
         """
-        new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-warning"}" title="{core_message}">'
-        for element in info_elements:
-            if is_game_id_formatted(element):
-                new_info += icon(element, img_class='gb-icon-sm')
-            else:
-                new_info += f'<div class="gb-info-content">{element}</div>'
-        new_info += '</div>'
+        html_content = render_info(*info_elements, info_class='gb-info-warning', title=core_message)
+        print(f"{html_content=}")
         self.add_ui_update({
             'type':  'player_info',
             'target': self.get_ui_target(),
-            'content': new_info,
+            'content': html_content,
             'duration': 40
         })
 

@@ -112,7 +112,51 @@ def css_friendly(game_id: str) -> str:
     :param game_id:  An ID, e.g. 'data.storage.content.gold'
     :return:    A CSS friendly ID, e.g. 'data-storage-content-gold'
     """
-    return game_id.replace('.', '-')
+    return game_id.replace('.', '-').replace(':', '-')
+
+
+@global_jinja_fun
+def icon(game_id: str, **kwargs):
+    """
+    Wraps the <img> tag formatted for game icons to increase code readability in HTML templates.
+    :param game_id: An entity ID
+    :keyword class  (default `gb-icon`), will set the content of the class attribute of the image tag. Can therefore
+                    include multiple classes separated by a space.
+    :keyword href   href attribute content
+    :keyword id     ID attribute content
+    :return:        An image tag that will properly display the image.
+    """
+    element_addition = ''
+    from gnomebrew.game.objects import StaticGameObject
+    if StaticGameObject.is_known_prefix(game_id.split('.')[0]):
+        entity = StaticGameObject.from_id(game_id)
+        element_addition = f' title="{entity.name()}"'
+
+    if 'class' not in kwargs:
+        if 'img_class' in kwargs: # Added because python compiler did not like class= in python code :(
+            kwargs['class'] = kwargs['img_class']
+        else:
+            kwargs['class'] = 'gb-icon'
+
+    if 'href' in kwargs:
+        element_addition += f' href="{kwargs["href"]}"'
+
+    if 'id' in kwargs:
+        element_addition += f' id="{kwargs["id"]}"'
+
+    return f'<img class="{kwargs["class"]}"{element_addition} src="{url_for("get_icon", game_id=game_id)}">'
+
+
+@global_jinja_fun
+def render_info(*info_elements, **kwargs):
+    new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{kwargs["title"] if "title" in kwargs else ""}">'
+    for element in info_elements:
+        if is_game_id_formatted(element):
+            new_info += icon(element, img_class='gb-icon-sm')
+        else:
+            new_info += f'<div class="gb-info-content">{element}</div>'
+    new_info += '</div>'
+    return new_info
 
 
 @global_jinja_fun
@@ -246,7 +290,7 @@ def is_uuid(string: str) -> bool:
     else:
         return False
 
-
+@global_jinja_fun
 def generate_uuid() -> str:
     """
     Generates a UUID that can be used in game.

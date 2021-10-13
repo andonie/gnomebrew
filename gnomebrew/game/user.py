@@ -443,7 +443,6 @@ class User(UserMixin):
                         mongo_command='$push', **kwargs)
         elif isinstance(game_id, list):
             # Complex case: Add multiple elements to the listener bunch.
-            print(f"{[self._generate_id_listener_dict(gid, on_change, starts_with) for gid in game_id]=}")
             self.update("data.special.id_listeners", {'$each': [self._generate_id_listener_dict(gid, on_change, starts_with) for gid in game_id]},
                         mongo_command='$push', **kwargs)
         else:

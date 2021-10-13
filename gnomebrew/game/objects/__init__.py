@@ -16,6 +16,7 @@ from gnomebrew.game.objects.condition import Condition as Condition
 from gnomebrew.game.objects.request import PlayerRequest as PlayerRequest
 from gnomebrew.game.objects.adventure import Adventure as Adventure
 from gnomebrew.game.objects.prompt import Prompt as Prompt
+from gnomebrew.game.objects.game_object import StaticGameObject as StaticGameObject
 
 import gnomebrew.game.objects.names
 import gnomebrew.game.objects.game_statistics

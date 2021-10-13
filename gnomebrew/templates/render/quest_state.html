@@ -2,19 +2,18 @@
  # Renders the state of a quest as logged in the current player data.
  # Expects a quest data from player data (not full quest data) to render.
  #}
-<div class="gb-quest-info">
-    <div class="quest-header gb-icon-group">
+<div class="gb-quest-info" id="{{ css_friendly(data.quest_id) }}">
+    {% with foldout_id = css_friendly(generate_uuid()) %}
+    <div class="quest-header gb-icon-group gb-toggle-view" data-toggles="#{{ foldout_id }}">
         <img src="{{ url_for('get_icon', game_id=data.icon) }}" class="gb-icon-lg">
         <div class="title-wrap">
             <div class="quest-title">{{ data.name }}</div>
             <div class="quest-subtitle">{{ data.description }}</div>
         </div>
-
     </div>
-    <div class="gb-progress-bar">
-
-    </div>
-    <div class="gb-foldout">
-        {{ data.foldout }}
-    </div>
+    <div class="gb-progress-bar"></div>
+    <div class="gb-info-container"></div>
+    <div class="gb-foldout gb-toggle-hidden" id="{{ foldout_id }}">{{ data.foldout }}</div>
+    {% for objective in data.current_objectives %}{{ render_object('render.objective_state', data=objective) | safe }}{% endfor %}
+    {% endwith %}
 </div>

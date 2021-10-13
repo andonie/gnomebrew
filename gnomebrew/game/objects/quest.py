@@ -2,17 +2,16 @@
 Implements basic quest logic in Gnomebrew.
 Governed by the 'quest'-ID-prefix
 """
+import copy
 from typing import List, Callable
 
-from gnomebrew.game import user
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.condition import Condition
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.objects.generation import GeneratedGameObject
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, GameObject, PublicGameObject
 from gnomebrew.game.objects.objective import Objective
 from gnomebrew.game.testing import application_test
-from gnomebrew.game.user import User, get_resolver, load_user
+from gnomebrew.game.user import User, get_resolver, load_user, id_update_listener
 
 
 @PublicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest')
@@ -34,6 +33,7 @@ class Quest(StaticGameObject, PublicGameObject):
         """
         # Update User Data to include this as an active quest
         base_quest_data = {
+            'quest_id': self._data['game_id'],
             'name': self._data['name'],
             'description': self._data['description'],
             'foldout': self._data['foldout'],
@@ -43,7 +43,7 @@ class Quest(StaticGameObject, PublicGameObject):
         user.update(f"data.quest.active.{self.get_minimized_id()}", base_quest_data)
 
         # Transition into the first quest state
-        self.transition_state(user, self._data['quest_start'], **kwargs)
+        self.transition_state(user, self._data['quest_start'], suppress_listener_removal=True, **kwargs)
 
     def transition_state(self, user: User, state_id: str, **kwargs):
         """
@@ -51,13 +51,15 @@ class Quest(StaticGameObject, PublicGameObject):
         :param user         Target user
         :param state_id:    The ID of the state to transition to as used in the quest data.
         """
-        next_state = QuestState(self._data['quest_flow'][state_id])
+        if not 'suppress_listener_removal' in kwargs or not kwargs['suppress_listener_removal']:
+            # Remove all listeners from my the current quest state before transitioning
+            last_state = user.get(f'data.quest.active.{self.get_minimized_id()}.current_state',**kwargs)
+            user.remove_from_id_listeners(lambda data: data['quest'] == f"{self.get_minimized_id()}.{last_state}")
 
-        # Add any listeners that are needed in this state but currently not registered
-        current_listener_ids = set([listener_data['target_id'] for listener_data in user.get_id_listeners()
-                             if listener_data['effect_type'] == 'qu'])
+        next_state = QuestState(self._data['quest_flow'][state_id])
         new_listener_ids = set(next_state.get_all_target_ids())
-        user.register_id_listeners(list(new_listener_ids-current_listener_ids), {'effect_type': 'qu'}, starts_with=True)
+
+        user.register_id_listeners(list(new_listener_ids), {'effect_type': 'qu', 'quest': f"{self.get_minimized_id()}.{state_id}"}, starts_with=True)
 
         # Initialize next state.
         next_state.initialize_for(user, self.get_minimized_id())
@@ -111,13 +113,27 @@ class QuestState(GameObject):
     @staticmethod
     def _generate_playerdata_conditions(condition_raw: list):
         """
-        Prepares raw condition data to be adapted for
-        :param condition_raw:   Raw condition JSON data.
+        Prepares raw condition data to be adapted for the user's interface.
+        :param condition_raw:   Raw condition JSON data. Expected to be a deepcopy
         :return:    JSON data ready to be added to user data.
         """
         for condition_data in condition_raw:
             condition_data['state'] = 0
+
         return condition_raw
+
+    def _generate_current_objective_infos(self) -> List:
+        """
+        Generates a view of infos that can be rendered to display the current objectives progress.
+        :return:    A list representing the infos to be rendered.
+        """
+        objective_infos = list()
+        for objective_data in self._data['objectives']:
+            for condition in [Condition(data) for data in objective_data['conditions']]:
+                if condition.has_display():
+                    objective_infos.append(condition.generate_info())
+
+        return objective_infos
 
     def generate_user_objective_data(self, user: User) -> List[dict]:
         """
@@ -129,8 +145,8 @@ class QuestState(GameObject):
             'name': obj['name'],
             'description': obj['description'],
             'state': 0,
-            'info': [],
-            'conditions': QuestState._generate_playerdata_conditions(obj['conditions'])
+            'infos': QuestObjective(obj).generate_infos(),
+            'conditions': QuestState._generate_playerdata_conditions(copy.deepcopy(obj['conditions']))
         } for obj in self._data['objectives']]
 
     @staticmethod
@@ -145,14 +161,25 @@ class QuestState(GameObject):
         """
         return user.get('data.quest.active', **kwargs)
 
-    @staticmethod
-    def get_all_quest_ids(user: User, **kwargs) -> List[str]:
+
+class QuestObjective(GameObject):
+    """
+    Wraps a Quest Objective.
+    """
+
+    def __init__(self, data):
+        GameObject.__init__(self, data)
+
+    def generate_infos(self) -> List[List[str]]:
         """
-        Returns all game ID's the quest system is currently listening for.
-        :param user:    Target user
-        :param kwargs:  kwargs
-        :return:        A list of all game ids that need to accounted for for this user.
+        Generates this objective's info to be displayed under the objective.
+        :return:    A list of lists, representing `render_info` data.
         """
+        info_list = list()
+        for condition in [Condition(data) for data in self._data['conditions']]:
+            if condition.has_display():
+                info_list.append(condition.generate_info())
+        return info_list
 
 
 @load_on_startup('static_quests')
@@ -177,39 +204,52 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
     # Bulk update dict for a $set data update for quest data.
     update_data = dict()
 
-    # An ID relevant to at least one quest has been updated. Propagate the update to all quests
-    active_quest_dict = user.get('quest._active', **kwargs)
-    check_for_completion_quests = list()
-    for quest_id in active_quest_dict:
-        obj_index = 0
+    # An ID relevant to at least one quest has been updated. Propagate the update to the relevant quest objectives.
+    quest_splits = effect_data['quest'].split('.')
+    quest_id = quest_splits[0]
+    objective_list = user.get(f"data.quest.active.{quest_id}.current_objectives", **kwargs)
 
-        for objective_data in active_quest_dict[quest_id]['current_objectives']:
-            obj_changed = False
-            cond_index = 0
-            for condition_data in objective_data['conditions']:
-                condition = Condition(condition_data)
-                if condition.cares_for(update_id):
-                    new_completion = condition.current_completion(new_value)
-                    update_data[f'{quest_id}.current_objectives.{obj_index}.conditions.{cond_index}.state'] = new_completion
-                    # Also update local copy to make summing up for main state easier
-                    condition_data['state'] = new_completion
-                    obj_changed = True
-                cond_index += 1
-            if obj_changed:
-                # Calculate new objective completion.
-                objective_state = sum([c_data['state'] for c_data in objective_data['conditions']]) / len(objective_data['conditions'])
-                update_data[f"{quest_id}.current_objectives.{obj_index}.state"] = objective_state
-                objective_data['state'] = objective_state
-                if objective_state == 1:
-                    check_for_completion_quests.append(quest_id)
-            obj_index += 1
+    check_for_completion = False
+    obj_index = 0
+
+    for objective_data in objective_list:
+        obj_changed = False
+        cond_index = 0
+        for condition_data in objective_data['conditions']:
+            condition = Condition(condition_data)
+            if condition.cares_for(update_id):
+                new_completion = condition.current_completion(new_value)
+                update_data[f'{quest_id}.current_objectives.{obj_index}.conditions.{cond_index}.state'] = new_completion
+                # Also update local copy to make summing up for main state easier
+                condition_data['state'] = new_completion
+                obj_changed = True
+            cond_index += 1
+        if obj_changed:
+            # Calculate new objective completion.
+            objective_state = sum([c_data['state'] for c_data in objective_data['conditions']]) / len(objective_data['conditions'])
+            update_data[f"{quest_id}.current_objectives.{obj_index}.state"] = objective_state
+            objective_data['state'] = objective_state
+            if objective_state == 1:
+                check_for_completion = True
+        obj_index += 1
 
     if update_data:
         user.update('data.quest.active', update_data, is_bulk=True, **kwargs)
 
-    for quest_id in check_for_completion_quests:
-        if all([obj['state'] == 1 for obj in active_quest_dict[quest_id]['current_objectives']]):
-            user.get(f"quest.{quest_id}").progress_quest(user, **kwargs)
+    if check_for_completion and all([obj['state'] == 1 for obj in objective_list]):
+        user.get(f"quest.{quest_id}").progress_quest(user, **kwargs)
+
+
+@id_update_listener(r'data\.active\.[\w:]+\.current_objectives\.')
+def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwargs):
+    """
+    Called whenever a user's current_objective state for any quest changes.
+    :param user:        Target user who's data changed.
+    :param data:        The new data value as given to MongoDB.
+    :param game_id:     The updated full Game ID
+    :param kwargs:      kwargs
+    """
+    print(f"UPDATE ON {game_id=} with {data=}")
 
 
 @application_test(name='Give Quest', category='Default')

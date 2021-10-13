@@ -1,6 +1,6 @@
 {% extends "stations/_station.html" %}
 
-{% block station_actions %}<div class="gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-close-button" aria-label="Close" data-display="#storage-icon" data-inform=".gb-main">
+{% block station_actions %}<div class="gb-toggle-view gb-toggle-view-active" data-toggles="#gb-sidebar-left" id="storage-close-button" aria-label="Close" data-display="#storage-icon" data-inform=".gb-main" data-sync="selection._bool.storage_expanded">
     {{ icon('special.cancel') | safe }}
 </div>{% endblock %}
 

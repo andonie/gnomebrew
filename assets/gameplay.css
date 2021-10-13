@@ -378,6 +378,20 @@ input {
     max-height: 90vh;
 }
 
+.gb-quest-info {
+    padding: 5px;
+    border-radius: 10px;
+    background: #624e54;
+}
+
+.obj-content > .gb-info-container {
+    color: black;
+}
+
+.quest-obj-indicator.obj-achieved {
+    background: #6ec36e;
+}
+
 .gb-quest-headline {
     background: #e7bf8b;
     padding-left: 10px;
@@ -391,12 +405,11 @@ input {
 
 .gb-quest-headline:hover {
     background: #ffeed9;
-
 }
 
 .quest-title {
     font-family: 'Press Start 2P';
-
+    font-size: 0.9em;
 }
 
 .quest-list {
@@ -408,9 +421,36 @@ input {
 }
 
 .active-quests {
+}
+
+.quest-header.gb-icon-group {
+    padding-left: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.quest-header.gb-icon-group:hover {
     background: #8e616f;
 }
 
+.quest-objective {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.quest-obj-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #aca7a9;
+    border: 4px solid #3e3034;
+    flex-shrink: 0;
+}
 
 /* TAVERN */
 

@@ -1,7 +1,7 @@
 {% extends "stations/_station.html" %}
 
 {% block pre_header %}
-    <div class="gb-toggle-view{% if current_user.get('selection._bool.station_quest_open', default=True, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles=".quest-sidebar" id="quest-close-button" data-display="#quest-icon" data-inform=".gb-main">
+    <div class="gb-toggle-view{% if current_user.get('selection._bool.station_quest_open', default=True, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles=".quest-sidebar" id="quest-close-button" data-display="#quest-icon" data-inform=".gb-main" data-sync="selection._bool.quest_expanded">
         {{ icon('special.cancel') | safe }}
     </div>
 {% endblock %}

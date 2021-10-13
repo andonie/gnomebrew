@@ -325,38 +325,6 @@ def update_static_data():
 
 
 @global_jinja_fun
-def icon(game_id: str, **kwargs):
-    """
-    Wraps the <img> tag formatted for game icons to increase code readability in HTML templates.
-    :param game_id: An entity ID
-    :keyword class  (default `gb-icon`), will set the content of the class attribute of the image tag. Can therefore
-                    include multiple classes separated by a space.
-    :keyword href   href attribute content
-    :keyword id     ID attribute content
-    :return:        An image tag that will properly display the image.
-    """
-    element_addition = ''
-
-    if StaticGameObject.is_known_prefix(game_id.split('.')[0]):
-        entity = StaticGameObject.from_id(game_id)
-        element_addition = f' title="{entity.name()}"'
-
-    if 'class' not in kwargs:
-        if 'img_class' in kwargs: # Added because python compiler did not like class= in python code :(
-            kwargs['class'] = kwargs['img_class']
-        else:
-            kwargs['class'] = 'gb-icon'
-
-    if 'href' in kwargs:
-        element_addition += f' href="{kwargs["href"]}"'
-
-    if 'id' in kwargs:
-        element_addition += f' id="{kwargs["id"]}"'
-
-    return f'<img class="{kwargs["class"]}"{element_addition} src="{url_for("get_icon", game_id=game_id)}">'
-
-
-@global_jinja_fun
 def render_object(game_id: str, data: Any, **kwargs) -> str:
     """
     Renders an object to it's HTML representation.

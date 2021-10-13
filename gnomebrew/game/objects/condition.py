@@ -2,6 +2,7 @@
 Describes conditions in game
 """
 from collections import Callable
+from typing import List
 
 from gnomebrew.game.objects.game_object import GameObject
 from gnomebrew.game.user import User
@@ -55,6 +56,24 @@ class Condition(GameObject):
                         Only 1 will be recognized as condition met.
         """
         return Condition.condition_resolvers[self._data['condition_type']]['fun'](value, self._data)
+
+    def has_display(self) -> bool:
+        """
+        Checks if this condition has a display. If so, the condition will have a `gb-info` to visualize this condition.
+        :return:    `True` if this condition has a display. Otherwise `False`
+        """
+        return 'display' in self._data
+
+    def generate_info(self) -> List[str]:
+        """
+        Generates this condition's info to visualize. Assumes `has_display() := True`
+        :return:    This condition's info data.
+        """
+        display_data = self._data['display']
+        if isinstance(display_data, str):
+            # Primitive case. Return list to just render base text.
+            return [display_data]
+
 
 
 @Condition.type('id_eval')
