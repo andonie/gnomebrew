@@ -180,3 +180,8 @@ TYPE_ERROR._data = {
     'type': 'fail',
     'fail_msg': 'The Game Request Type is unknown.'
 }
+SERVER_ERROR = GameResponse()
+SERVER_ERROR._data = {
+    'type': 'fail',
+    'fail_msg': 'The server encountered an error.'
+}

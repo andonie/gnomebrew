@@ -91,11 +91,3 @@ class DataObject:
             for sub_element in e:
                 DataObject._collection_key_replace(sub_element, to_replace, replace_with)
 
-    @staticmethod
-    def generate_uuid() -> str:
-        """
-        Generates an anonymous UUID.
-        This method can be called to name an unnamed game object.
-        :return:    A UUID string that can be used within Game ID strings
-        """
-        return str(uuid.uuid4())

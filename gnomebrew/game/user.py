@@ -1,6 +1,7 @@
 """
 Manages User Data for the game
 """
+import copy
 from os.path import join
 from typing import Callable, Union, List
 
@@ -180,6 +181,35 @@ class User(UserMixin):
     Models all relevant data to play and modify a user's play data.
     """
 
+    # Defines the data an empty user starts with
+    INITIAL_DATA = {
+        'special': {
+            'roles': [],
+            'prompts': [],
+            'selection': {
+                '_bool': {
+                    'storage_expanded': 'false',
+                    'quest_expanded': 'false'
+                },
+                '_id': {},
+                '_str': {}
+            },
+            'id_listeners': []
+        },
+        'storage': {
+            'content': {
+                'gold': 0
+            },
+            'it_cat_selections': {}
+        },
+        'quest': {
+            'active': {
+            },
+            'available': {}
+        }
+
+    }
+
     def __init__(self, username):
         """
         Init.
@@ -229,8 +259,8 @@ class User(UserMixin):
         except KeyError:
             return False
 
-    @staticmethod
-    def create_user(username: str, pw: str):
+    @classmethod
+    def create_user(cls, username: str, pw: str):
         """
         This process creates a new user entity in the Gnomebrew Game.
         :param username:    Username. Must be free.
@@ -332,17 +362,27 @@ class User(UserMixin):
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
         # If any update listeners are registered for this game ID, inform update listeners of the update
-        global _UPDATE_LISTENERS
-        for gid in res:
-            if gid in _UPDATE_LISTENERS:
-                for listener in _UPDATE_LISTENERS[gid]:
-                    listener(user=self,
-                             update=res,
-                             mongo_command=mongo_command)
+        # Dead Code: To review if the general (non user-specific) update feature is eneded
+        # global _UPDATE_LISTENERS
+        # for gid in res:
+        #     if gid in _UPDATE_LISTENERS:
+        #         for listener in _UPDATE_LISTENERS[gid]:
+        #             listener(user=self,
+        #                      update=res,
+        #                      mongo_command=mongo_command)
 
         if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
             return
         self._data_update_to_frontends(mongo_command, res)
+
+        # Check all update listeners and trigger the appropriate ones
+        for listener_data in self.get('data.special.id_listeners'):
+            if listener_data['target_id'] == game_id or (listener_data['starts_with'] and game_id.startswith(listener_data['target_id'])):
+                # Hit. Interpret this listener as an Effect and execute.
+                from gnomebrew.game.objects.effect import Effect
+                Effect(listener_data).execute_on(self, updated_id=game_id, updated_value=update, **kwargs)
+
+        return mongo_command, res
 
     def _data_update_to_frontends(self, mongo_command, command_content):
         """
@@ -373,13 +413,58 @@ class User(UserMixin):
         """
         socketio.emit(update_type, update_data, json=True, to=self.username)
 
-    def get_game_data(self):
+    @staticmethod
+    def _generate_id_listener_dict(game_id: str, on_change: dict, starts_with: bool) -> dict:
         """
-        Returns all game data of this user
-        :return:    All Game data as a `dict`
+        Generates an ID listener dict from a given on-change effect.
+        :param game_id      Target ID
+        :param on_change:   Effect data to execute on update.
+        :return:            Resulting ID listener formatted dict for storage and use during `update` calls on this user.
         """
-        return mongo.db.users.find_one({"username": self.username},
-                                       {'data': 1, '_id': 0})['data']
+        result = copy.deepcopy(on_change)
+        result['target_id'] = game_id
+        result['starts_with'] = starts_with
+        return result
+
+    def register_id_listeners(self, game_id: Union[str, list], on_change: dict, starts_with=True, **kwargs):
+        """
+        Registers an ID listener to this user.
+        Whenever `user.update` is called, all ID listeners registered to `user` will fire.
+        :param game_id:         ID to listen to updates to. If `game_id` is a list of IDs, all IDs will be registered.
+        :param on_change:       Describes **Effect** data that will be executed on ID update. This effect will receive
+                                a keyword argument `game_id=<updated_id>` to have the changed variable available.
+        :param starts_with:     If `True`, will match any ID that starts with the given `game_id` (e.g. to include
+                                `item.fruit_wine.strawberry` in `item.wine`
+        """
+        # Push new data in DB
+        if isinstance(game_id, str):
+            # Simple Case: Just push one given effect to data
+            self.update("data.special.id_listeners", self._generate_id_listener_dict(game_id, on_change, starts_with),
+                        mongo_command='$push', **kwargs)
+        elif isinstance(game_id, list):
+            # Complex case: Add multiple elements to the listener bunch.
+            print(f"{[self._generate_id_listener_dict(gid, on_change, starts_with) for gid in game_id]=}")
+            self.update("data.special.id_listeners", {'$each': [self._generate_id_listener_dict(gid, on_change, starts_with) for gid in game_id]},
+                        mongo_command='$push', **kwargs)
+        else:
+            raise Exception(f"Malformatted ID Registering Input: {game_id}")
+
+    def remove_from_id_listeners(self, filter_out: Callable):
+        """
+        Removes all ID listeners that fit a given pattern.
+        :param filter_out:   A function that expects a `dict` input for listener raw data and returns a `bool` signifying
+                            whether to remove this element (`filter_out` returns `True`) or to keep an element
+                            (`filter_out` returns `False`)
+        """
+        id_listeners = self.get('data.special.id_listeners')
+        self.update('data.special.id_listeners', list(filter(lambda id_l: not filter_out(id_l), id_listeners)))
+
+    def get_id_listeners(self) -> List[dict]:
+        """
+        Returns the raw listener ID data as a list of listener data `dict`s.
+        :return:    The current ID listeners of this users.
+        """
+        return self.get('data.special.id_listeners')
 
     @staticmethod
     def game_integrity_assertions(user):
@@ -462,7 +547,7 @@ def game_data_update(user: User, game_id: str, update, **kwargs):
             command_content[game_id + '.' + key] = update[key]
     else:
         command_content = {game_id: update}
-    mongo_command = kwargs['command'] if 'command' in kwargs else '$set'
+    mongo_command = kwargs['mongo_command'] if 'mongo_command' in kwargs else '$set'
     mongo.db.users.update_one({"username": user.get_id()}, {mongo_command: command_content})
     # Also update the currently attached users.
     return mongo_command, command_content

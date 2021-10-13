@@ -71,7 +71,6 @@ class PlayerRequest(GameObject):
                                 If no input was given, returns an empty `dict`.
         """
         parsed_inputs = dict()
-        print(request_object)
         for key in request_object:
             match = PlayerRequest._input_regex.match(key)
             if match:

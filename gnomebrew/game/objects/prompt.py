@@ -3,7 +3,6 @@ Manages ingame prompts to the player.
 A prompt is an object that describes the prompt.
 """
 from typing import Callable
-from uuid import uuid4
 
 from gnomebrew import log
 from gnomebrew.game.gnomebrew_io import GameResponse
@@ -13,8 +12,7 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import GameObject, render_object
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, get_resolver, id_update_listener, load_user
-from gnomebrew.game.util import global_jinja_fun
-
+from gnomebrew.game.util import global_jinja_fun, generate_uuid
 
 
 class Prompt(GameObject):
@@ -86,6 +84,11 @@ class Prompt(GameObject):
         if 'input' in self._data:
             for input_obj in [PlayerInput(data) for data in self._data['input'].values()]:
                 input_obj.process_input(user, input_items[input_obj.get_id()])
+
+        # Execute any effects on this prompt
+        if 'effects' in self._data:
+            for effect in [Effect(data) for data in self._data['effects']]:
+                effect.execute_on(user, **kwargs)
 
         # Provide an update on the prompt states for the user.
         prompt_heads = get_prompt_head_dict(user)
@@ -189,8 +192,6 @@ def resolve_get_prompt(user: User, game_id: str, **kwargs):
     * `prompt.active`: Currently active prompt. Raises exception if no prompt is active currently
     """
     splits = game_id.split('.')
-
-    print(splits)
 
     # Default case: `prompt.<uuid>`
     prompt_data = user.get('data.special.prompts')
@@ -341,10 +342,10 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
         if prompt_object['prompt_type'] not in prompt_types:
             prompt_types.append(prompt_object['prompt_type'])
         if 'prompt_id' not in prompt_object:
-            prompt_object['prompt_id'] = uuid4()
+            prompt_object['prompt_id'] = generate_uuid()
 
     # Execute Queue Prompts
-    user.update('data.special.prompts', effect_data['prompts'], mongo_command='$push')
+    user.update('data.special.prompts', {'$each': effect_data['prompts']}, mongo_command='$push')
 
     # Ensure user has the given prompt type visible
     for prompt_type in prompt_types:

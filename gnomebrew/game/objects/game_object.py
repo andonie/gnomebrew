@@ -3,7 +3,6 @@ This module manages the game's in-loading
 """
 from os.path import join
 from typing import Type, Any, Callable, Union
-from uuid import uuid4
 
 from flask import url_for, render_template
 
@@ -11,7 +10,7 @@ from gnomebrew import mongo
 from gnomebrew.game import boot_routine
 from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.user import get_resolver, User, update_resolver
-from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.game.util import global_jinja_fun, generate_uuid, is_uuid
 from gnomebrew.logging import log
 
 
@@ -24,7 +23,7 @@ class GameObject(DataObject):
         DataObject.__init__(self, data)
         if uuid != None:
             if uuid not in self._data:
-                self._data[uuid] = uuid4()
+                self._data[uuid] = generate_uuid()
 
     def __str__(self):
         return f"<GameObject: {self._data=}>"
@@ -136,32 +135,34 @@ class StaticGameObject(GameObject):
 
 class PublicGameObject(GameObject):
     """
-    Wraps/describes a game object that is stored on DB Server in dedicated collection and is accessible to **any user on
-    server** via it's unique `game_id`.
+    Wraps/describes a game object that is stored on DB Server in two dedicated formats: *Static* objects and *Generated*
+    objects. This class wraps such a class, wiring together the features of static objects and reducing code overhead
+    by registering the appropriate get/update method.
     """
 
     _public_id_lookup = dict()
 
     @classmethod
-    def setup(cls, collection_name: str, game_id_prefix: str):
+    def setup(cls, dynamic_collection_name: str, game_id_prefix: str):
         """
         Decorates a `PublicGameObject` class to set it up as a publicly accessible datatype.
-        :param collection_name: the name of the MongoDB-collection that is managing the JSON data of this object type
+        :param dynamic_collection_name: the name of the MongoDB-collection that is managing the JSON data of this object type
         :param game_id_prefix: Basic Prefix to associate this class with (e.g. 'adventure')
         """
         if game_id_prefix in cls._public_id_lookup:
-            raise Exception(f"{collection_name} is already a registered collection.")
+            raise Exception(f"{dynamic_collection_name} is already a registered collection.")
 
         id_data = dict()
-        id_data['mongo_collection'] = collection_name
+        id_data['special_get'] = dict()
+        id_data['dynamic_collection'] = dynamic_collection_name
         cls._public_id_lookup[game_id_prefix] = id_data
 
         # Check if Mongo Collection with that name already exists. If not, create it.
-        if collection_name not in mongo.db.list_collection_names():
+        if dynamic_collection_name not in mongo.db.list_collection_names():
             # Create Collection with proper name
-            mongo.db[collection_name].create_index('game_id')
+            mongo.db[dynamic_collection_name].create_index('game_id')
             log('gb_system', f"Created game_id index for collection.",
-                f"mongo:{collection_name}")
+                f"mongo:{dynamic_collection_name}")
 
         # Register a GET resolver for the data
         get_resolver(type=game_id_prefix, dynamic_buffer=True, postfix_start=2)(
@@ -174,12 +175,38 @@ class PublicGameObject(GameObject):
         return lambda x: x
 
     @classmethod
-    def generate_get_resolver(cls, id_prefix: str) -> Callable:
-        name = cls._public_id_lookup[id_prefix]['mongo_collection']
-        target_collection = mongo.db[name]
+    def special_id_get(cls, game_id: str):
+        """
+        Annotation function. Adds a special ID for a given Game ID.
+        Annotates a get-resolving function for execution for only the given ID.
+        :param game_id: The game ID for which this special ID resolves. Defining split should always start with
+                        an underscore. E.g. `quest._active`
+        """
+        splits = game_id.split('.')
+        prefix = splits[0]
+        assert len(splits) == 2
+        if prefix not in cls._public_id_lookup:
+            raise Exception(f"{prefix} is not a managed prefix. Cannot resolve this unless set up correctly.")
 
-        def resolve_id_get(game_id: str, user: User, **kwargs) -> 'PublicGameObject':
-            result = target_collection.find_one({"game_id": game_id}, {'_id': 0})
+        def wrapper(fun: Callable):
+            cls._public_id_lookup[prefix]['special_get'][game_id] = fun
+            return fun
+
+        return wrapper
+
+    @classmethod
+    def generate_get_resolver(cls, id_prefix: str) -> Callable:
+        dynamic_collection = mongo.db[cls._public_id_lookup[id_prefix]['dynamic_collection']]
+        special_id_lookup = cls._public_id_lookup[id_prefix]['special_get']
+        def resolve_id_get(game_id: str, user: User, **kwargs) -> 'GameObject':
+            if game_id in special_id_lookup:
+                return special_id_lookup[game_id](game_id=game_id, user=user, **kwargs)
+
+            splits = game_id.split('.')
+            if not is_uuid(splits[1]):
+                return StaticGameObject.from_id(game_id)
+
+            result = dynamic_collection.find_one({"game_id": game_id}, {'_id': 0})
             if not result:
                 if 'default' in kwargs and kwargs['default']:
                     return kwargs['default']
@@ -192,8 +219,15 @@ class PublicGameObject(GameObject):
 
     @classmethod
     def generate_update_resolver(cls, id_prefix: str) -> Callable:
-        target_collection = mongo.db[cls._public_id_lookup[id_prefix]['mongo_collection']]
+        target_collection = mongo.db[cls._public_id_lookup[id_prefix]['dynamic_collection']]
+
         def resolve_id_update(user: User, game_id: str, update, **kwargs):
+            splits = game_id.split('.')
+            if not is_uuid(splits[1]):
+                # Not a UUID. Instead of doing this forward this request to the static collection
+                raise Exception(f"Cannot update a scripted object: {game_id}.")
+
+            # This is a UUID. Let's look in the data.
             core_query = {"game_id": game_id}
             if 'delete' in kwargs and kwargs['delete']:
                 target_collection.delete_one(core_query)

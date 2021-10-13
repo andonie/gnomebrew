@@ -45,7 +45,8 @@ def select(user, request_object: dict, **kwargs):
     # Ensure target ID is valid selection.
     match = next(filter(lambda data: data[0]==target_id or (data[1]['is_generic'] and target_id.startswith(data[0])), selection_ids.items()), None)
     if match:
-        match[1]['fun'](game_id=target_id, user=user, set_value=value, **kwargs)
+        # match[1]['fun'](game_id=target_id, user=user, set_value=value, **kwargs)
+        user.update(target_id, value, **kwargs)
         response.succeess()
     else:
         response.add_fail_msg(f"Could not find a selection ID {target_id}")
@@ -102,7 +103,7 @@ def selection_update(user: User, game_id: str, update, **kwargs):
     """
     selection_function = _get_matching_fun(game_id)
     if selection_function:
-        selection_function(game_id=game_id, user=user, set_value=update, **kwargs)
+        return selection_function(game_id=game_id, user=user, set_value=update, **kwargs)
     else:
         raise Exception(f"Cannot interpret {game_id=}")
 
@@ -149,4 +150,4 @@ def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs) -> b
                 raise Exception(f"Selection for {game_id} does not exist for user {user.get_id()}. No default was given.")
     else:
         # Update the value
-        user.update(f"data.special.selection._bool.{splits[2]}", set_value, **kwargs)
+        return user.update(f"data.special.selection._bool.{splits[2]}", set_value, **kwargs)

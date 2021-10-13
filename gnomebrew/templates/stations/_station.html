@@ -1,6 +1,7 @@
 {% set station_name = station.get_minimized_id() %}
 <div class="station grid-item station-{{ station_name }}" id="{{ station.get_id() }}">
     {% block station_header_outer %}<div class="gb-title-wrapper">
+        {% block pre_header %}{% endblock %}
         <div class="station-header gb-toggle-view {% if current_user.get('selection._bool.station_' + station.get_minimized_id() + '_open', default=True, id_buffer=id_buffer) %}gb-toggle-view-active{% endif %}" id="{{ css_friendly(station.get_id()) }}-header" data-toggles="#{{ css_friendly(station.get_id()) }}-content" data-sync="selection._bool.station_{{ station.get_minimized_id() }}_open" data-display="#{{ css_friendly(station.get_id()) }}-header">
             {% block station_header %}
             {{ icon( station.get_id() ) | safe }}

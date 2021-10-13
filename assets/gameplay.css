@@ -369,20 +369,47 @@ input {
 
 .station.station-quest {
     background: #3e3034;
+    color: #e7bf8b;
     border-top-left-radius: 10px;
     border-top-right-radius: 0px;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 0px;
     width: 400px;
-    height: 90vh;
+    max-height: 90vh;
 }
 
-.station-quest h3 {
-    color: white;
+.gb-quest-headline {
+    background: #e7bf8b;
+    padding-left: 10px;
+    border-radius: 8px;
+    border: 3px solid #e7bf8b;
+    color: #8e616f;
+    font-family: 'Press Start 2P';
+    letter-spacing: -3px;
+    max-height: 35px;
 }
 
+.gb-quest-headline:hover {
+    background: #ffeed9;
 
+}
 
+.quest-title {
+    font-family: 'Press Start 2P';
+
+}
+
+.quest-list {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.active-quests {
+    background: #8e616f;
+}
 
 
 /* TAVERN */

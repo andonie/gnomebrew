@@ -7,6 +7,7 @@ from flask import render_template, send_from_directory, redirect, url_for, flash
 from flask_login import login_required, current_user
 from os.path import isfile, join
 from gnomebrew.game.user import IDBuffer
+from gnomebrew.logging import log_execution_time
 
 supported_browsers = ['firefox', 'chrome']
 
@@ -16,7 +17,8 @@ def index():
     if browser not in supported_browsers:
         flash("Currently, Gnomebrew is optimized for Firefox and Chrome and it's suggested to use either. Your browser might still work.")
     if current_user.is_authenticated:
-        return render_template('playscreen.html', buffer=IDBuffer())
+        playscreen = log_execution_time(lambda: render_template('playscreen.html', buffer=IDBuffer()), 'html', 'playscreen rendered', f"usr:{current_user.get_id()}")
+        return playscreen
     else:
         return render_template('public_page.html')
 

@@ -6,6 +6,7 @@ import traceback
 from typing import Callable
 
 from gnomebrew import mongo
+from gnomebrew.game.util import generate_uuid
 from gnomebrew.logging import log, log_exception
 from gnomebrew.game import boot_routine
 import datetime
@@ -80,7 +81,7 @@ class Event(GameObject):
         """
         GameObject.__init__(self, mongo_data)
         if 'event_id' not in self._data:
-            self._data['event_id'] = GameObject.generate_uuid()
+            self._data['event_id'] = generate_uuid()
 
     """
     Wrapper Class for Events

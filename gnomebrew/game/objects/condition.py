@@ -39,50 +39,25 @@ class Condition(GameObject):
     def __init__(self, condition_data: dict):
         GameObject.__init__(self, condition_data)
 
-    def met_for(self, user: User, **kwargs) -> bool:
+    def cares_for(self, game_id: str) -> bool:
         """
-        Checks if the current user meets this condition.
-        :param user:    A user.
-        :param kwargs   should contain any known data mapped as `{ game_id: value }`
-        :return:        `True` if the condition is met for this user. Otherwise `False`.
+        Checks if this conditions cares for a given ID.
+        :param game_id: ID to check.
+        :return:    `True`, if `game_id` is relevant to this condition. Otherwise `False`.
         """
-        return Condition.condition_resolvers[self._data['condition_type']](user, **kwargs)
+        return False if 'target_id' not in self._data or self._data['state'] == 1 else self._data['target_id'] == game_id
+
+    def current_completion(self, value) -> float:
+        """
+        Checks if the current value meets the condition.
+        :param value:   A value.
+        :return:        A number between 0 and 1, representing the degree of completion of this conditon.
+                        Only 1 will be recognized as condition met.
+        """
+        return Condition.condition_resolvers[self._data['condition_type']]['fun'](value, self._data)
 
 
-@Condition.type('reach')
-def reach_condition(user: User, condition_data: dict, **kwargs):
-    """
-    Requires the user to reach a certain target amount of an entity (or more).
-    :param user:            target user.
-    :param condition_data:  JSON data from Condition object.
-    :param kwargs:          Any already resolved Game-IDs in format `{ game_id: value }`
-    :return:                `True`, if the conditition is met. Otherwise, `False`.
-    """
-    target_name = condition_data['target']
-    if target_name in kwargs:
-        target_value = kwargs[target_name]
-    else:
-        # I have to calculate the value myself right now. :(
-        target_value = user.get(f"data.storage.content.{target_name}", **kwargs)
-    return target_value >= condition_data['to_reach']
-
-
-@Condition.type('give')
-def give_condition(user: User, condition_data: dict, **kwargs):
-    """
-    Requires the user to give a number of items from their inventory via dedicated game request.
-    :param user:                target user.
-    :param condition_data:      JSON data from Condition object.
-    :param kwargs:              Any already resolved Game-IDs in format `{ game_id: value }`
-    :return:                    `True`, if the conditition is met. Otherwise, `False`.
-    """
-
-@Condition.type('quest')
-def quest_condition(user: User, condition_data: dict, **kwargs):
-    """
-
-    :param user:
-    :param condition_data:
-    :param kwargs:
-    :return:
-    """
+@Condition.type('id_eval')
+def id_eval_check(value, condtion_data: dict):
+    if condtion_data['eval_type'] == 'equals':
+        return 1 if value == condtion_data['target_value'] else 0

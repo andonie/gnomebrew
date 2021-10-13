@@ -204,10 +204,9 @@ function reload_element(element_name) {
 function add_station(station_name) {
     console.log('adding station: ' + station_name);
     $.post('/play/game_id/html.station.' + station_name).done(function(response) {
-        //$('#station-grid').append(response);
-        $('#station-grid').append(response);
-        $('#station-grid').masonry('reloadItems');
-        $('#station-grid').masonry('layout');
+        element = $(response);
+        animate_whole_ui(element);
+        $('.gb-grid').append(element);
     }).fail(function(response){
         global_error('Error while connecting to server!');
     });

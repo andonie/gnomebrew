@@ -4,6 +4,7 @@ body {
     color: #5E484F;
     scrollbar-color: #5E484F #E7BF8B;
     overflow-x: hidden;
+    letter-spacing: -1px;
 }
 
 h3 {

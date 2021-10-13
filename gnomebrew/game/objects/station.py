@@ -41,20 +41,20 @@ class Station(StaticGameObject):
         assert self._data[attr]
         return self._data[attr]
 
-    def initialize_for(self, user):
+    def initialize_for(self, user, **kwargs):
         """
         Initializes this station for a given user with the station's `init_data`.
         :param user:    a user. We assume this user has not yet had data connected to this station.
         """
+        print(f"Initializing {self=}")
         # Add new station in user data with default values.
         # Also ignore the frontend, since we will manually send an add_station update to the frontend.
-        user.update(f"data.{self._data['game_id'].split('.')[1]}", self._data['init_data'], suppress_frontend=True)
+        user.update(f"data.{self.get_minimized_id()}", self._data['init_data'], **kwargs)
 
         # If this station has an init-effect to be executed, do so now.
         if 'init_effect' in self._data:
-            from gnomebrew.game.event import Event
-            for effect in self._data['init_effect']:
-                Event.execute_event_effect(user, effect_type=effect, effect_data=self._data['init_effect'][effect])
+            for effect in [Effect(data) for data in self._data['init_effect']]:
+                effect.execute_on(user, **kwargs)
 
     def has_slots(self) -> bool:
         """
@@ -76,8 +76,9 @@ def add_station(user: User, effect_data: dict, **kwargs):
     :param user:        a user
     :param effect_data: effect data dict formatted as `effect_data['station'] = station_id`
     """
+    print("ADDING STATION")
     # Load the respective station and initialize it for this user
-    station = StaticGameObject.from_id(effect_data['station'])
+    station: Station = StaticGameObject.from_id(effect_data['station'])
     station.initialize_for(user)
 
     # Send the respective update to all active frontends

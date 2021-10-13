@@ -5,6 +5,7 @@ import datetime
 import math
 import random
 import re
+import uuid
 
 from numpy.random import default_rng
 from gnomebrew import app
@@ -150,7 +151,7 @@ def shorten_time(val: int) -> str:
         return f"{math.floor(val / (60 * 60))} h{f', {shorten_time(rest)}' if rest > 0 else ''}"
     else:
         rest = val % (60 * 60 * 24)
-        return f"{math.floor(val / (60 * 60 * 24))} days{f', {shorten_time(rest)}' if rest > 0 else '' }"
+        return f"{math.floor(val / (60 * 60 * 24))} days{f', {shorten_time(rest)}' if rest > 0 else ''}"
 
 
 @global_jinja_fun
@@ -205,6 +206,7 @@ def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
 game_id_regex = re.compile(r"^\w+(\.\w+)+$")
 game_id_split_regex = re.compile(r"\w+")
 
+
 @global_jinja_fun
 def is_game_id_formatted(string: str) -> bool:
     """
@@ -228,3 +230,26 @@ def is_game_split_formatted(string: str) -> bool:
     if game_id_split_regex.match(string):
         return True
     return False
+
+
+game_uuid_re = re.compile(r"^[a-f0-9]{8}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{12}$")
+
+
+def is_uuid(string: str) -> bool:
+    """
+    Checks if a string is formatted like a game UUID.
+    :param string:  A string to check.
+    :return:        `True` if the string is an appropriately formatted game UUID. Otherwise `False`
+    """
+    if game_uuid_re.match(string):
+        return True
+    else:
+        return False
+
+
+def generate_uuid() -> str:
+    """
+    Generates a UUID that can be used in game.
+    :return:    A unique identifier string that can be used to uniquely address an object in the game.
+    """
+    return str(uuid.uuid4()).replace('-', ':')

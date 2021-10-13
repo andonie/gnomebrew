@@ -27,15 +27,18 @@ def reset_game_data(user: User):
     """
     # Remove user from event database
     remove_all_event_data(user)
-    # Set relevant data points to default values
 
+    # Reset all Game Data
     res = mongo.db.users.update_one({'username': user.get_id()}, {'$set': {
-        'data': {'storage': {'content': {'gold': 0}}},
-        'ingame_event': {
-            'queued': ['ig_event.start'],
-            'finished': []
-        }
-    }})
+        'data': User.INITIAL_DATA}
+    })
+
+    # The game is kicked off the quest `quest.welcome` by convention
+    from gnomebrew.game.objects import Quest
+
+    start_quest: Quest = Quest.from_id('quest.welcome')
+    start_quest.initialize_for(user)
+
 
 @application_test(name='Reset User Data', category='Admin')
 def reset_game_data_frontend(username: str):

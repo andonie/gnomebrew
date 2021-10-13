@@ -9,7 +9,7 @@ from flask_socketio import emit
 from flask_login import login_required, current_user
 from flask import request
 from typing import Callable
-from gnomebrew.game.gnomebrew_io import TYPE_ERROR, GameResponse
+from gnomebrew.game.gnomebrew_io import TYPE_ERROR, GameResponse, SERVER_ERROR
 import functools
 from flask_socketio import disconnect, join_room
 
@@ -51,7 +51,7 @@ def player_request():
         response.finalize(current_user)
     except Exception as e:
         log_exception('gb_system', e, 'request', level=logging.ERROR)
-        return TYPE_ERROR.to_json()
+        return SERVER_ERROR.to_json()
 
 
     log('gb_system', f"processed", 'request', request.form['request_type'], f'usr:{current_user.get_id()}')

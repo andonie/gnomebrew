@@ -1,0 +1,20 @@
+{#
+ # Renders the state of a quest as logged in the current player data.
+ # Expects a quest data from player data (not full quest data) to render.
+ #}
+<div class="gb-quest-info">
+    <div class="quest-header gb-icon-group">
+        <img src="{{ url_for('get_icon', game_id=data.icon) }}" class="gb-icon-lg">
+        <div class="title-wrap">
+            <div class="quest-title">{{ data.name }}</div>
+            <div class="quest-subtitle">{{ data.description }}</div>
+        </div>
+
+    </div>
+    <div class="gb-progress-bar">
+
+    </div>
+    <div class="gb-foldout">
+        {{ data.foldout }}
+    </div>
+</div>
