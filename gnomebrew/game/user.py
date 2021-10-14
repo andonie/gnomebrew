@@ -194,7 +194,7 @@ class User(UserMixin):
                 '_id': {},
                 '_str': {}
             },
-            'stations': [],
+            'stations': ['station.quest', 'station.storage'],
             'id_listeners': []
         },
         'storage': {

@@ -129,13 +129,30 @@ class Quest(StaticGameObject, PublicGameObject):
                 effect.execute_on(user)
 
         # Remove all traces from this quest from the user data
-        print(f"REMOVING {self.get_minimized_id()}")
-        print(user.update(f"data.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs))
+        user.update(f"data.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs)
+
+        # Remove any traces of quest items (from storage) and quest stations (from station list)
+        station_list = user.get("data.special.stations", **kwargs)
+        user.update("data.special.stations", list(filter(lambda s_id: not s_id.startswith(f"quest_data.{self.get_minimized_id()}.station"),
+                                                         station_list)), **kwargs)
+
+        # TODO Quest Item Removal
+
         # Remove this quest from the quest data
         user.frontend_update('ui', {
             'type': 'remove_element',
             'selector': f"#{css_friendly(self.get_id())}-active"
         })
+
+    def get_station_id_list(self) -> List[str]:
+        """
+        Convenience function. Returns a list of all station IDs that are associated with this quest.
+        :return:    A list of station IDs. Can be empty if no stations are associated with this quest.
+        """
+        if 'data' not in self._data or 'station' not in self._data['data']:
+            return []
+        else:
+            return list(self._data['station'].keys())
 
     # Formatting Helpers
     def generate_available_user_data(self) -> dict:

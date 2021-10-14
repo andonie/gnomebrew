@@ -209,7 +209,7 @@ function reload_element(element_name) {
 
 function add_station(station_name) {
     console.log('adding station: ' + station_name);
-    $.post('/play/game_id/html.station.' + station_name).done(function(response) {
+    $.post('/play/game_id/html.' + station_name).done(function(response) {
         element = $(response);
         animate_whole_ui(element);
         $('.gb-grid').append(element);

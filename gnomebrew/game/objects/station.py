@@ -9,10 +9,11 @@ from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, get_resolver, html_generator
 from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.logging import log_exception
 
 
 @get_resolver('station')
-def station(game_id: str, user: User):
+def station(game_id: str, user: User, **kwargs):
     return StaticGameObject.from_id(game_id)
 
 
@@ -46,15 +47,24 @@ class Station(StaticGameObject):
         Initializes this station for a given user with the station's `init_data`.
         :param user:    a user. We assume this user has not yet had data connected to this station.
         """
-        print(f"Initializing {self=}")
+        # Add station ID to station list to ensure it's recognized as an active station
+        user.update("data.special.stations", self.get_id(), mongo_command="$push", **kwargs)
+
+        # If this station has data to add,
         # Add new station in user data with default values.
-        # Also ignore the frontend, since we will manually send an add_station update to the frontend.
-        user.update(f"data.{self.get_minimized_id()}", self._data['init_data'], **kwargs)
+        if 'init_data' in self._data:
+            user.update(f"data.{self.get_minimized_id()}", self._data['init_data'], **kwargs)
 
         # If this station has an init-effect to be executed, do so now.
         if 'init_effect' in self._data:
             for effect in [Effect(data) for data in self._data['init_effect']]:
                 effect.execute_on(user, **kwargs)
+
+        # Finally, send the respective update to all active frontends
+        user.frontend_update('ui', {
+            'type': 'add_station',
+            'station': self.get_id()
+        })
 
     def has_slots(self) -> bool:
         """
@@ -76,16 +86,20 @@ def add_station(user: User, effect_data: dict, **kwargs):
     :param user:        a user
     :param effect_data: effect data dict formatted as `effect_data['station'] = station_id`
     """
-    print("ADDING STATION")
-    # Load the respective station and initialize it for this user
-    station: Station = StaticGameObject.from_id(effect_data['station'])
-    station.initialize_for(user)
+    print(f"ADD STATION: {effect_data}")
+    if 'station' not in effect_data:
+        raise Exception(f"Missing element 'station'")
 
-    # Send the respective update to all active frontends
-    user.frontend_update('ui', {
-        'type': 'add_station',
-        'station': station.get_minimized_id()
-    })
+    station_id = effect_data['station']
+    try:
+        station: Station = user.get(station_id, **kwargs)
+    except Exception as a:
+        # Load the respective station and initialize it for this user
+        log_exception('effect', a, 'Could not find station')
+        return
+
+    # Initialize Station
+    station.initialize_for(user)
 
 
 @html_generator(base_id='html.station', is_generic=True)
@@ -111,9 +125,7 @@ def get_unlocked_station_list(user: User, **kwargs) -> List[Station]:
     Convenience function for playscreen rendering. Returns
     :return:
     """
-    station_data = user.get('data', **kwargs)
-    return [ station for station in Station.get_all_of_type('station').values()
-             if station.get_minimized_id() in station_data and not station.has_special_ui()]
+    return [user.get(station_id, **kwargs) for station_id in user.get("data.special.stations")]
 
 
 @selection_id('selection.station.collapsed', is_generic=True)
