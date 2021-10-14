@@ -34,10 +34,12 @@ def reset_game_data(user: User):
     })
 
     # The game is kicked off the quest `quest.welcome` by convention
-    from gnomebrew.game.objects import Quest
+    from gnomebrew.game.objects import Quest, Effect
 
-    start_quest: Quest = Quest.from_id('quest.welcome')
-    start_quest.initialize_for(user)
+    Effect({
+        'effect_type': 'add_available_quests',
+        'quest_ids': ['quest.welcome']
+    }).execute_on(user)
 
 
 @application_test(name='Reset User Data', category='Admin')

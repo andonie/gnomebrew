@@ -12,7 +12,7 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import GameObject, render_object
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, get_resolver, id_update_listener, load_user
-from gnomebrew.game.util import global_jinja_fun, generate_uuid
+from gnomebrew.game.util import global_jinja_fun, generate_uuid, render_info
 
 
 class Prompt(GameObject):
@@ -346,6 +346,13 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
             prompt_object['prompt_id'] = generate_uuid()
         if 'show_immediately' in prompt_object and prompt_object['show_immediately']:
             display_immediately = prompt_object
+        else:
+            user.frontend_update('ui', {
+                'type': 'player_info',
+                'target': '#gb-global-info',
+                'content': render_info('new', 'special.prompt'),
+                'duration': 100
+            })
 
     # Execute Queue Prompts
     user.update('data.special.prompts', {'$each': effect_data['prompts']}, mongo_command='$push')

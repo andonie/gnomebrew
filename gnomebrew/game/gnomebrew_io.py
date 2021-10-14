@@ -70,15 +70,12 @@ class GameResponse(object):
                               All other elements will be added straight into the info box in a wrapper div.
         """
         html_content = render_info(*info_elements, info_class='gb-info-warning', title=core_message)
-        print(f"{html_content=}")
         self.add_ui_update({
             'type':  'player_info',
-            'target': self.get_ui_target(),
+            'target': kwargs['target'] if 'target' in kwargs else self.get_ui_target(),
             'content': html_content,
             'duration': 40
         })
-
-
 
     def log(self, log: str):
         """

@@ -8,7 +8,7 @@
 
 
 {% block station_body %}
-{% with active_quests = current_user.get('quest._active', id_buffer=buffer) %}
+{% with active_quests = current_user.get('quest._active', id_buffer=buffer), available_quests = current_user.get('data.quest.available', id_buffer=buffer) %}
 <div class="quest-view-navigation">
 
 </div>
@@ -17,10 +17,15 @@
         {{ icon('special.active_quests') | safe }}
         Active Quests
     </div>
-    <div class="quest-list active-quests gb-foldout">
-        {% for quest_id in active_quests %}
-        {{ render_object('render.quest_state', data=active_quests[quest_id]) | safe }}
-        {% endfor %}
+    <div class="quest-list active-quests gb-foldout" id="quests-active">
+        {% for quest_id in active_quests %}{{ render_object('render.active_quest', data=active_quests[quest_id]) | safe }}{% endfor %}
+    </div>
+    <div class="gb-icon-group gb-quest-headline gb-toggle-view" data-toggles=".available-quests">
+        {{ icon('special.available_quests') | safe }}
+        Available Quests
+    </div>
+    <div class="quest-list available-quests gb-foldout" id="quests-available">
+        {% for quest_id in available_quests %}{{ render_object('render.available_quest', data=available_quests[quest_id]) | safe }}{% endfor %}
     </div>
 </div>
 {% endwith %}

@@ -1,0 +1,18 @@
+{# Bas rendering class for quests  #}
+<div class="gb-quest-content" id="{% block id %}{{ css_friendly(data.quest_id) }}{% endblock %}">
+    {% block quest_header %}
+    {{ foldout_id }}
+    <div class="quest-header gb-icon-group gb-toggle-view" data-toggles="#{{ css_friendly(data.quest_id) }}-foldout">
+        <img src="{{ url_for('get_icon', game_id=data.icon) }}" class="gb-icon-lg">
+        <div class="title-wrap">
+            <div class="quest-title">{{ data.name }}</div>
+            <div class="quest-subtitle">{{ data.description }}</div>
+        </div>
+    </div>
+    {% endblock %}
+    <div class="gb-info-container" id="{{ css_friendly(data.quest_id) }}-infos">{% block quest_infos %}{% endblock %}</div>
+    {% block sub_header %}{% endblock %}
+    {{ foldout_id }}
+    <div class="gb-foldout gb-toggle-hidden" id="{{ css_friendly(data.quest_id) }}-foldout">{{ data.foldout }}</div>
+    {% block quest_content %}{% endblock %}
+</div>

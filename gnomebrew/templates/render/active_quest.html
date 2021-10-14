@@ -1,0 +1,14 @@
+{% extends 'render/quest.html' %}
+
+{#
+ # Renders the state of a quest as logged in the current player data.
+ # Expects a quest data from player data (not full quest data) to render.
+ #}
+{% block id %}{{ super() }}-active{% endblock %}
+{% block sub_header %}
+<div class="gb-progress-bar"></div>
+{% endblock %}
+
+{% block quest_content %}
+<div class="quest-objectives" id="quest-objectives.{{ css_friendly(data.quest_id.split('.')[1]) }}">{{ render_object('render.objective_list', data=data.current_objectives) | safe }}</div>
+{% endblock %}

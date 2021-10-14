@@ -140,6 +140,12 @@ function handle_ui_req(data) {
         case 'reload_element':
             reload_element(data.element);
             break;
+        case 'remove_element':
+            $(data.selector).remove();
+            break;
+        case 'append_element':
+            $(data.selector).append(data.element);
+            break;
         case 'prompt':
             display_prompt(data.prompt_html);
             break;

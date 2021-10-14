@@ -247,6 +247,19 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     user.update('data', inventory_update, is_bulk=True)
 
 
+@Effect.type_info('delta_inventory')
+def generate_type_info_for(effect_data: dict) -> List[List[str]]:
+    """
+    Generates the info for a delta inventory event.
+    :param effect_data: Data to render info for.
+    :return:            Info-lines to display
+    """
+    infos = list()
+    for item_id in effect_data['delta']:
+        infos.append([item_id, effect_data['delta'][item_id]])
+    return infos
+
+
 @global_jinja_fun
 def get_available_category_data(user: User, **kwargs) -> List[dict]:
     """

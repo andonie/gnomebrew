@@ -291,6 +291,7 @@ def update_static_data():
     tiered_lookup = dict()
 
     for job in _load_job_list:
+        log('gb_core', f'loading {job["collection"]}', 'boot_routines')
         base_dict = dict()
         entity_type = None
         for doc in mongo.db[job['collection']].find({}, {'_id': False}):

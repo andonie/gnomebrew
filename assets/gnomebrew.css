@@ -298,14 +298,14 @@ img {
 /* BUTTONS */
 
 .gb-button {
-    border-width: 3.5px;
-    border-color: #5e484f;
+    border: 3.5px solid #5e484f;
     border-top-left-radius: 20px;
     border-bottom-left-radius: 5px;
     border-top-right-radius: 5px;
     border-bottom-right-radius: 20px;
     background: #aca7a9;
     transition: all 0.3s;
+    flex-shrink: 0;
 }
 
 .gb-button:hover {

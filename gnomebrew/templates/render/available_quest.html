@@ -1,0 +1,18 @@
+{#
+ # Renders an available quest view.
+ # Expects the `data.quest.available` quest `data`.
+ #}
+{% extends 'render/quest.html' %}
+{% block id %}{{ super() }}-available{% endblock %}
+{% block quest_header %}
+<div class="quest-header-wrap">
+{{ super() }}
+ <div class="gb-button" onclick="one_way_game_request({'request_type': 'accept_quest', 'quest_id': '{{ data.quest_id }}'}, '{{ css_friendly(data.quest_id) }}-infos', this)">{{ icon('special.take_quest') | safe }}</div>
+</div>
+{% endblock %}
+
+{% block quest_infos %}
+{% for info_data in data.challenge_infos %}{{ render_info(*info_data, icon_class='gb-icon') | safe}}{% endfor %}
+<div class="">{{ icon("special.results_in", class='gb-icon') | safe }}</div>
+{% for info_data in data.reward_infos %}{{ render_info(*info_data, icon_class='gb-icon') | safe}}{% endfor %}
+{% endblock %}

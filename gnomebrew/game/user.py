@@ -189,7 +189,7 @@ class User(UserMixin):
             'selection': {
                 '_bool': {
                     'storage_expanded': 'false',
-                    'quest_expanded': 'false'
+                    'quest_expanded': 'true'
                 },
                 '_id': {},
                 '_str': {}
@@ -353,7 +353,8 @@ class User(UserMixin):
         * `suppress_frontend`: If this is set `True`, no frontend updates will be run.
         """
         id_type = game_id.split('.')[0]
-        assert id_type in _UPDATE_RESOLVERS
+        if id_type not in _UPDATE_RESOLVERS:
+            raise Exception(f"Unkown ID type: {id_type}")
 
         if 'id_buffer' in kwargs:
             # If A Buffer is used currently, make sure it invalidates this ID properly
@@ -575,15 +576,15 @@ class IDBuffer:
         """
         return max([buffer_id for buffer_id in self._buffer_data if game_id.startswith(buffer_id)], key=len, default=None)
 
-    def _split_at_game_id(self, game_id: str, invalidate_id: str):
-        result = self.evaluate_id(game_id)
+    def _split_at_game_id(self, game_id: str, invalidate_id: str, dynamic_id: bool):
+        result = self.evaluate_id(game_id, dynamic_id)
         del self._buffer_data[game_id]
         for key in result:
             sub_id = f"{game_id}.{key}"
-            self.include(sub_id, result[key])
+            self.include(sub_id, result[key], dynamic_id)
             if invalidate_id.startswith(sub_id):
                 # Must split this key, too.
-                self._split_at_game_id(sub_id, invalidate_id)
+                self._split_at_game_id(sub_id, invalidate_id, dynamic_id)
 
 
     def contains_id(self, game_id: str, dynamic_id: bool):
@@ -640,7 +641,7 @@ class IDBuffer:
                 elif game_id.startswith(buffer_id):
                     # Indirect hit. Game ID on buffer starts with this ID.
                     # Take the buffered dict and split its' contents and add to the buffer
-                    self._split_at_game_id(buffer_id, game_id)
+                    self._split_at_game_id(buffer_id, game_id, dynamic_id)
         else:
             if game_id in self._buffer_data:
                 del self._buffer_data[game_id]

@@ -378,7 +378,7 @@ input {
     max-height: 90vh;
 }
 
-.gb-quest-info {
+.gb-quest-content {
     padding: 5px;
     border-radius: 10px;
     background: #624e54;
@@ -391,6 +391,25 @@ input {
 .quest-obj-indicator.obj-achieved {
     background: #6ec36e;
 }
+
+.quest-header-wrap {
+    display: flex;
+    flex-flow: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    align-content: center;
+}
+
+.quest-header-wrap > .gb-button {
+    border-color: #e7bf8b;
+}
+
+.gb-quest-content > .gb-info-container > .gb-info {
+    color: #3e3034;
+    font-size: 0.8em;
+    padding-right: 8px;
+}
+
 
 .gb-quest-headline {
     background: #e7bf8b;
@@ -417,7 +436,7 @@ input {
     flex-direction: column;
     flex-wrap: nowrap;
     gap: 5px;
-    margin-top: 10px;
+    margin: 10px 0px;
 }
 
 .active-quests {

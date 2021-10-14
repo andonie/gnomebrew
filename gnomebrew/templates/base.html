@@ -21,6 +21,7 @@
             {% block navbar %}
             <nav class="gb-navbar">
                 {% block brand %}<a class="gb-brand" href="{{ url_for('index') }}">Gnomebrew</a>{% endblock %}
+                <div class="gb-info-container" id="gb-global-info"></div>
                 {% block navbar_content %}
                 <div class="gb-navbar-links">
                     {% block navbar_extras %}{% endblock %}

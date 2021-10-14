@@ -2,6 +2,7 @@
 Essentially, Gnomebrew tries to keep all entity information formatted as JSON data.
 The `DataObject` class wraps any such data with rich features and a dedicated inheritance tree.
 """
+import logging
 import uuid
 from typing import Union, Any
 
@@ -21,7 +22,7 @@ class DataObject:
         if not data:
             raise Exception(f"Invalid data added: {data=}")
         if not isinstance(data, dict):
-            log('gb_system', f'object data was not a dict. Was: {str(data)}')
+            log('gb_system', f'object data was not a dict. Was: {str(data)}', level=logging.WARN)
         self._data = data
 
     def get_json(self) -> dict:
