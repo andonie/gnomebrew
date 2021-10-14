@@ -6,18 +6,22 @@ import copy
 from typing import List, Callable
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects import Station
 from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.objects.condition import Condition
 from gnomebrew.game.objects.effect import Effect
+from gnomebrew.game.objects.item import Item
+from gnomebrew.game.objects.recipe import Recipe
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, GameObject, PublicGameObject, \
     render_object
 from gnomebrew.game.objects.objective import Objective
 from gnomebrew.game.testing import application_test
-from gnomebrew.game.user import User, get_resolver, load_user, id_update_listener, html_generator
+from gnomebrew.game.user import User, get_resolver, load_user, id_update_listener, html_generator, get_postfix, \
+    update_resolver
 from gnomebrew.game.util import generate_uuid, css_friendly, render_info
 
 
-@PublicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest')
+@PublicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest', dynamic_buffer=False)
 @load_on_startup('scripted_quests')
 class Quest(StaticGameObject, PublicGameObject):
     """
@@ -51,7 +55,8 @@ class Quest(StaticGameObject, PublicGameObject):
             'description': self._data['description'],
             'foldout': self._data['foldout'],
             'icon': self._data['icon'],
-            'slots': self._data['slots'] if 'slots' in self._data else 0
+            'slots': self._data['slots'] if 'slots' in self._data else 0,
+            'data': self.generate_initial_quest_data()
         }
         user.update(f"data.quest.active.{self.get_minimized_id()}", base_quest_data)
 
@@ -124,7 +129,8 @@ class Quest(StaticGameObject, PublicGameObject):
                 effect.execute_on(user)
 
         # Remove all traces from this quest from the user data
-        user.update(f"data.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs)
+        print(f"REMOVING {self.get_minimized_id()}")
+        print(user.update(f"data.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs))
         # Remove this quest from the quest data
         user.frontend_update('ui', {
             'type': 'remove_element',
@@ -172,6 +178,25 @@ class Quest(StaticGameObject, PublicGameObject):
                 for info in reward_effect.generate_infos():
                     infos.append(info)
         return infos
+
+    def generate_initial_quest_data(self) -> dict:
+        """
+        Generates this quest's intial data.
+        Quests can contain various data from quest entities (quest stations/recipes/items/etc.) to quest variables
+        (e.g. player quest decisions). All of this data is stored in `data.quest.active.<quid>.data`.
+        This function generates the this quest's initial data.
+        :return:    Quest's initial `data`.
+        """
+        quest_data = dict()
+        # Quest internal data
+        quest_data['_flags'] = {}
+
+        # Quest Entities visible to player:
+        if 'data' in self._data:
+            for entity_class in self._data['data']:
+                quest_data[entity_class] = self._data['data'][entity_class]
+
+        return quest_data
 
 
 class QuestState(GameObject):
@@ -304,6 +329,43 @@ class StaticQuest(Quest, StaticGameObject):
         Quest.__init__(self, db_data)
 
 
+questdata_entity_types = {
+    'station': Station,
+    'item': Item,
+    'recipe': Recipe,
+    '_flags': lambda x: x,
+}
+
+def _validate_questdata_splits(splits: List[str], user: User):
+    """
+    :param splits: Splits of a `quest_data` Game ID
+    :param user     Target user
+    :raises         An exception if the ID is obviously malformatted
+    """
+    if len(splits) != 4 or splits[2] not in questdata_entity_types:
+        raise Exception(f"Malformatted ID: {splits=}")
+    if splits[1] not in user.get("data.quest.active"):
+        raise Exception(f"Quest currently not taken by user.")
+
+
+@get_resolver('quest_data', dynamic_buffer=True)
+def get_quest_data(user: User, game_id: str, **kwargs):
+    splits = game_id.split('.')
+    _validate_questdata_splits(splits, user)
+    return questdata_entity_types[splits[2]](user.get(f"data.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
+
+
+@update_resolver('quest_data')
+def resolve_quest_update(user: User, game_id: str, update, **kwargs):
+    """
+    Updates player quest data.
+    """
+    splits = game_id.split('.')
+    _validate_questdata_splits(splits, user)
+    return user.update(f"data.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", update, **kwargs)
+
+
+
 @Effect.type('qu')
 def review_quest_objectives(user: User, effect_data: dict, **kwargs):
     if 'updated_id' not in kwargs or 'updated_value' not in kwargs:
@@ -360,7 +422,7 @@ def add_available_quest(user: User, effect_data: dict, **kwargs):
     :param effect_data:     Effect data
     :param kwargs:          kwargs
     """
-    if 'quest_ids' not in effect_data:
+    if 'quest_ids' not in effect_data or len(effect_data['quest_ids'])==0:
         raise Exception(f"No quest_ids was given for command.")
 
     quest_data = user.get("data.quest", **kwargs)
@@ -411,7 +473,7 @@ def start_quest_immediately(user: User, effect_data: dict, **kwargs):
         raise Exception(f"Malformatted quest_id: {effect_data['quest_id']}")
 
     # Get the quest object for this quest and execute it
-    Quest(user.get(effect_data['quest_id'])).initialize_for(user, **kwargs)
+    user.get(effect_data['quest_id']).initialize_for(user, **kwargs)
 
 
 @PlayerRequest.type('accept_quest', is_buffered=True)
@@ -447,7 +509,7 @@ def accept_quest(user: User, request_object: dict, **kwargs):
     quest = user.get(request_object['quest_id'])
 
     # Check if the user has slots available still for another quest.
-    current_slot_number = sum([active_data['slots'] for active_data in quest_data['active']])
+    current_slot_number = sum([quest_data['active'][active_data]['slots'] for active_data in quest_data['active']])
     if current_slot_number + quest.get_static_value('slots') > user.get('attr.quest.slots'):
         response.add_fail_msg('Not enough slots to add this quest.')
         response.player_info(f"Not enough capacity to execute.", 'special.at_limit')

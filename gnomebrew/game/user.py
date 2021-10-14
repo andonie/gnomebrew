@@ -194,6 +194,7 @@ class User(UserMixin):
                 '_id': {},
                 '_str': {}
             },
+            'stations': [],
             'id_listeners': []
         },
         'storage': {
@@ -332,8 +333,8 @@ class User(UserMixin):
 
         # If this is postfixed and the critical split length has been reached, apply post-GET postfix operations.
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
-            for split in splits[resolver_data['postfix_start']:]:
-                result = resolver_data['postfix_fun'](result, split)
+            result = resolver_data['postfix_fun'](result, splits[resolver_data['postfix_start']:])
+
 
         if 'id_buffer' in kwargs:
             kwargs['id_buffer'].include(game_id, result, dynamic_id=is_dynamic)

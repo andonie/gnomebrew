@@ -143,7 +143,7 @@ class PublicGameObject(GameObject):
     _public_id_lookup = dict()
 
     @classmethod
-    def setup(cls, dynamic_collection_name: str, game_id_prefix: str):
+    def setup(cls, dynamic_collection_name: str, game_id_prefix: str, **kwargs):
         """
         Decorates a `PublicGameObject` class to set it up as a publicly accessible datatype.
         :param dynamic_collection_name: the name of the MongoDB-collection that is managing the JSON data of this object type
@@ -165,7 +165,9 @@ class PublicGameObject(GameObject):
                 f"mongo:{dynamic_collection_name}")
 
         # Register a GET resolver for the data
-        get_resolver(type=game_id_prefix, dynamic_buffer=True, postfix_start=2)(
+        get_resolver(type=game_id_prefix,
+                     dynamic_buffer=True if 'dynamic_buffer' not in kwargs else kwargs['dynamic_buffer'],
+                     postfix_start=2)(
             cls.generate_get_resolver(game_id_prefix))
 
         # Register an UPDATE resolver for the data

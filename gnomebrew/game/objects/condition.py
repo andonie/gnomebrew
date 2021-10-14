@@ -75,8 +75,26 @@ class Condition(GameObject):
             return [display_data]
 
 
+# Condition Types
+
+
+@Condition.type('flag')
+def flag_check(value, condition_data: dict):
+    """
+    Checks if a certain flag is set.
+    :param value:
+    :param condition_data:
+    :return:
+    """
+
+id_eval_types = {
+    'equals': lambda val, data: 1 if val == data['target_value'] else 0,
+    'any': lambda val, data: 1
+}
 
 @Condition.type('id_eval')
-def id_eval_check(value, condtion_data: dict):
-    if condtion_data['eval_type'] == 'equals':
-        return 1 if value == condtion_data['target_value'] else 0
+def id_eval_check(value, condition_data: dict):
+    if condition_data['eval_type'] not in id_eval_types:
+        raise Exception(f"Evaluation Type {condition_data['eval_type']} not supported")
+    return id_eval_types[condition_data['eval_type']](value, condition_data)
+

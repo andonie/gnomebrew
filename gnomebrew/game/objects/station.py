@@ -105,11 +105,10 @@ def generate_station_html(game_id: str, user: User, **kwargs):
     return res
 
 
-
 @global_jinja_fun
 def get_unlocked_station_list(user: User, **kwargs) -> List[Station]:
     """
-
+    Convenience function for playscreen rendering. Returns
     :return:
     """
     station_data = user.get('data', **kwargs)

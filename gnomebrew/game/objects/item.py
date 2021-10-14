@@ -179,10 +179,13 @@ def item(game_id: str, user: User, **kwargs) -> Item:
 
 
 @get_postfix('item')
-def append_postfix(old: Item, split: str) -> Item:
+def append_postfix(old: Item, splits: List[str]) -> Item:
     new_data = copy.deepcopy(old.get_json())
     if 'postfixed' not in new_data:
         raise Exception(f'Cannot process postfix for {str(old)}')
+
+    assert len(splits) == 1
+    split = splits[0]
 
     new_data['game_id'] = f"{new_data['game_id']}.{split}"
     if 'postfix' not in new_data:

@@ -117,3 +117,15 @@ def repeat_event(user: User, effect_data: dict, **kwargs):
     for _ in range(repeat_times):
         target_effect.execute_on(user)
 
+@Effect.type('id_update')
+def id_update(user: User, effect_data: dict, **kwargs):
+    """
+    Updates a given ID with a given value.
+    :param user:        Target user
+    :param effect_data: Effect data.
+    :param kwargs:      kwargs
+    """
+    if 'game_id' not in effect_data or 'value' not in effect_data:
+        raise Exception(f"Missing data for ID Update: {effect_data}")
+
+    user.update(effect_data['game_id'], effect_data['value'], **kwargs)
