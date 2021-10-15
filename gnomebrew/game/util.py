@@ -152,7 +152,8 @@ def render_info(*info_elements, **kwargs):
     new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{kwargs["title"] if "title" in kwargs else ""}">'
     for element in info_elements:
         if is_game_id_formatted(element):
-            new_info += icon(element, img_class='gb-icon-sm' if 'icon_class' not in kwargs else kwargs['icon_class'])
+            with app.app_context():
+                new_info += icon(element, img_class='gb-icon-sm' if 'icon_class' not in kwargs else kwargs['icon_class'])
         else:
             new_info += f'<div class="gb-info-content">{element}</div>'
     new_info += '</div>'

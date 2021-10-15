@@ -4,9 +4,9 @@ This module manages the game's in-loading
 from os.path import join
 from typing import Type, Any, Callable, Union
 
-from flask import url_for, render_template
+from flask import render_template
 
-from gnomebrew import mongo
+from gnomebrew import mongo, app
 from gnomebrew.game import boot_routine
 from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.user import get_resolver, User, update_resolver
@@ -339,8 +339,29 @@ def render_object(game_id: str, data: Any, **kwargs) -> str:
     splits = game_id.split('.')
     assert splits[0] == 'render'
     log('game_id', 'rendering object', f'id:{game_id}')
-    template = render_template(join('render', f"{''.join(splits[1:])}.html"), data=data, **kwargs)
+    with app.app_context():
+        template = render_template(join('render', f"{''.join(splits[1:])}.html"), data=data, **kwargs)
     return template
+
+
+static_getters = {
+    'it_cat': lambda id: StaticGameObject.from_id(id),
+    'special': lambda id: StaticGameObject.from_id(id),
+    'item': lambda id: StaticGameObject.from_id(id)
+}
+
+@global_jinja_fun
+def static_get(game_id: str) -> GameObject:
+    """
+    Helper function for templates. Retrieves static data from a game ID. If the given GameID both exists and is a static
+    element (e.g. a base item or an item category) it will return this Game Object
+    :param game_id: Target ID
+    :return:        Result of a static get call for this function.
+    """
+    splits = game_id.split('.')
+    if splits[0] not in static_getters:
+        raise Exception(f"Cannot resolve {game_id} statically.")
+    return static_getters[splits[0]](game_id)
 
 
 @get_resolver('render')

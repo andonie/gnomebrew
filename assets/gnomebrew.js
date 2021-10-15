@@ -144,7 +144,9 @@ function handle_ui_req(data) {
             $(data.selector).remove();
             break;
         case 'append_element':
-            $(data.selector).append(data.element);
+            to_add = $(data.element);
+            animate_whole_ui(to_add);
+            $(data.selector).append(to_add);
             break;
         case 'prompt':
             display_prompt(data.prompt_html);

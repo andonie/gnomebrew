@@ -9,11 +9,11 @@ from flask import render_template, url_for
 
 from gnomebrew import log
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.objects.game_object import StaticGameObject
+from gnomebrew.game.objects.game_object import StaticGameObject, render_object
 from gnomebrew.game.objects.item import ItemCategory, Item
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import html_generator, User, id_update_listener, get_resolver, get_postfix, update_resolver
-from gnomebrew.game.util import global_jinja_fun, css_friendly
+from gnomebrew.game.util import global_jinja_fun, css_friendly, render_info
 
 
 def _get_display_function(game_id: str) -> str:
@@ -207,15 +207,20 @@ def get_storage_amounts(user: User, game_id: str, **kwargs):
     if splits[1] == '_content':
         # Return a full dict that describes the exact content with full item_id's mapped to the amount
         return _full_storage_dict(user, **kwargs)
-    target_item = user.get('.'.join(splits[1:]))
-    if target_item.has_postfixes() and len(splits) == 2:
-        # storage-data for first postfix is always a dict. Return sum of all
-        return sum(storage_data['item'][target_item.get_minimized_id()].values())
     else:
-        result = storage_data[splits[1]]
-        for split in splits[2:]:
-            result = result[split]
-        return result
+        # Evaluate storage data
+        ret = storage_data
+        for split in game_id.split('.')[1:]:
+            try:
+                ret = ret[split]
+            except:
+                raise Exception(f"Did not find {game_id} in storage")
+        if isinstance(ret, dict):
+            # Return value is a dict. Sum up all its content
+            ret = _storage_dict_iter(ret, dict(), "")
+        return ret
+
+
 
 
 @update_resolver('storage')
@@ -241,15 +246,13 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     user_inventory = user.get('storage._content', **kwargs)
     max_capacity = user.get('attr.storage.max_capacity', **kwargs)
     inventory_update = dict()
+    known_frontend_category_ids = list(map(lambda x: x['category'].get_id(), get_available_category_data(user, storage_ui=True)))
+    new_items = []
     for item_id in effect_data['delta']:
         item_object: Item = user.get(item_id)
         if item_id not in user_inventory:
             inventory_update[f'storage.content.{item_id}'] = min(max_capacity, effect_data['delta'][item_id])
-            # The new item might be orderable. In that case --> Add it to the price list
-            if item_object.is_orderable():
-                # inventory_update[f'tavern.prices.{item_object.get_minimized_id()}'] = item_object.get_static_value('base_value')
-                # TODO replace this logic with on_storage_added feature calling arbitrary effects
-                pass
+            new_items.append(item_object)
 
         if not item_object.has_storage_cap():
             # Gold is an exception and can grow to infinity always:
@@ -263,6 +266,38 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
                                                                           item_id])
 
     user.update('data', inventory_update, is_bulk=True)
+
+    for new_item in new_items:
+        data = {'item_id': new_item.get_id(), "amount": inventory_update[f"storage.content.{new_item.get_id()}"]}
+        item_amount_html = render_object('render.item_amount', data=data)
+        for category in new_item.get_categories():
+            if category.get_id() not in known_frontend_category_ids and category.is_frontend_category():
+                # Update user inventory locally to reflect the changes in this item before rendering the new category
+                user_inventory[new_item.get_id()] = inventory_update[f"storage.content.{new_item.get_id()}"]
+                # New category added. Add this to the frontend.]
+                render_data = generate_category_render_data(user, category)
+                user.frontend_update('ui', {
+                    'type': 'append_element',
+                    'selector': '.gb-storage-category-view',
+                    'element': render_object('render.storage_category',
+                                             data=render_data,
+                                             player_inventory=user_inventory,
+                                             category_selection_id=user.get(f'data.storage.it_cat_selections.{category.get_minimized_id()}', default='_unset', **kwargs))
+                })
+            else:
+                user.frontend_update('ui', {
+                    'type': 'append_element',
+                    'selector': f'#{css_friendly(category.get_id())}-items',
+                    'element': item_amount_html
+                })
+        user.frontend_update('ui',{
+            'type':  'player_info',
+            'target': '#gb-global-info',
+            'content': render_info('NEW:', new_item.get_id()),
+            'duration': 120
+        })
+
+        # The new item might be orderable. In that case --> Add it to the price list
 
 
 @Effect.type_info('delta_inventory')
@@ -293,11 +328,20 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
     for category in cat_dict.values():
         if all([category.has_static_key(key) and category.get_static_value(key) == kwargs[key] for key in kwargs]) and \
                 any([item for item in category.get_matching_items() if item.get_id() in player_storage]):
-            to_append = dict()
-            to_append['category'] = category
-            to_append['collapsed'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_collapsed", default=True)
-            to_append['visible'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_visible", default=True)
-            to_append['cat_order'] = category.get_static_value('cat_order') if category.has_static_key('cat_order') else 50
-            result.append(to_append)
+            result.append(generate_category_render_data(user, category))
 
     return sorted(result, key=lambda cat: cat['cat_order'])
+
+def generate_category_render_data(user: User, category: ItemCategory):
+    """
+    Generates the data expected by `render.storage_category` to render the data.
+    :param user:        Target user.
+    :param category:    Target category.
+    :return:            Appropriate data.
+    """
+    cat_data = dict()
+    cat_data['category'] = category
+    cat_data['collapsed'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_collapsed", default=True)
+    cat_data['visible'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_visible", default=True)
+    cat_data['cat_order'] = category.get_static_value('cat_order') if category.has_static_key('cat_order') else 50
+    return cat_data

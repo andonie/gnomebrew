@@ -1,0 +1,28 @@
+{# Renders an Item category. Expects one correctly formatted data element from `get_available_category_data` as `data`
+ # Also requires `player_inventory` to be set.
+ #}
+
+{% if player_inventory is not defined %}{% set player_inventory = data.player_inventory %}{% endif %}
+{% with category=data['category'], cat_collapsed=data['collapsed'], cat_visible=data['visible'] %}
+    <div class="gb-storage-category {{ css_friendly(category.get_id()) }} gb-foldout {% if not data.visible %}gb-toggle-hidden{% endif %}">
+        <div class="gb-category-header gb-toggle-view" data-toggles="#{{ css_friendly(category.get_id()) }}-items">
+            {{ icon(category.get_id(), class='gb-icon-sm') | safe }}
+            <div class="gb-category-heading-banner">{{ category.name() }}</div>
+            <div class="gb-info">
+                {{ icon('special.item_category_selected', class='gb-icon-sm') | safe }}
+                {% with icon_id = category_selection_id if category_selection_id != '_unset' else 'special.unset' %}{{ icon(category_selection_id, class='gb-icon-sm selection-it_cat-' + css_friendly(category.get_minimized_id()), id_buffer=buffer) | safe  }}{% endwith %}
+            </div>
+        </div>
+        <div class="gb-storage-category-items gb-info-container gb-foldout" id="{{ css_friendly(category.get_id()) }}-items">
+            {% for item in category.get_matching_items() %}
+            {% if item.get_id() in player_inventory %}
+            <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == category_selection_id %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
+                 data-select-value="{{ item.get_id() }}" data-peers=".{{ css_friendly(category.get_id()) }}-option" onclick="select('selection.{{ category.get_id() }}', this)">
+                {{ icon(item.get_id(), class='gb-icon-sm') | safe }}
+                <span class="storage-{{ css_friendly(item.get_id()) }}" data-value="{{ player_inventory[item.get_id()] }}">{{ shorten_num(player_inventory[item.get_id()]) }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% endwith %}

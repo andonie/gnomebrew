@@ -94,6 +94,12 @@ class Item(StaticGameObject):
         """
         return not self._data['disable_storage_cap'] if 'disable_storage_cap' in self._data else True
 
+    def get_categories(self) -> List['ItemCategory']:
+        """
+        :return: a list of all Item Category objects which include this item.
+        """
+        return [ItemCategory.from_id(f"it_cat.{cat_name}") for cat_name in self._data['categories']]
+
 
 @load_on_startup('item_categories')
 class ItemCategory(StaticGameObject):
@@ -135,6 +141,12 @@ class ItemCategory(StaticGameObject):
         but only belong into one main-category.
         """
         return self._data['is_main'] if 'is_main' in self._data else False
+
+    def is_frontend_category(self) -> bool:
+        """
+        :return: `True` if this category is visible in the frontend (e.g. in storage). Otherwise `False`
+        """
+        return 'storage_ui' not in self._data or self._data['storage_ui']
 
     def get_matching_items(self) -> List[Item]:
         """
