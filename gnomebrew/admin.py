@@ -12,36 +12,6 @@ from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew import app, mongo
 
 
-def remove_all_event_data(user: User):
-    """
-    Removes all event data in the `events` database for a user.
-    :param user:    Target User
-    """
-    mongo.db.events.delete_many({'target': user.get_id()})
-
-
-def reset_game_data(user: User):
-    """
-    Resets this user's game data to the **initial** state.
-    :param user:    User who should be reset.
-    """
-    # Remove user from event database
-    remove_all_event_data(user)
-
-    # Reset all Game Data
-    res = mongo.db.users.update_one({'username': user.get_id()}, {'$set': {
-        'data': User.INITIAL_DATA}
-    })
-
-    # The game is kicked off the quest `quest.welcome` by convention
-    from gnomebrew.game.objects import Quest, Effect
-
-    Effect({
-        'effect_type': 'add_available_quests',
-        'quest_ids': ['quest.welcome']
-    }).execute_on(user)
-
-
 @application_test(name='Reset User Data', category='Admin')
 def reset_game_data_frontend(username: str):
     """
@@ -51,7 +21,7 @@ def reset_game_data_frontend(username: str):
     if not User.user_exists(username):
         response.add_fail_msg(f"User {username} does not exist.")
         return response
-    reset_game_data(load_user(username))
+    load_user(username).reset_game_data()
     response.log(f"Reset data of {username} to starting conditions.")
     return response
 

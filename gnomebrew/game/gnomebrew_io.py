@@ -146,7 +146,7 @@ class GameResponse(object):
             if 'default' in kwargs:
                 return kwargs['default']
             else:
-                raise a
+                return "#gb-global-info"
 
     def finalize(self, user, **kwargs):
         """

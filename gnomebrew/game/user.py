@@ -477,6 +477,27 @@ class User(UserMixin):
         for assertion in _USER_ASSERTIONS:
             assertion(user)
 
+    def reset_game_data(self):
+        """
+        Resets this user's game data to the **initial** state.
+        :param self:    User who should be reset.
+        """
+        # Remove user from event database
+        mongo.db.events.delete_many({'target': self.get_id()})
+
+        # Reset all Game Data
+        res = mongo.db.users.update_one({'username': self.get_id()}, {'$set': {
+            'data': User.INITIAL_DATA}
+        })
+
+        # The game is kicked off the quest `quest.welcome` by convention
+        from gnomebrew.game.objects import Effect
+
+        Effect({
+            'effect_type': 'add_available_quests',
+            'quest_ids': ['quest.welcome']
+        }).execute_on(self)
+
 
 @login_manager.user_loader
 def load_user(user_id):

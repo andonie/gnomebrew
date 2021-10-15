@@ -77,3 +77,28 @@ class PlayerRequest(GameObject):
                 parsed_inputs[match.group(1)] = request_object[key]
 
         return parsed_inputs
+
+
+
+
+@PlayerRequest.type('reset_game_data')
+def reset_game_data(request_object: dict, user: User, **kwargs):
+    """
+    Resets a given user's game data if the confirmation is given in an additional variable.
+    :param user:            Target user.
+    :param effect_data:     Effect data.
+    :param kwargs:          kwargs
+    """
+    response = GameResponse()
+    if 'confirmation' not in request_object or request_object['confirmation'] != 'RESET':
+        response.add_fail_msg(f"Malformatted Request data: {request_object}")
+        response.player_info('Wrong input. Will not reset data.', f"{str(request_object['confirmation'])} is invalid.")
+
+    if response.has_failed():
+        return response
+
+    user.reset_game_data()
+
+    response.player_info('Player Data Reset!', "Reset! You're back at the very beginning.")
+
+    return response

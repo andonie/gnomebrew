@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% import "bootstrap/wtf.html" as wtf %}
 
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static_res', res='settings.js') }}"></script>
+{% endblock %}
+
 {% block app_content %}
 <h3>Game Settings</h3>
 
@@ -20,8 +25,12 @@
             <h4>Reset Password</h4>
             {{ wtf.quick_form(pw_form) }}
         </div>
-        <div class="gb-tab" id="tab-preferences">
-
+        <div class="gb-tab" id="tab-preferences" style="display:none;">
+            To reset your game data, type RESET below and then click the button.
+            <div style="display:flex;flex-direction:row;">
+                <div class="gb-button" onclick="attempt_reset()">{{ icon('special.reset') | safe }}</div>
+                <input type="text" id="reset-confirmation">
+            </div>
         </div>
     </div>
 </div>
