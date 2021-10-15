@@ -199,7 +199,11 @@ class User(UserMixin):
         },
         'storage': {
             'content': {
-                'gold': 0
+                'item': {
+                    'gold': 0
+                },
+                'quest_data': {
+                }
             },
             'it_cat_selections': {}
         },

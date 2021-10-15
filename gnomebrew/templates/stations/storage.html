@@ -27,7 +27,7 @@
 <div class="gb-storage-category-view">
 
     {% for data_object in category_data %}
-    {% with category=data_object['category'], cat_collapsed=data_object['collapsed'], cat_visible=data_object['visible'] %}{% with category_selection_id = current_user.get('selection.' + category.get_id()) %}
+    {% with category=data_object['category'], cat_collapsed=data_object['collapsed'], cat_visible=data_object['visible'] %}{% with category_selection_id = current_user.get('selection.' + category.get_id(), id_buffer=buffer) %}
     <div class="gb-storage-category {{ css_friendly(category.get_id()) }} gb-foldout {% if not data_object.visible %}gb-toggle-hidden{% endif %}">
         <div class="gb-category-header gb-toggle-view" data-toggles="#{{ css_friendly(category.get_id()) }}-items">
             {{ icon(category.get_id(), class='gb-icon-sm') | safe }}
@@ -39,11 +39,11 @@
         </div>
         <div class="gb-storage-category-items gb-info-container gb-foldout" id="{{ css_friendly(category.get_id()) }}-items">
             {% for item in category.get_matching_items() %}
-            {% if item.get_minimized_id() in player_inventory %}
+            {% if item.get_id() in player_inventory %}
             <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == current_user.get('data.storage.it_cat_selections.' + category.get_minimized_id(), default=None, id_buffer=buffer) %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
                  data-select-value="{{ item.get_id() }}" data-peers=".{{ css_friendly(category.get_id()) }}-option" onclick="select('selection.{{ category.get_id() }}', this)">
                 {{ icon(item.get_id(), class='gb-icon-sm') | safe }}
-                <span class="storage-{{ css_friendly(item.get_minimized_id()) }}" data-value="{{ player_inventory[item.get_minimized_id()] }}">{{ shorten_num(player_inventory[item.get_minimized_id()]) }}</span>
+                <span class="storage-{{ css_friendly(item.get_id()) }}" data-value="{{ player_inventory[item.get_id()] }}">{{ shorten_num(player_inventory[item.get_id()]) }}</span>
             </div>
             {% endif %}
             {% endfor %}

@@ -85,13 +85,11 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
     target_category: ItemCategory = ItemCategory.from_id(f"it_cat.{game_id_splits[2]}")
     if set_value:
         # Update item category choice.
-        assert set_value.startswith('item.')
         current_selection = user.get(game_id)
         if set_value == current_selection:
             # The selected item got selected again. Instead _unset
             set_value = '_unset'
-        user.update(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", set_value)
-        return 'no_mongo', {}
+        return user.update(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", set_value)
     else:
         # Give current item selection from Category
         if 'default' in kwargs:
@@ -107,9 +105,7 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
 
             best_item = _best_option_for_category(user, target_category)
             if best_item:
-                result = 'item.' + best_item
-                if result:
-                    return result
+                return best_item
 
             # No valid result was found
             if 'default' in kwargs:
@@ -119,7 +115,7 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
 
 
 def _best_option_for_category(user, target_category, **kwargs):
-    cat_item_names = list(map(lambda item_obj: item_obj.get_minimized_id(), target_category.get_matching_items()))
+    cat_item_names = list(map(lambda item_obj: item_obj.get_id(), target_category.get_matching_items()))
     user_storage = user.get('storage._content', **kwargs)
     cat_user_options = [(item_id, user_storage[item_id]) for item_id in user_storage if item_id in cat_item_names]
     if cat_user_options:
@@ -134,10 +130,10 @@ def forward_selection_update_to_frontends(user: User, data: dict, game_id: str, 
     for element in data:
         if data[element] == '_unset':
             # Special Case, selection was unset. Pick most appropriate item instead.
-            item_name = _best_option_for_category(user, ItemCategory.from_id(f"it_cat.{game_id.split('.')[3]}"))
-            target_item = user.get(f"item.{item_name}")
+            best_id = _best_option_for_category(user, ItemCategory.from_id(f"it_cat.{game_id.split('.')[3]}"))
+            target_item = user.get(best_id, **kwargs)
         else:
-            target_item = user.get(data[element])
+            target_item = user.get(data[element], **kwargs)
 
         # Change Icon Image
         reload_img = dict()
@@ -159,6 +155,37 @@ def forward_selection_update_to_frontends(user: User, data: dict, game_id: str, 
     })
 
 
+def _storage_dict_iter(data_source: dict, storage_dict: dict, parent_id: str) -> int:
+    """
+    Helper function to be used recursively. Iterates one layer of a storage dict and fills all relevant data for the
+    storage-dict-output.
+    :param data_source:     The source-dict to iterate. Expected to only contain dicts and end point int values.
+    :param storage_dict:    The storage dict to fill with the relevant data from this iteration.
+    :param parent_id:       The parent id layers to ensure correct naming in there.
+    :return                 Returns the sum of all underlying values.
+    """
+    total = 0
+    if not parent_id:
+        path_base = ""
+    else:
+        path_base = f"{parent_id}."
+    for source_split in data_source:
+        path = path_base + source_split
+        val = data_source[source_split]
+        if isinstance(val, int):
+            # Simple case. Add this value to the full storage dict:
+            storage_dict[path] = val
+            total += val
+        elif isinstance(val, dict):
+            # Layered case. iterate this dict recursively.
+            underlying = _storage_dict_iter(val, storage_dict, path)
+            storage_dict[path] = underlying
+            total += underlying
+        else:
+            raise Exception(f"Unexpected data source: {val}")
+    return total
+
+
 def _full_storage_dict(user: User, **kwargs):
     """
     Generates a dict for a given user, mapping every owned item ID to the amount in storage.
@@ -167,16 +194,8 @@ def _full_storage_dict(user: User, **kwargs):
     """
     storage_data = user.get('data.storage.content')
     result = dict()
-    for key in storage_data:
-        if Item.from_id(f"item.{key}").has_postfixes():
-            sum = 0
-            for subkey in storage_data[key]:
-                val = storage_data[key][subkey]
-                result[f"{key}.{subkey}"] = val
-                sum += val
-            result[key] = sum
-        else:
-            result[key] = storage_data[key]
+
+    _storage_dict_iter(storage_data, result, "")
 
     return result
 
@@ -188,11 +207,10 @@ def get_storage_amounts(user: User, game_id: str, **kwargs):
     if splits[1] == '_content':
         # Return a full dict that describes the exact content with full item_id's mapped to the amount
         return _full_storage_dict(user, **kwargs)
-
-    target_item = user.get(f"item.{'.'.join(splits[1:])}")
+    target_item = user.get('.'.join(splits[1:]))
     if target_item.has_postfixes() and len(splits) == 2:
         # storage-data for first postfix is always a dict. Return sum of all
-        return sum(storage_data[target_item.get_minimized_id()].values())
+        return sum(storage_data['item'][target_item.get_minimized_id()].values())
     else:
         result = storage_data[splits[1]]
         for split in splits[2:]:
@@ -223,26 +241,26 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     user_inventory = user.get('storage._content', **kwargs)
     max_capacity = user.get('attr.storage.max_capacity', **kwargs)
     inventory_update = dict()
-    for material in effect_data['delta']:
-        item_object: Item = user.get('item.' + material)
-        if material not in user_inventory:
-            inventory_update['storage.content.' + material] = min(max_capacity, effect_data['delta'][material])
+    for item_id in effect_data['delta']:
+        item_object: Item = user.get(item_id)
+        if item_id not in user_inventory:
+            inventory_update[f'storage.content.{item_id}'] = min(max_capacity, effect_data['delta'][item_id])
             # The new item might be orderable. In that case --> Add it to the price list
             if item_object.is_orderable():
                 # inventory_update[f'tavern.prices.{item_object.get_minimized_id()}'] = item_object.get_static_value('base_value')
-                # TODO add item_object to tavern price list.
+                # TODO replace this logic with on_storage_added feature calling arbitrary effects
                 pass
 
         if not item_object.has_storage_cap():
             # Gold is an exception and can grow to infinity always:
-            inventory_update[f"storage.content.{material}"] = user_inventory[material] + effect_data['delta'][material]
+            inventory_update[f"storage.content.{item_id}"] = user_inventory[item_id] + effect_data['delta'][item_id]
         else:
-            if material not in user_inventory:
-                user_inventory[f"storage.content.{material}"] = min(max_capacity, effect_data['delta'][material])
+            if item_id not in user_inventory:
+                user_inventory[f"storage.content.{item_id}"] = min(max_capacity, effect_data['delta'][item_id])
             else:
-                inventory_update[f"storage.content.{material}"] = min(max_capacity,
-                                                                      user_inventory[material] + effect_data['delta'][
-                                                                          material])
+                inventory_update[f"storage.content.{item_id}"] = min(max_capacity,
+                                                                      user_inventory[item_id] + effect_data['delta'][
+                                                                          item_id])
 
     user.update('data', inventory_update, is_bulk=True)
 
@@ -274,7 +292,7 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
 
     for category in cat_dict.values():
         if all([category.has_static_key(key) and category.get_static_value(key) == kwargs[key] for key in kwargs]) and \
-                any([item for item in category.get_matching_items() if item.get_minimized_id() in player_storage]):
+                any([item for item in category.get_matching_items() if item.get_id() in player_storage]):
             to_append = dict()
             to_append['category'] = category
             to_append['collapsed'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_collapsed", default=True)

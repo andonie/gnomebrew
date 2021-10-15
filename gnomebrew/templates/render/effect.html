@@ -6,7 +6,7 @@
 {% if effect_data is not defined %}{% set effect_data = data.effect_data %}{% endif %}
 {% if effect_type == 'delta_inventory' %}
 {% for item in effect_data.delta %}
-{% with item_id = "item."+item, cost=effect_data.delta[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-info gb-info-highlight') | safe}}{% endwith %}
+{% with item_id = item, cost=effect_data.delta[item] %}{{ render_object('render.item_amount', data={'item_id': item_id, 'amount': cost}, class='gb-info gb-info-highlight') | safe}}{% endwith %}
 {% endfor %}
 {% elif effect_type == 'upgrade' %}
 {% with class='gb-info gb-info-highlight' %}{{ render_object('render.upgrade_outcome', data=effect_data.to_upgrade, class=class) | safe }}{% endwith %}

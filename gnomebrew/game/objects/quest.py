@@ -48,8 +48,11 @@ class Quest(StaticGameObject, PublicGameObject):
         if qid in quest_data['available']:
             user.update(f"data.quest.available.{qid}", '', mongo_command='$unset', **kwargs)
 
-        # Update User Data to include this as an active quest
-        base_quest_data = {
+        # Update User Data to include this as an active quest and have the storage's `quest_data` fields include this
+        # category's ID:
+        update_data = dict()
+        # Base Quest Data
+        update_data[f"quest.active.{self.get_minimized_id()}"] = {
             'quest_id': self._data['game_id'],
             'name': self._data['name'],
             'description': self._data['description'],
@@ -58,7 +61,13 @@ class Quest(StaticGameObject, PublicGameObject):
             'slots': self._data['slots'] if 'slots' in self._data else 0,
             'data': self.generate_initial_quest_data()
         }
-        user.update(f"data.quest.active.{self.get_minimized_id()}", base_quest_data)
+
+        # Update for Storage
+        update_data[f"storage.content.quest_data.{self.get_minimized_id()}"] = {
+            'item': {}
+        }
+
+        user.update("data", update_data, is_bulk=True, **kwargs)
 
         # Transition into the first quest state
         self.transition_state(user, self._data['quest_start'], **kwargs)
