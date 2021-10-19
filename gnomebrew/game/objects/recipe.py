@@ -16,9 +16,8 @@ from gnomebrew.game.objects.item import ItemCategory, Item
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.request import PlayerRequest
-from gnomebrew.game.objects.upgrades import Upgrade
 from gnomebrew.game.user import get_resolver, User, html_generator
-from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.game.util import global_jinja_fun, css_friendly
 
 
 @get_resolver('recipe')
@@ -27,14 +26,20 @@ def recipe(game_id: str, user: User, **kwargs):
 
 
 @get_resolver('recipes')
-def recipes(game_id: str, user: User, **kwargs):
+def recipes(game_id: str, user: User, **kwargs) -> List['Recipe']:
+    """
+    Generates a list of valid Recipes that can currently be executed on a given station
+    :param game_id:     Target ID formatted as `recipes.<fullstationid>`
+    :param user:        Target user.
+    :param kwargs:      kwargs
+    :return:            A list of all recipes that can currently be executed on the given station
+    """
     splits = game_id.split('.')
-    assert len(splits) == 2
-    # Add default values to make the system not crap out before the workshop is unlocked
-    user_ws_data = user.get('data.workshop', default={'upgrades': [], 'finished_otr': []}, **kwargs)
-    return [r for r in Recipe.get_recipes_by_station(splits[1]) if r.can_execute(user,
-                                                                                 user_upgrades=user_ws_data['upgrades'],
-                                                                                 user_otr=user_ws_data['finished_otr'])]
+    target_station = user.get('.'.join(splits[1:]), **kwargs)
+    if target_station.has_recipes():
+        return [user.get(recipe_id, **kwargs) for recipe_id in user.get(f"data.{target_station.get_id()}.recipes", **kwargs)]
+    else:
+        return []
 
 
 def _find_best_postfix(postfix_result: dict, total_cost: dict) -> str:
@@ -77,7 +82,7 @@ class Recipe(StaticGameObject):
         :return:        The Game Response object summarizing the transaction.
         """
         response = GameResponse()
-        response.set_ui_target(f"#station-{self.get_static_value('station')}-infos")
+        response.set_ui_target(f"#{css_friendly(self.get_static_value('station'))}-infos")
 
         # ~~~~ Check if prerequisites are met ~~~~
 
@@ -104,14 +109,14 @@ class Recipe(StaticGameObject):
                              if item_id[5:] not in player_inventory or player_inventory[item_id[5:]] < total_cost[item_id]]
         if insufficent_items:
             response.add_fail_msg(f"You are missing resources: {', '.join(insufficent_items)}")
-            response.player_info(f"You are missing resources.", 'missing:', *insufficent_items)
+            response.player_info(user, f"You are missing resources.", 'missing:', *insufficent_items)
 
         # 2. Available Slots
         slots_list = user.get(f"slots.{self._data['station']}", **kwargs)
         slots_available = len([slot for slot in slots_list if slot['state'] == 'free'])
         if slots_available < self._data['slots']:
             response.add_fail_msg(f"Not enough slots available in {self._data['station']}")
-            response.player_info(f"Not enough capacity to execute.", 'special.at_limit')
+            response.player_info(user, f"Not enough capacity to execute.", 'special.at_limit')
 
         # 3. One Time Recipes
         if self.is_one_time():
@@ -119,22 +124,22 @@ class Recipe(StaticGameObject):
             if not self._otr_check(user):
                 # The recipe is already logged in the list of finished one-time-recipes. This cannot be crafted again.
                 response.add_fail_msg("This recipe can't be run more than once.")
-                response.player_info('This recipe was one-time and is already executed.', 'cannot execute')
+                response.player_info(user, 'This recipe was one-time and is already executed.', 'cannot execute')
 
         # 4. Recipe Already Available
         if not self.requirements_met(user):
             response.add_fail_msg('Recipe not unlocked yet.')
-            response.player_info('Recipe not unlocked yet', self.get_id(), 'unavailable')
+            response.player_info(user, 'Recipe not unlocked yet', self.get_id(), 'unavailable')
 
         # 5. Inventory change event can theoretically improve player inventory
         delta_inventory = next(filter(lambda effect_dict: effect_dict['effect_type']=='delta_inventory', self._data['result']), None)
         if delta_inventory:
-            max_capacity = user.get('attr.storage.max_capacity')
-            at_capacity_results = [f"item.{item}" for item in delta_inventory['delta']
+            max_capacity = user.get('attr.station.storage.max_capacity')
+            at_capacity_results = [item for item in delta_inventory['delta']
                                    if item in player_inventory and player_inventory[item] >= max_capacity]
             if len(at_capacity_results) == len(delta_inventory['delta'].keys()):
                 response.add_fail_msg('You are at storage capacity for all resulting items.')
-                response.player_info('You are at storage capacity for all resulting items.', 'attr.storage.max_capacity'
+                response.player_info(user, 'You are at storage capacity for all resulting items.', 'attr.station.storage.max_capacity'
                                      ,'full:', *at_capacity_results)
 
 
@@ -147,7 +152,7 @@ class Recipe(StaticGameObject):
         for material in total_cost:
             update_data[material[5:]] = player_inventory[material[5:]] - total_cost[material]
         if update_data:
-            user.update('data.storage.content', update_data, is_bulk=True)
+            user.update('data.station.storage.content', update_data, is_bulk=True)
 
         # (slots don't have to be discounted as they are logged via the eventqueue)
 
@@ -159,9 +164,9 @@ class Recipe(StaticGameObject):
         result: list = copy.deepcopy(self._data['result'])
         if self.is_one_time():
             result.append({
-                'effect_type': 'push_data',
-                'push_target': 'data.workshop.finished_otr',
-                'to_push': self.get_id()
+                'effect_type': 'pull_data',
+                'pull_target': f'{self._data["station"]}.recipes',
+                'to_pull': self.get_id()
             })
             result.append({
                 'effect_type': 'ui_update',
@@ -204,8 +209,7 @@ class Recipe(StaticGameObject):
         :param user:    a user
         :return:        `True` if this recipe can still be executed, otherwise `False`
         """
-        user_otr = user.get('data.workshop.finished_otr', **kwargs)
-        return self._data['game_id'] not in user_otr or mongo.db.events.find_one(
+        return self.get_id() in user.get(f"data.{self._data['station']}.recipes", **kwargs) and not mongo.db.events.find_one(
             {'target': user.get_id(), 'recipe_id': self._data['game_id']})
 
     def is_one_time(self):
@@ -315,113 +319,16 @@ class Recipe(StaticGameObject):
                 target_item = user.get(key.replace('-', '.'))
                 cost[target_item.get_minimized_id()] = cost[key]
                 del cost[key]
-            user.update('data.storage.content', cost, command='$inc', is_bulk=True)
+            user.update('data.station.storage.content', cost, command='$inc', is_bulk=True)
+
         response.succeess()
         return response
-
-
-def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str, List[dict]]:
-    """
-    Behavior for `slots._all` feature.
-    :param game_id: game ID that resulted in this call.
-    :param user:    calling user.
-    :param kwargs:
-    :return:        a dict mapping all known stations with slots to a list representing their current slot allocation.
-    """
-    ret = dict()
-    mongo_result = {x['_id']: x['etas'] for x in mongo.db.events.aggregate([{'$match': {
-        'target': user.username,
-        'due_time': {'$gt': datetime.utcnow()}
-    }}, {'$group': {'_id': '$station', 'etas': {'$push': {
-        'due': '$due_time',
-        'since': '$since',
-        'slots': '$slots',
-        'effect': '$effect',
-        'recipe': '$recipe_id',
-        'event_id': '$event_id'
-    }}}}])}
-    complete_station_data = mongo.db.users.find_one({"username": user.get_id()}, {'data': 1, '_id': 0})['data']
-    for _station in complete_station_data:
-        max_slots = user.get('attr.' + _station + '.slots', default=0, **kwargs)
-        if max_slots:
-            # _station is slotted. Add the necessary input to return value
-            ret[_station] = list()
-            if _station in mongo_result:
-                # By Default, add the implicit occupied state
-                for item in mongo_result[_station]:
-                    item['state'] = 'occupied'
-                ret[_station] = mongo_result[_station] + ([{'state': 'free'}] * (max_slots - len(mongo_result[_station])))
-            else:
-                ret[_station] = [{'state': 'free'}] * max_slots
-
-    return ret
-
-
-_special_slot_behavior = {
-    '_all': generate_complete_slot_dict
-}
-
-
-@get_resolver('slots')
-def slots(game_id: id, user: User, **kwargs) -> List[dict]:
-    """
-    Calculates slot data for a given station.
-
-    :param user:
-    :param game_id:       e.g. 'slots.well'
-    :return:              A list
-
-    """
-    splits = game_id.split('.')
-
-    # Interpret the game_id input
-    if splits[1] in _special_slot_behavior:
-        return _special_slot_behavior[splits[1]](game_id, user, **kwargs)
-
-    # Default: slots of a station
-
-    active_events = mongo.db.events.find({
-        'target': user.username,
-        'station': splits[1],
-        'due_time': {'$gt': datetime.utcnow()}
-    }, {
-        "_id": 0,
-        "effect": 1,
-        "due_time": 1,
-        "slots": 1,
-        "recipe_id": 1,
-        "since": 1,
-        "event_id": 1
-    })
-
-    slot_list = list()
-    total_slots_allocated = 0
-
-    for recipe_event in active_events:
-        slot_list.append({
-            'state': 'occupied',
-            'due': recipe_event['due_time'],
-            'since': recipe_event['since'],
-            'slots': recipe_event['slots'],
-            'effect': recipe_event['effect'],
-            'recipe': recipe_event['recipe_id'],
-            'event_id': recipe_event['event_id']
-        })
-        total_slots_allocated += recipe_event['slots']
-
-    # Fill up list with empty slots with appropriate empty slots
-    max_slots = user.get(f'attr.{splits[1]}.slots', **kwargs)
-    slot_list += [{
-        'state': 'free'
-    }] * (max_slots - total_slots_allocated)
-
-    return slot_list
 
 
 @PlayerRequest.type('recipe', is_buffered=True)
 def recipe(user: User, request_object: dict, **kwargs):
     if request_object['action'] == 'execute':
-        response = Recipe.from_id(request_object['recipe_id']).check_and_execute(user, **kwargs)
+        response = user.get(request_object['recipe_id']).check_and_execute(user, **kwargs)
     elif request_object['action'] == 'cancel':
         response = Recipe.cancel_running_recipe(request_object['event_id'], user)
     return response
@@ -435,7 +342,8 @@ def generate_slot_html(game_id: str, user: User, **kwargs):
     :param game_id:     e.g. 'html.slots.well'
     :return:            HTML rendering for the given slot environment/station. Returns an empty string for now slot data.
     """
-    station_name = game_id.split('.')[2]
+    splits = game_id.split('.')
+    station_name = '.'.join(splits[2:])
     return ''.join([render_object('render.slot', data=slot_data)
                     for slot_data in user.get(f"slots.{station_name}", **kwargs) if slot_data['state'] == 'occupied'])
 

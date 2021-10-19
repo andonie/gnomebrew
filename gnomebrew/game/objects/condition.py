@@ -46,7 +46,10 @@ class Condition(GameObject):
         :param game_id: ID to check.
         :return:    `True`, if `game_id` is relevant to this condition. Otherwise `False`.
         """
-        return False if 'target_id' not in self._data or self._data['state'] == 1 else self._data['target_id'] == game_id
+        if 'target_id' not in self._data or self._data['state'] == 1:
+            return False
+
+        return self._data['target_id'] == game_id
 
     def current_completion(self, value) -> float:
         """
@@ -73,6 +76,9 @@ class Condition(GameObject):
         if isinstance(display_data, str):
             # Primitive case. Return list to just render base text.
             return [display_data]
+        else:
+            # Assume the quest data is the info display as it is to be shown.
+            return display_data
 
 
 # Condition Types
@@ -89,7 +95,8 @@ def flag_check(value, condition_data: dict):
 
 id_eval_types = {
     'equals': lambda val, data: 1 if val == data['target_value'] else 0,
-    'any': lambda val, data: 1
+    'any': lambda val, data: 1,
+    'minimum': lambda val, data: val >= data,
 }
 
 @Condition.type('id_eval')

@@ -78,7 +78,7 @@ def generate_current_divination_map(user: User, **kwargs) -> List[List[WorldLoca
     :param user:    a user. Assumes user has access to the divination table.
     :return:        A user's current divination map as a quasi-matrix
     """
-    divination_radius = user.get('attr.divination_table.divination_radius', default=5, **kwargs)
+    divination_radius = user.get('attr.station.divination_table.divination_radius', default=5, **kwargs)
     matrix = get_locations_around(center=user.get('data.divination_table.current_focus', **kwargs),
                                   radius=divination_radius)
     # Shift matrix so that [0][0] is in the center instead of at the technical beginning

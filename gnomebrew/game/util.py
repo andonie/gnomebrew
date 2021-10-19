@@ -148,12 +148,17 @@ def icon(game_id: str, **kwargs):
 
 
 @global_jinja_fun
-def render_info(*info_elements, **kwargs):
+def render_info(user, *info_elements, **kwargs):
     new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{kwargs["title"] if "title" in kwargs else ""}">'
     for element in info_elements:
         if is_game_id_formatted(element):
             with app.app_context():
                 new_info += icon(element, img_class='gb-icon-sm' if 'icon_class' not in kwargs else kwargs['icon_class'])
+        elif element.startswith('id:'):
+            # Assume this to be a to-be updated Game ID and hence wrap it in an appropriate <span>
+            target_id = element[3:]
+            target_value = user.get(target_id, **kwargs, default=0)
+            new_info += f'<div class="{css_friendly(target_id)} gb-info-content">{target_value}</div>'
         else:
             new_info += f'<div class="gb-info-content">{element}</div>'
     new_info += '</div>'
@@ -220,6 +225,22 @@ def format_markdown(code: str) -> str:
     """
     code = render_template_string(code)
     return markdown(code)
+
+
+@global_jinja_fun
+def render_string(string: str, current_user: 'User') -> str:
+    """
+    Renders a Game Content String as HTML to display. In order to ensure the string is adapted to the user's current
+    state, template code is executed in the process.
+    :param string:  A string to render as stored in engine data. Could contain template code.
+    :param current_user:    A 'current_user' variable. Will be used in template content strings.
+    :return:        HTML formatted version of input string.
+    """
+    if current_user:
+        return render_template_string(string, current_user=current_user)
+    else:
+        raise Exception(f"Current User must be provided.")
+
 
 
 @global_jinja_fun

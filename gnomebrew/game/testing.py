@@ -194,7 +194,7 @@ def evaluate_game_id(game_id: str, username: str):
     evaluates on current player. Valid IDs are for example:
 
     * `item.gold`
-    * `data.storage.content.iron`
+    * `data.station.storage.content.iron`
     """
     response = GameResponse()
     if username is None or username == '':

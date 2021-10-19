@@ -92,13 +92,13 @@ def reset_game_data(request_object: dict, user: User, **kwargs):
     response = GameResponse()
     if 'confirmation' not in request_object or request_object['confirmation'] != 'RESET':
         response.add_fail_msg(f"Malformatted Request data: {request_object}")
-        response.player_info('Wrong input. Will not reset data.', f"{str(request_object['confirmation'])} is invalid.")
+        response.player_info(user, 'Wrong input. Will not reset data.', f"{str(request_object['confirmation'])} is invalid.")
 
     if response.has_failed():
         return response
 
     user.reset_game_data()
 
-    response.player_info('Player Data Reset!', "Reset! You're back at the very beginning.")
+    response.player_info(user, 'Player Data Reset!', "Reset! You're back at the very beginning.")
 
     return response

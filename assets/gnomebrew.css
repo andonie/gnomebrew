@@ -27,6 +27,13 @@ p {
     margin-bottom: 0;
 }
 
+strong {
+    font-weight: normal;
+    font-family: 'Press Start 2P';
+    font-size: 0.85em;
+    color: #e19093;
+}
+
 /* IMAGES */
 
 img {

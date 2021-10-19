@@ -30,7 +30,7 @@ def generate_new_inventory(user: User, **kwargs):
     :return:
     """
     # Get List of Items that are technically available in market
-    possible_items = user.get('attr.market.available_items', default=['grains', 'wood'], **kwargs)
+    possible_items = user.get('attr.station.market.available_items', default=['grains', 'wood'], **kwargs)
 
     # Identify this iteration's available funds
     market_budget = generate_procurement_budget(user)
@@ -58,7 +58,7 @@ def generate_procurement_budget(user: User) -> float:
     rng_factor = random_normal(median=MARKETING_RNG_MEDIAN, std_deviation=MARKETING_RNG_STD_DEVIATION)
     # Revenue Factor Calculation
 
-    return rng_factor * user.get('attr.market.budget_factor', default=1, **kwargs)
+    return rng_factor * user.get('attr.station.market.budget_factor', default=1, **kwargs)
 
 
 @PlayerRequest.type('market_buy', is_buffered=True)
@@ -79,9 +79,9 @@ def market_buy(user: User, request_object: dict, **kwargs):
     item_name = request_object['item_id'].split('.')[1]
     # Get Current Market Inventory
     item = user.get('data.market.inventory.' + item_name)
-    storage_capacity = user.get('attr.storage.max_capacity', **kwargs)
-    user_gold = user.get('data.storage.content.gold', **kwargs)
-    user_item_amount = user.get('data.storage.content.' + item_name, default=0, **kwargs)
+    storage_capacity = user.get('attr.station.storage.max_capacity', **kwargs)
+    user_gold = user.get('data.station.storage.content.gold', **kwargs)
+    user_item_amount = user.get('data.station.storage.content.' + item_name, default=0, **kwargs)
     ok = True
 
     if amount + user_item_amount > storage_capacity:
@@ -98,7 +98,7 @@ def market_buy(user: User, request_object: dict, **kwargs):
         response.succeess()
         item['stock'] -= amount
         user_gold -= amount * item['price']
-        user_item_num = int(user.get('data.storage.content.' + item_name, default=0, **kwargs))
+        user_item_num = int(user.get('data.station.storage.content.' + item_name, default=0, **kwargs))
         user.update('data', {
             'market.inventory.' + item_name: item,  # New Item Inventory
             'storage.content.gold': user_gold,

@@ -62,20 +62,21 @@ class GameResponse(object):
         self._data['type'] = 'fail'
 
 
-    def player_info(self, core_message, *info_elements, **kwargs):
+    def player_info(self, user, core_message, *info_elements, **kwargs):
         """
         Shorthand code to efficiently communicate from backend to frontend.
         Generates one info element with an arbitrary number of info content.
         :param info_elements: Info elements. Game IDs will automatically be recognized and turned into an icon of the ID.
                               All other elements will be added straight into the info box in a wrapper div.
         """
-        html_content = render_info(*info_elements, info_class='gb-info-warning', title=core_message)
+        html_content = render_info(user, *info_elements, info_class='gb-info-warning', title=core_message)
         self.add_ui_update({
             'type':  'player_info',
             'target': kwargs['target'] if 'target' in kwargs else self.get_ui_target(),
             'content': html_content,
             'duration': 40
         })
+        print(f"{html_content=}")
 
     def log(self, log: str):
         """

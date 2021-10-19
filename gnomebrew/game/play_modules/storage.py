@@ -22,7 +22,7 @@ def _get_display_function(game_id: str) -> str:
     :param game_id:     A game_id
     :return:            The function with which this data is to be displayed (e.g. 'shorten_num')
     """
-    if game_id in ['data.storage.content.gold']:
+    if game_id in ['data.station.storage.content.gold']:
         return 'shorten_cents'
     if game_id in ['special.time']:
         return 'shorten_time'
@@ -31,11 +31,11 @@ def _get_display_function(game_id: str) -> str:
     return 'shorten_num'
 
 
-@id_update_listener(r'^data\.storage\.content\.*')
+@id_update_listener(r'^data\.station\.storage\.content\.*')
 def forward_storage_update_to_ui(user: User, data: dict, game_id: str, **kwargs):
-    updated_elements = {css_friendly(f"storage.{'.'.join(item_id.split('.')[3:])}"): {'data': data[item_id],
+    updated_elements = {css_friendly(f"storage.{'.'.join(data_update_id.split('.')[4:])}"): {'data': data[data_update_id],
                                                                                       'display_fun': _get_display_function(
-                                                                                          game_id)} for item_id in data}
+                                                                                          game_id)} for data_update_id in data}
     if 'command' in kwargs:
         update_type = 'inc' if kwargs['command'] == '$inc' else 'set'
     else:
@@ -58,7 +58,7 @@ def category_toggle(game_id: str, user: User, set_value, **kwargs):
     if len(game_id_splits) != 3:
         raise Exception(f"Cannot evaluate Game-ID: {game_id}")
 
-    target_data_id = f'data.storage.it_cat_toggles.{game_id_splits[2]}'
+    target_data_id = f'data.station.storage.it_cat_toggles.{game_id_splits[2]}'
     if set_value == None:
         # Return current toggle status
         return user.get(target_data_id, default=True, **kwargs)
@@ -89,12 +89,12 @@ def selection_from_it_cat(game_id: str, user: User, set_value, **kwargs):
         if set_value == current_selection:
             # The selected item got selected again. Instead _unset
             set_value = '_unset'
-        return user.update(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", set_value)
+        return user.update(f"data.station.storage.it_cat_selections.{target_category.get_minimized_id()}", set_value)
     else:
         # Give current item selection from Category
         if 'default' in kwargs:
             del kwargs['default']
-        selected_item = user.get(f"data.storage.it_cat_selections.{target_category.get_minimized_id()}", default=None,
+        selected_item = user.get(f"data.station.storage.it_cat_selections.{target_category.get_minimized_id()}", default=None,
                                  **kwargs)
         if selected_item and selected_item != '_unset':
             # There's an item selected in this category
@@ -192,7 +192,7 @@ def _full_storage_dict(user: User, **kwargs):
     :param user:        A user.
     :return:            A dict with {game_id: amount} for all owned items.
     """
-    storage_data = user.get('data.storage.content')
+    storage_data = user.get('data.station.storage.content')
     result = dict()
 
     _storage_dict_iter(storage_data, result, "")
@@ -203,7 +203,7 @@ def _full_storage_dict(user: User, **kwargs):
 @get_resolver('storage', dynamic_buffer=False)
 def get_storage_amounts(user: User, game_id: str, **kwargs):
     splits = game_id.split('.')
-    storage_data = user.get('data.storage.content', **kwargs)
+    storage_data = user.get('data.station.storage.content', **kwargs)
     if splits[1] == '_content':
         # Return a full dict that describes the exact content with full item_id's mapped to the amount
         return _full_storage_dict(user, **kwargs)
@@ -214,25 +214,23 @@ def get_storage_amounts(user: User, game_id: str, **kwargs):
             try:
                 ret = ret[split]
             except:
-                raise Exception(f"Did not find {game_id} in storage")
+                # Did not find this in storage. Return default value if given or raise exception
+                if 'default' in kwargs:
+                    return kwargs['default']
+                else:
+                    raise Exception(f"Did not find {game_id} in storage")
         if isinstance(ret, dict):
             # Return value is a dict. Sum up all its content
             ret = _storage_dict_iter(ret, dict(), "")
         return ret
 
 
-
-
 @update_resolver('storage')
-def update_storage_amount(user: User, game_id: str, update, **kwargs):
-    # Format update data to conform with 'data' locations
-    if 'mongo_command' in kwargs:
-        command = kwargs['mongo_command']
-    else:
-        command = '$set'
-
-    user.update('data.storage.content', update, mongo_command=command, is_bulk=True)
-    return command, update
+def update_storage_amounts(user: User, game_id: str, update, **kwargs):
+    # Forward update data straight to the data location
+    splits = game_id.split('.')
+    appendage = '.'.join(splits[1:]) if game_id != 'storage' else ''
+    return user.update(f"data.station.storage.content{appendage}", update, **kwargs)
 
 
 @Effect.type('delta_inventory')
@@ -244,36 +242,34 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     """
     log('effect', f'executing effect', 'delta_inventory', f'usr:{user.get_id()}')
     user_inventory = user.get('storage._content', **kwargs)
-    max_capacity = user.get('attr.storage.max_capacity', **kwargs)
+    max_capacity = user.get('attr.station.storage.max_capacity', **kwargs)
     inventory_update = dict()
     known_frontend_category_ids = list(map(lambda x: x['category'].get_id(), get_available_category_data(user, storage_ui=True)))
     new_items = []
     for item_id in effect_data['delta']:
         item_object: Item = user.get(item_id)
         if item_id not in user_inventory:
-            inventory_update[f'storage.content.{item_id}'] = min(max_capacity, effect_data['delta'][item_id])
+            inventory_update[item_id] = min(max_capacity, effect_data['delta'][item_id])
             new_items.append(item_object)
 
         if not item_object.has_storage_cap():
             # Gold is an exception and can grow to infinity always:
-            inventory_update[f"storage.content.{item_id}"] = user_inventory[item_id] + effect_data['delta'][item_id]
+            inventory_update[item_id] = user_inventory[item_id] + effect_data['delta'][item_id]
         else:
             if item_id not in user_inventory:
-                user_inventory[f"storage.content.{item_id}"] = min(max_capacity, effect_data['delta'][item_id])
+                user_inventory[item_id] = min(max_capacity, effect_data['delta'][item_id])
             else:
-                inventory_update[f"storage.content.{item_id}"] = min(max_capacity,
-                                                                      user_inventory[item_id] + effect_data['delta'][
-                                                                          item_id])
+                inventory_update[item_id] = min(max_capacity, user_inventory[item_id] + effect_data['delta'][item_id])
 
-    user.update('data', inventory_update, is_bulk=True)
+    user.update('storage', inventory_update, is_bulk=True)
 
     for new_item in new_items:
-        data = {'item_id': new_item.get_id(), "amount": inventory_update[f"storage.content.{new_item.get_id()}"]}
+        data = {'item_id': new_item.get_id(), "amount": inventory_update[new_item.get_id()]}
         item_amount_html = render_object('render.item_amount', data=data)
         for category in new_item.get_categories():
             if category.get_id() not in known_frontend_category_ids and category.is_frontend_category():
                 # Update user inventory locally to reflect the changes in this item before rendering the new category
-                user_inventory[new_item.get_id()] = inventory_update[f"storage.content.{new_item.get_id()}"]
+                user_inventory[new_item.get_id()] = inventory_update[new_item.get_id()]
                 # New category added. Add this to the frontend.]
                 render_data = generate_category_render_data(user, category)
                 user.frontend_update('ui', {
@@ -282,7 +278,7 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
                     'element': render_object('render.storage_category',
                                              data=render_data,
                                              player_inventory=user_inventory,
-                                             category_selection_id=user.get(f'data.storage.it_cat_selections.{category.get_minimized_id()}', default='_unset', **kwargs))
+                                             category_selection_id=user.get(f'data.station.storage.it_cat_selections.{category.get_minimized_id()}', default='_unset', **kwargs))
                 })
             else:
                 user.frontend_update('ui', {
@@ -293,7 +289,7 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
         user.frontend_update('ui',{
             'type':  'player_info',
             'target': '#gb-global-info',
-            'content': render_info('NEW:', new_item.get_id()),
+            'content': render_info(user, 'NEW:', new_item.get_id()),
             'duration': 120
         })
 

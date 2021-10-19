@@ -8,7 +8,7 @@ from gnomebrew.game.objects.recipe import Recipe as Recipe
 from gnomebrew.game.objects.people import Person as Person
 from gnomebrew.game.objects.world import WorldLocation as WorldLocation
 from gnomebrew.game.objects.station import Station as Station
-from gnomebrew.game.objects.upgrades import Upgrade as Upgrade
+import gnomebrew.game.objects.upgrades
 from gnomebrew.game.objects.generation import Generator as Generator
 from gnomebrew.game.objects.quest import Quest as Quest
 from gnomebrew.game.objects.quest import Objective as Objective

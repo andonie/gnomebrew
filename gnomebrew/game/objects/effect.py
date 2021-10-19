@@ -94,6 +94,18 @@ def push_data(user: User, effect_data: dict, **kwargs):
     user.update(push_target, push_data, mongo_command='$push')
 
 
+@Effect.type('pull_data')
+def pull_data(user: User, effect_data: dict, **kwargs):
+    """
+    Event execution for an arbitrary push (list append) of data.
+    :param user:            The user to execute on.
+    :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
+    """
+    pull_data = effect_data['to_pull']
+    push_target = effect_data['pull_target']
+    user.update(push_target, pull_data, mongo_command='$pull')
+
+
 @Effect.type('ui_update')
 def ui_update(user: User, effect_data: dict, **kwargs):
     """

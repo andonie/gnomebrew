@@ -323,7 +323,7 @@ def min_length(input_data: dict, data, response: GameResponse):
     """
     if len(data) < input_data['min_length']:
         response.add_fail_msg(f"Minimum length is {input_data['min_length']}")
-        response.player_info(f'Input must be longer than {input_data["min_length"]}', 'must be', 'special.greater_than', str(input_data['min_length']))
+        response.player_info(None, f'Input must be longer than {input_data["min_length"]}', 'must be', 'special.greater_than', str(input_data['min_length']))
 
 
 
@@ -350,7 +350,7 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
             user.frontend_update('ui', {
                 'type': 'player_info',
                 'target': '#gb-global-info',
-                'content': render_info('new', 'special.prompt'),
+                'content': render_info(user, 'new', 'special.prompt'),
                 'duration': 100
             })
 

@@ -8,7 +8,7 @@
 
 
 {% block station_body %}
-{% with active_quests = current_user.get('quest._active', id_buffer=buffer), available_quests = current_user.get('data.quest.available', id_buffer=buffer) %}
+{% with active_quests = current_user.get('quest._active', id_buffer=buffer), available_quests = current_user.get('data.station.quest.available', id_buffer=buffer) %}
 <div class="quest-view-navigation">
 
 </div>

@@ -84,7 +84,7 @@ class Patron(Person):
         """
         # Budget was a standardized value. Budget however depends on game upgrades of specific user, too
         # In play, gold values only make sense in cents, so format the actual budget to an int
-        self._data['budget'] = int(self._data['budget'] * user.get('attr.tavern.budget_multiplicator', default=1, **kwargs))
+        self._data['budget'] = int(self._data['budget'] * user.get('attr.station.tavern.budget_multiplicator', default=1, **kwargs))
         self._data['tab'] = dict()
         uuid = GameObject.generate_uuid()
         self._data['id'] = uuid
@@ -202,7 +202,7 @@ class Patron(Person):
         thirst = self.generate_thirst(user, saturation_factor=total_saturation)
 
         budget_count = self._data['budget']
-        desire_threshold = AVG_DESIRE_THRESHOLD * user.get('attr.tavern.desire_threshold_factor', default=1, **kwargs)
+        desire_threshold = AVG_DESIRE_THRESHOLD * user.get('attr.station.tavern.desire_threshold_factor', default=1, **kwargs)
 
         for wish in wish_list:
             item_name = wish['item'].get_minimized_id()
@@ -222,7 +222,7 @@ class Patron(Person):
                                  wish['demand']))
                 budget_count -= amount * prices[item_name]
                 thirst -= amount * (
-                        orderable_data['thirst_reduction'] * user.get('attr.tavern.thirst_reduction_mul',
+                        orderable_data['thirst_reduction'] * user.get('attr.station.tavern.thirst_reduction_mul',
                                                                       default=1, **kwargs))
                 order_dict[item_name] = amount
 
@@ -272,7 +272,7 @@ class Patron(Person):
             # This item has already been ordered. Apply saturation factor
             return self._saturation_factor_formula(self._data['tab'][item_name],
                                                    orderable_item.get_static_value('orderable')['saturation_speed'] * user.get(
-                                                       'attr.tavern.saturation_factor', default=1, **kwargs))
+                                                       'attr.station.tavern.saturation_factor', default=1, **kwargs))
         else:
             # Not ordered this yet. Factor = 1
             return 1
@@ -284,7 +284,7 @@ class Patron(Person):
         :return:        The total saturation factor value taking into account all parameters.
         """
         return self._saturation_factor_formula(sum(self._data['tab'].values()),
-                                               BASE_THIRST_DECAY * user.get('attr.tavern.thirst_decay_factor',
+                                               BASE_THIRST_DECAY * user.get('attr.station.tavern.thirst_decay_factor',
                                                                             default=1, **kwargs))
 
     def generate_wait_time(self, user: User, **kwargs) -> timedelta:
@@ -307,7 +307,7 @@ class Patron(Person):
                                   (self._data['personality']['neuroticism'] * -0.30) +
                                   ((self._data['personality']['extraversion'] - 1) * len(
                                       user.get('data.tavern.queue', **kwargs)) * 0.02)) *
-                                 user.get('attr.tavern.personality_flex', default=1, **kwargs)) + 1
+                                 user.get('attr.station.tavern.personality_flex', default=1, **kwargs)) + 1
         wait_in_s *= personality_influence
         return timedelta(seconds=wait_in_s)
 
@@ -337,7 +337,7 @@ class Patron(Person):
             saturation = self.calculate_individual_saturation_factor(item, user)
             fair_price = item.determine_fair_price(user)
             personality_adjust = 1 + item.personality_adjust(self._data['personality']) * user.get(
-                'attr.tavern.personality_flex', default=1, **kwargs)
+                'attr.station.tavern.personality_flex', default=1, **kwargs)
             current_price = prices[item.get_minimized_id()]
             result = {
                 'desire': self.generate_desire_for(orderable_item=item,
@@ -377,7 +377,7 @@ class Patron(Person):
         fair_price = kwargs['fair_price'] if 'fair_price' in kwargs else orderable_item.determine_fair_price(user)
         personality_adjust = kwargs['personality_adjust'] if 'personality_adjust' in kwargs else \
             1 + orderable_item.personality_adjust(self._data['personality']) * user.get(
-                'attr.tavern.personality_flex', default=1, **kwargs)
+                'attr.station.tavern.personality_flex', default=1, **kwargs)
         if current_price < fair_price:
             denominator = 3 - math.cos(TWO_PI * (current_price - fair_price) / fair_price)
         elif current_price > fair_price:
@@ -405,7 +405,7 @@ class Patron(Person):
         orderable_data = orderable_item.get_static_value('orderable')
         personality_adjust = kwargs['personality_adjust'] if 'personality_adjust' in kwargs else \
             1 + orderable_item.personality_adjust(self._data['personality']) * user.get(
-                'attr.tavern.personality_flex', default=1, **kwargs)
+                'attr.station.tavern.personality_flex', default=1, **kwargs)
         saturation_factor = kwargs[
             'saturation'] if 'saturation' in kwargs else self.calculate_individual_saturation_factor(
             orderable_item, user)
@@ -428,19 +428,19 @@ class Patron(Person):
             personality_influence = ((self._data['personality']['agreeableness'] * -.14) +
                                      (self._data['personality']['extraversion'] * .02) +
                                      (self._data['personality']['neuroticism'] * .02)
-                                     * user.get('attr.tavern.personality_flex', default=1, **kwargs)) + 1
+                                     * user.get('attr.station.tavern.personality_flex', default=1, **kwargs)) + 1
         else:
             personality_influence = ((self._data['personality']['neuroticism'] * .08) +
                                      (self._data['personality']['extraversion'] * .02) +
                                      (self._data['personality']['openness'] * -.12)
                                      (self._data['personality']['conscientiousness'] * -.10)
-                                     * user.get('attr.tavern.personality_flex', default=1, **kwargs)) + 1
+                                     * user.get('attr.station.tavern.personality_flex', default=1, **kwargs)) + 1
 
         saturation_factor = kwargs['saturation_factor'] if 'saturation_factor' in kwargs else \
             self.calculate_total_saturation_factor(user)
 
         base_thirst = random_normal(min=MIN_BASE_THIRST, max=MAX_BASE_THIRST)
-        return base_thirst * personality_influence * user.get('attr.tavern.thirst_multiplier',
+        return base_thirst * personality_influence * user.get('attr.station.tavern.thirst_multiplier',
                                                               default=1, **kwargs) / saturation_factor
 
     ## PLAYER TRANSACTIONS
@@ -484,13 +484,13 @@ class Patron(Person):
         # Gifting Items Feature
         if 'bonus_item' in kwargs:
             bonus_item: Item = Item.from_id(f"item.{kwargs['bonus_item']}")
-            current_storage = user.get(f"data.storage.content.{bonus_item.get_minimized_id()}", **kwargs)
+            current_storage = user.get(f"data.station.storage.content.{bonus_item.get_minimized_id()}", **kwargs)
             if current_storage < 1:
                 response.add_fail_msg(f"Missing 1 {bonus_item.name()} in storage.")
             else:
                 # Apply everything now before main data is loaded:
                 self.give_bonus_item(bonus_item)
-                user.update(f"data.storage.content.{bonus_item.get_minimized_id()}", current_storage - 1)
+                user.update(f"data.station.storage.content.{bonus_item.get_minimized_id()}", current_storage - 1)
 
         # Check if enough of the required product is in storage
         storage = user.get('storage._content', **kwargs)
@@ -674,7 +674,7 @@ def patron_enter(user: User, effect_data: dict, **kwargs):
     tavern_data = user.get('data.tavern', **kwargs)
 
     # Check if pub is full
-    if len(tavern_data['patrons']) >= user.get('attr.tavern.capacity', **kwargs):
+    if len(tavern_data['patrons']) >= user.get('attr.station.tavern.capacity', **kwargs):
         # The Tavern is full. Patron cannot enter
         return
 
@@ -784,7 +784,7 @@ def _process_user(user: User, tavern_data: dict, patron_list: list):
     now = datetime.utcnow()
 
     # Define the number of Patrons that will join the tavern in this cycle
-    num_patrons = int(random_normal(min=0, max=user.get('attr.tavern.patron_influx', default=10, **kwargs)))
+    num_patrons = int(random_normal(min=0, max=user.get('attr.station.tavern.patron_influx', default=10, **kwargs)))
     patron_entry_times = random_uniform(min=0, max=_CYCLE_TIME, size=num_patrons)
     for patron, entry_delay in zip(patron_list[:num_patrons], patron_entry_times):
         _generate_patron_enter_event(target=user.get_id(),

@@ -3,8 +3,12 @@ Implements basic quest logic in Gnomebrew.
 Governed by the 'quest'-ID-prefix
 """
 import copy
+from os.path import join, isdir, isfile
 from typing import List, Callable
 
+from flask import render_template
+
+from gnomebrew import app
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import Station
 from gnomebrew.game.objects.request import PlayerRequest
@@ -39,14 +43,14 @@ class Quest(StaticGameObject, PublicGameObject):
         :param kwargs:  kwargs
         """
         qid = self.get_minimized_id()
-        quest_data = user.get("data.quest", **kwargs)
+        quest_data = user.get("data.station.quest", **kwargs)
 
         if qid in quest_data['active']:
             raise Exception(f"Quest {qid} is already active.")
 
         # If this quest ID is currently in `available`, remove now.
         if qid in quest_data['available']:
-            user.update(f"data.quest.available.{qid}", '', mongo_command='$unset', **kwargs)
+            user.update(f"data.station.quest.available.{qid}", '', mongo_command='$unset', **kwargs)
 
         # Update User Data to include this as an active quest and have the storage's `quest_data` fields include this
         # category's ID:
@@ -67,10 +71,17 @@ class Quest(StaticGameObject, PublicGameObject):
             'item': {}
         }
 
-        user.update("data", update_data, is_bulk=True, **kwargs)
+        user.update("data.station", update_data, is_bulk=True, **kwargs)
 
         # Transition into the first quest state
         self.transition_state(user, self._data['quest_start'], **kwargs)
+
+        # Once all is done, add this quest to the user's frontend.
+        user.frontend_update('ui', {
+            'type': 'append_element',
+            'selector': "#quests-active",
+            'element': render_object('render.active_quest', data=user.get(f"data.station.quest.active.{self.get_minimized_id()}"))
+        })
 
     def transition_state(self, user: User, state_id: str, **kwargs):
         """
@@ -84,7 +95,7 @@ class Quest(StaticGameObject, PublicGameObject):
         user.register_id_listeners(list(new_listener_ids),
                                    {'effect_type': 'qu', 'quest': f"{self.get_minimized_id()}.{state_id}"},
                                    starts_with=True)
-        user.update(f"data.quest.active.{self.get_minimized_id()}.current_state", state_id, **kwargs)
+        user.update(f"data.station.quest.active.{self.get_minimized_id()}.current_state", state_id, **kwargs)
         # Initialize next state.
         next_state.initialize_for(user, self.get_minimized_id())
 
@@ -101,7 +112,7 @@ class Quest(StaticGameObject, PublicGameObject):
         :param user:    Target user.
         :param kwargs:  kwargs
         """
-        last_state = user.get(f"data.quest.active.{self.get_minimized_id()}.current_state", **kwargs)
+        last_state = user.get(f"data.station.quest.active.{self.get_minimized_id()}.current_state", **kwargs)
         # CLEAN UP CURRENT STATE
         # Remove all listeners from my the current quest state before transitioning
         print(f'Checking {user.get_id_listeners()=} against {f"{self.get_minimized_id()}.{last_state}"=}')
@@ -121,14 +132,14 @@ class Quest(StaticGameObject, PublicGameObject):
             user.frontend_update('ui', {
                 'type': 'player_info',
                 'target': '#gb-global-info',
-                'content': render_info('station.quest', 'progress'),
+                'content': render_info(user, 'station.quest', 'progress'),
                 'duration': 100
             })
 
     def on_complete(self, user: User, **kwargs):
         """
         Called when this quest is completed. Resolves any pending actions such as rewards/effects and then removes all
-        quest data from the `data.quest` region.
+        quest data from the `data.station.quest` region.
         :param user:        Target user.
         :param kwargs:      kwargs
         """
@@ -138,14 +149,14 @@ class Quest(StaticGameObject, PublicGameObject):
                 effect.execute_on(user)
 
         # Remove all traces from this quest from the user data
-        user.update(f"data.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs)
+        user.update(f"data.station.quest.active.{self.get_minimized_id()}", "", mongo_command='$unset', **kwargs)
 
         # Remove any traces of quest items (from storage) and quest stations (from station list)
         station_list = user.get("data.special.stations", **kwargs)
         user.update("data.special.stations", list(filter(lambda s_id: not s_id.startswith(f"quest_data.{self.get_minimized_id()}.station"),
                                                          station_list)), **kwargs)
-
-        # TODO Quest Item Removal
+        # Remove any quest items
+        user.update(f"data.station.storage.content.quest_data.{self.get_minimized_id()}", '', mongo_command='$unset', **kwargs)
 
         # Remove this quest from the quest data
         user.frontend_update('ui', {
@@ -205,6 +216,8 @@ class Quest(StaticGameObject, PublicGameObject):
                     infos.append(info)
         return infos
 
+    no_id_quest_data_entities = ['_flags']
+
     def generate_initial_quest_data(self) -> dict:
         """
         Generates this quest's intial data.
@@ -220,7 +233,11 @@ class Quest(StaticGameObject, PublicGameObject):
         # Quest Entities visible to player:
         if 'data' in self._data:
             for entity_class in self._data['data']:
-                quest_data[entity_class] = self._data['data'][entity_class]
+                quest_data[entity_class] = copy.deepcopy(self._data['data'][entity_class])
+                if entity_class not in Quest.no_id_quest_data_entities:
+                    for entity in quest_data[entity_class]:
+                        quest_data[entity_class][entity]['game_id'] = f"quest_data.{self.get_minimized_id()}.{entity_class}.{entity}"
+
 
         return quest_data
 
@@ -241,7 +258,7 @@ class QuestState(GameObject):
         :param quest_id: Minimized name of the parent quest ID
         """
         # Update user data.
-        user.update(f"data.quest.active.{quest_id}.current_objectives", self.generate_user_objective_data(user),
+        user.update(f"data.station.quest.active.{quest_id}.current_objectives", self.generate_user_objective_data(user),
                     **kwargs)
 
         # Execute all effects attached
@@ -306,7 +323,7 @@ class QuestState(GameObject):
         :param kwargs:  kwargs
         :return:        A `dict` with all active quests.
         """
-        return user.get('data.quest.active', **kwargs)
+        return user.get('data.station.quest.active', **kwargs)
 
 
 class QuestObjective(GameObject):
@@ -370,7 +387,7 @@ def _validate_questdata_splits(splits: List[str], user: User):
     """
     if len(splits) != 4 or splits[2] not in questdata_entity_types:
         raise Exception(f"Malformatted ID: {splits=}")
-    if splits[1] not in user.get("data.quest.active"):
+    if splits[1] not in user.get("data.station.quest.active"):
         raise Exception(f"Quest currently not taken by user.")
 
 
@@ -378,7 +395,7 @@ def _validate_questdata_splits(splits: List[str], user: User):
 def get_quest_data(user: User, game_id: str, **kwargs):
     splits = game_id.split('.')
     _validate_questdata_splits(splits, user)
-    return questdata_entity_types[splits[2]](user.get(f"data.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
+    return questdata_entity_types[splits[2]](user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
 
 
 @update_resolver('quest_data')
@@ -388,7 +405,7 @@ def resolve_quest_update(user: User, game_id: str, update, **kwargs):
     """
     splits = game_id.split('.')
     _validate_questdata_splits(splits, user)
-    return user.update(f"data.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", update, **kwargs)
+    return user.update(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", update, **kwargs)
 
 
 
@@ -406,7 +423,7 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
     # An ID relevant to at least one quest has been updated. Propagate the update to the relevant quest objectives.
     quest_splits = effect_data['quest'].split('.')
     quest_id = quest_splits[0]
-    objective_dict = user.get(f"data.quest.active.{quest_id}.current_objectives", **kwargs)
+    objective_dict = user.get(f"data.station.quest.active.{quest_id}.current_objectives", **kwargs)
 
     check_for_completion = False
 
@@ -434,7 +451,7 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
                 check_for_completion = True
 
     if update_data:
-        user.update('data.quest.active', update_data, is_bulk=True, **kwargs)
+        user.update('data.station.quest.active', update_data, is_bulk=True, **kwargs)
 
     if check_for_completion and all([objective_dict[obj]['state'] == 1 for obj in objective_dict]):
         user.get(f"quest.{quest_id}").progress_quest(user, **kwargs)
@@ -451,7 +468,7 @@ def add_available_quest(user: User, effect_data: dict, **kwargs):
     if 'quest_ids' not in effect_data or len(effect_data['quest_ids'])==0:
         raise Exception(f"No quest_ids was given for command.")
 
-    quest_data = user.get("data.quest", **kwargs)
+    quest_data = user.get("data.station.quest", **kwargs)
     update_data = dict()
     for quest_id in effect_data['quest_ids']:
         splits = quest_id.split('.')
@@ -468,7 +485,16 @@ def add_available_quest(user: User, effect_data: dict, **kwargs):
         # All checks passed. get the quest object and get its rendered available-data rendering
         update_data[target_id_mini] = user.get(quest_id).generate_available_user_data()
 
-    user.update(f"data.quest.available", update_data, is_bulk=True, **kwargs)
+    user.update(f"data.station.quest.available", update_data, is_bulk=True, **kwargs)
+
+    # Update frontend to reflect the added quests
+    for quest_id in effect_data['quest_ids']:
+        user.frontend_update('ui', {
+            'type': 'append_element',
+            'selector': "#quests-available",
+            'element': render_object('render.available_quest',
+                                     data=user.get(f"data.station.quest.available.{quest_id.split('.')[1]}"))
+        })
 
 
 @Effect.type_info('add_available_quests')
@@ -515,12 +541,11 @@ def accept_quest(user: User, request_object: dict, **kwargs):
     """
     response = GameResponse()
 
-
     if 'quest_id' not in request_object:
         raise Exception(f"No quest_id given in {request_object=}")
 
     quest_id = '.'.join(request_object['quest_id'].split('.')[1:])
-    quest_data = user.get('data.quest')
+    quest_data = user.get('data.station.quest')
 
     # Check if quest is currently available and not active
     if quest_id in quest_data['active']:
@@ -536,15 +561,15 @@ def accept_quest(user: User, request_object: dict, **kwargs):
 
     # Check if the user has slots available still for another quest.
     current_slot_number = sum([quest_data['active'][active_data]['slots'] for active_data in quest_data['active']])
-    if current_slot_number + quest.get_static_value('slots') > user.get('attr.quest.slots'):
+    if current_slot_number + quest.get_static_value('slots') > user.get('attr.station.quest.slots'):
         response.add_fail_msg('Not enough slots to add this quest.')
-        response.player_info(f"Not enough capacity to execute.", 'special.at_limit')
+        response.player_info(None, f"Not enough capacity to execute.", 'special.at_limit')
 
     if response.has_failed():
         return response
 
     # All checks passed. Add quest to active quest list of user and remove the available quest.
-    user.update(f"data.quest.available.{quest_id}", '', mongo_command='$unset', **kwargs)
+    user.update(f"data.station.quest.available.{quest_id}", '', mongo_command='$unset', **kwargs)
     quest.initialize_for(user, **kwargs)
 
     # Update the UI to reflect the changes:
@@ -552,17 +577,12 @@ def accept_quest(user: User, request_object: dict, **kwargs):
         'type': 'remove_element',
         'selector': f"#{css_friendly(quest.get_id())}-available"
     })
-    user.frontend_update('ui', {
-        'type': 'append_element',
-        'selector': "#quests-active",
-        'element': render_object('render.active_quest', data=user.get(f"data.quest.active.{quest_id}"))
-    })
 
     response.succeess()
     return response
 
 
-@id_update_listener(r'^data\.quest\.active\.[\w:]+\.current_objectives\.[\w:]+\.state')
+@id_update_listener(r'^data\.station\.quest\.active\.[\w:]+\.current_objectives\.[\w:]+\.state')
 def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwargs):
     """
     Called whenever a user's current_objective state for any quest changes.
@@ -571,6 +591,7 @@ def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwar
     :param game_id:     The updated full Game ID
     :param kwargs:      kwargs
     """
+    print(f"QUEST UPDATE {game_id=}")
     # An objective state has been updated. Is the update worthy to
     objective_state = data[game_id]
     if objective_state == 1:
@@ -579,15 +600,43 @@ def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwar
         user.frontend_update('ui', {
             'type': 'update_class',
             'action': 'add_class',
-            'target': f'#obj-indicator-{css_friendly(splits[5])}',
+            'target': f'#obj-indicator-{css_friendly(splits[6])}',
             'class_data': 'obj-achieved'
         })
+
+
+
+@html_generator(base_id='html.quest_data', is_generic=True)
+def render_quest_data(game_id: str, user: User, **kwargs):
+    """
+    Responds to any request to render quest data. Given that quest data can encompass many different entities,
+    this function is built to accommodate this.
+    Main usage is for rendering station HTML.
+    :param game_id:     Target ID
+    :param user:        Target user
+    :param kwargs:      kwargs
+    :return:            Appropriate HTML rendering
+    """
+    splits = game_id.split('.')
+    quest_name = splits[2]
+    if splits[3] == 'station':
+        if 'station' not in kwargs:
+            kwargs['station'] = user.get(f"quest_data.{quest_name}.station.{splits[4]}", **kwargs)
+        if 'slots' not in kwargs:
+            kwargs['slots'] = user.get('slots._all', **kwargs)
+        # Check if special Station UI exists
+        station_path = join(app.config['TEMPLATE_DIR'], quest_name, f"station.{splits[4]}.html")
+        if isfile(station_path):
+            return render_template(station_path, **kwargs)
+        else:
+            # No template data for this quest exists, so we assume this is rendered as a pure standard station.
+            return render_template(join("stations", "_station.html"), **kwargs)
 
 
 @html_generator(base_id='html.quest-objectives', is_generic=True)
 def render_quest_objective_html(game_id: str, user: User, **kwargs):
     return render_object('render.objective_list',
-                         data=user.get(f"data.quest.active.{game_id.split('.')[2]}.current_objectives", **kwargs))
+                         data=user.get(f"data.station.quest.active.{game_id.split('.')[2]}.current_objectives", **kwargs))
 
 
 @application_test(name='Give Quest', category='Default')

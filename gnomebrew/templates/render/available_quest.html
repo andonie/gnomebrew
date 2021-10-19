@@ -1,6 +1,6 @@
 {#
  # Renders an available quest view.
- # Expects the `data.quest.available` quest `data`.
+ # Expects the `data.station.quest.available` quest `data`.
  #}
 {% extends 'render/quest.html' %}
 {% block id %}{{ super() }}-available{% endblock %}
@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block quest_infos %}
-{% for info_data in data.challenge_infos %}{{ render_info(*info_data, icon_class='gb-icon') | safe}}{% endfor %}
+{% for info_data in data.challenge_infos %}{{ render_info(current_user, *info_data, icon_class='gb-icon') | safe}}{% endfor %}
 <div class="">{{ icon("special.results_in", class='gb-icon') | safe }}</div>
-{% for info_data in data.reward_infos %}{{ render_info(*info_data, icon_class='gb-icon') | safe}}{% endfor %}
+{% for info_data in data.reward_infos %}{{ render_info(current_user, *info_data, icon_class='gb-icon') | safe}}{% endfor %}
 {% endblock %}

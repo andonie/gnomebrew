@@ -1,3 +1,4 @@
+import copy
 from os.path import join
 from typing import List
 
@@ -9,7 +10,7 @@ from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, get_resolver, html_generator
 from gnomebrew.game.util import global_jinja_fun
-from gnomebrew.logging import log_exception
+from gnomebrew.logging import log_exception, log
 
 
 @get_resolver('station')
@@ -47,13 +48,22 @@ class Station(StaticGameObject):
         Initializes this station for a given user with the station's `init_data`.
         :param user:    a user. We assume this user has not yet had data connected to this station.
         """
+        log('data', f'Initializing {self.name()}', f"usr:{user.get_id()}")
         # Add station ID to station list to ensure it's recognized as an active station
         user.update("data.special.stations", self.get_id(), mongo_command="$push", **kwargs)
 
+        update_data = dict()
         # If this station has data to add,
-        # Add new station in user data with default values.
+        # Add new station in user data with default values
         if 'init_data' in self._data:
-            user.update(f"data.{self.get_minimized_id()}", self._data['init_data'], **kwargs)
+            init_data = copy.deepcopy(self._data['init_data'])
+            update_data[self.get_id()] = init_data
+
+        if 'init_attr' in self._data:
+            # I must initialize attributes
+            for attr_name in self._data['init_attr']:
+                update_data[f"special.attr.{self.get_id()}.{attr_name}"] = self._data['init_attr'][attr_name]
+        user.update(f"data", update_data, is_bulk=True, **kwargs)
 
         # If this station has an init-effect to be executed, do so now.
         if 'init_effect' in self._data:
@@ -71,6 +81,9 @@ class Station(StaticGameObject):
         :return: `True`, if this station has slots to calcuate for. Otherwise `False`.
         """
         return 'slots' in self._data
+
+    def has_recipes(self) -> bool:
+        return 'init_data' in self._data and 'recipes' in self._data['init_data']
 
     def has_special_ui(self) -> bool:
         """

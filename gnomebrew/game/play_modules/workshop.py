@@ -3,7 +3,6 @@ This module manages the workshop and also the general upgrade logic which is (ma
 """
 
 from gnomebrew.game.user import User, user_assertion, id_update_listener
-from gnomebrew.game.objects.upgrades import Upgrade
 from gnomebrew.game.event import Event
 import bisect
 

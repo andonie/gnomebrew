@@ -29,7 +29,7 @@ def get_resolver(type: str, dynamic_buffer=False, postfix_start: int=None, **kwa
     Registers a function to resolve a game resource identifier.
     :param type: The type of this resolver. A unique identifier for the first part of a game-id, e.g. `data`
     :param dynamic_buffer:  If set to `True`, Gnomebrew assumes this get-result will always be JSON formatted, and thus
-                            nested. (e.g. I don't need to resolve 'data.storage.content.gold', when I already have the
+                            nested. (e.g. I don't need to resolve 'data.station.storage.content.gold', when I already have the
                             result of 'data.storage.content' buffered)
     :param has_postfixes:   If this is set to a number, every split starting `postfix_start` will be considered a postfix
                             and postfixes for this ID will be observed and called for via `get_postfix` functions.
@@ -195,24 +195,35 @@ class User(UserMixin):
                 '_str': {}
             },
             'stations': ['station.quest', 'station.storage'],
-            'id_listeners': []
-        },
-        'storage': {
-            'content': {
-                'item': {
-                    'gold': 0
-                },
-                'quest_data': {
+            'id_listeners': [],
+            'attr': {
+                'station': {
+                    'quest': {
+                        'slots': 3
+                    },
+                    'storage': {
+                        'max_capacity': 100
+                    }
                 }
-            },
-            'it_cat_selections': {}
+            }
         },
-        'quest': {
-            'active': {
+        'station': {
+            'storage': {
+                'content': {
+                    'item': {
+                        'gold': 0
+                    },
+                    'quest_data': {
+                    }
+                },
+                'it_cat_selections': {}
             },
-            'available': {}
+            'quest': {
+                'active': {
+                },
+                'available': {}
+            }
         }
-
     }
 
     def __init__(self, username):
@@ -285,8 +296,7 @@ class User(UserMixin):
 
         # Create user handle
         user = User(username)
-        from gnomebrew.admin import reset_game_data
-        reset_game_data(user)
+        user.reset_game_data()
 
         return user
 
@@ -304,7 +314,7 @@ class User(UserMixin):
     def get(self, game_id: str, **kwargs):
         """
         Universal Method to retrieve an input with Game ID
-        :param game_id: The ID of a game item, e.g. `attr.well.slots` or `data.storage.content`
+        :param game_id: The ID of a game item, e.g. `attr.station.well.slots` or `data.storage.content`
         :keyword id_buffer `id_buffer` should always be set. If a buffer is registered it will be consulted during this
                             get-request as well as consecutive get-requests, provided the buffer is always forwarded.
         :return:        The result of the query
@@ -380,6 +390,8 @@ class User(UserMixin):
         if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
             return
         self._data_update_to_frontends(mongo_command, res)
+
+        print(f"{mongo_command=} {res=}")
 
         # Check all update listeners and trigger the appropriate ones
         for listener_data in self.get('data.special.id_listeners'):
