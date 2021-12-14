@@ -150,7 +150,7 @@ def log_execution_time(fun: Callable, category: str, message: str, *args, **kwar
     result = fun()
     end_time = datetime.utcnow()
     time_difference = str(end_time - start_time)
-    args = args + (time_difference,)
+    args = args + (f't:{time_difference}',)
     log(category, message, *args, **kwargs)
     return result
 

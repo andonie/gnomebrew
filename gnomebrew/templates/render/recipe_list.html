@@ -1,11 +1,11 @@
 {#
  # Renders a list of recipes in HTML.
- # Requires the variable `recipe_list` to be set.
+ # Requires the variable `data` to be set.
  #}
-{% if recipe_list is not defined %}{% endif %}
 {% with recipe_list = data %}
 <div class="gb-recipe-list">
-    <h6 class="gb-toggle-view" data-toggles="#{{ recipe_list[0].get_static_value('station') }}-recipe-container">Recipes</h6>
+{% if recipe_list|length %}
+    <h6 class="gb-toggle-view" data-toggles="#{{ recipe_list[0].get_static_value('station') }}-recipe-container">Actions</h6>
     <div class="gb-toggle gb-foldout" id="{{ recipe_list[0].get_static_value('station') }}-recipe-container">
         {% if recipe_list|length > 1 %}
         <div class="gb-search gb-icon-group">
@@ -15,5 +15,6 @@
         {% endif %}
         {% for recipe in recipe_list %}{{ render_object('render.recipe', data=recipe) | safe }}{% endfor %}
     </div>
+{% else %}<h6>No Actions</h6>{% endif %}
 </div>
 {% endwith %}

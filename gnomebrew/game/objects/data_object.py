@@ -25,6 +25,17 @@ class DataObject:
             log('gb_system', f'object data was not a dict. Was: {str(data)}', level=logging.WARN)
         self._data = data
 
+    def __str__(self):
+        """
+        Custom String Conversion to make data easy to read in console.
+        :return:    String representation of object with line breaks.
+        """
+        string = "{\n"
+        for key in self._data:
+            string += f"{key}: {self._data[key]},"
+        string += "\n}"
+        return string
+
     def get_json(self) -> dict:
         """
         Returns a JSON representation of the object.
@@ -45,7 +56,7 @@ class DataObject:
         elif 'default' in kwargs:
             return kwargs['default']
         else:
-            raise Exception(f"No data with key {key} found in {self.name()}.")
+            raise Exception(f"No data with key '{key}' found in {self}.")
 
     def has_static_key(self, key: str):
         """

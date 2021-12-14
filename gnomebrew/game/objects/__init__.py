@@ -3,6 +3,7 @@ This module contains core objects in Gnomebrew, such as Items, People, Stations,
 """
 
 
+from gnomebrew.game.objects.effect import Effect as Effect
 from gnomebrew.game.objects.item import Item as Item
 from gnomebrew.game.objects.recipe import Recipe as Recipe
 from gnomebrew.game.objects.people import Person as Person
@@ -17,7 +18,6 @@ from gnomebrew.game.objects.request import PlayerRequest as PlayerRequest
 from gnomebrew.game.objects.adventure import Adventure as Adventure
 from gnomebrew.game.objects.prompt import Prompt as Prompt
 from gnomebrew.game.objects.game_object import StaticGameObject as StaticGameObject
-from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.tier import Tier
 
 import gnomebrew.game.objects.names

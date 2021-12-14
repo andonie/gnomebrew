@@ -1,7 +1,7 @@
 {% extends "stations/_station.html" %}
 
 {% block station_body %}
-{% with offers = current_user.get('data.market.inventory', id_buffer=buffer) %}
+{% with offers = current_user.get('data.market.inventory') %}
 <table class="market-offers table gb-table table-hover">
     <thead>
         <tr>
@@ -29,7 +29,7 @@
 </table>
 <div class="description">
     <div class="descriptor">New Inventory in:</div>
-    <div class="description-value countdown" id='data.market.due' data-due="{{ current_user.get('data.market.due', id_buffer=buffer).strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"></div>
+    <div class="description-value countdown" id='data.market.due' data-due="{{ current_user.get('data.market.due').strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"></div>
 </div>
 {% endwith %}
 {% endblock %}

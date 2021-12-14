@@ -9,7 +9,7 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, get_resolver, html_generator
-from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.game.util import global_jinja_fun, css_friendly
 from gnomebrew.logging import log_exception, log
 
 
@@ -82,7 +82,7 @@ class Station(StaticGameObject):
         """
         return 'slots' in self._data
 
-    def has_recipes(self) -> bool:
+    def has_init_recipes(self) -> bool:
         return 'init_data' in self._data and 'recipes' in self._data['init_data']
 
     def has_special_ui(self) -> bool:
@@ -91,6 +91,15 @@ class Station(StaticGameObject):
         """
         return 'special_ui' in self._data
 
+    def get_current_recipe_list(self, user: User, **kwargs) -> List['Recipe']:
+        """
+        Generates a list of `Recipe` handler objects that represent all recipes this station currently has available
+        for a given user.
+        :param user:        Target user.
+        :param kwargs:      kwargs
+        :return:            The current list of recipes available to `user`
+        """
+        return [user.get(recipe_id) for recipe_id in user.get(f"data.{self.get_id()}.recipes")]
 
 @Effect.type('add_station')
 def add_station(user: User, effect_data: dict, **kwargs):
@@ -99,7 +108,6 @@ def add_station(user: User, effect_data: dict, **kwargs):
     :param user:        a user
     :param effect_data: effect data dict formatted as `effect_data['station'] = station_id`
     """
-    print(f"ADD STATION: {effect_data}")
     if 'station' not in effect_data:
         raise Exception(f"Missing element 'station'")
 
@@ -113,6 +121,30 @@ def add_station(user: User, effect_data: dict, **kwargs):
 
     # Initialize Station
     station.initialize_for(user)
+
+
+@Effect.type('remove_station')
+def remove_station(user: User, effect_data: dict, **kwargs):
+    """
+    Removes a station from the user's game data.
+    :param user:            target user
+    :param effect_data:     Effect data. Expecting ID of station to remove as 'station'
+    :param kwargs:          kwargs
+    """
+    station_id = effect_data['station']
+
+    # If this is NOT quest station, raise an exception for the moment
+    if not station_id.startswith('quest_data'):
+        raise Exception(f"A non-quest station ({station_id}) was asked to be removed. This is a non supported feature.")
+
+    # Remove Station ID from station list
+    user.update("data.special.stations", station_id, mongo_command='$pull', **kwargs)
+
+    # Remove the station from frontends
+    user.frontend_update('ui', {
+        'type': 'remove_element',
+        'selector': f"#{css_friendly(station_id)}"
+    })
 
 
 @html_generator(base_id='html.station', is_generic=True)

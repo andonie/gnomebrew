@@ -10,7 +10,7 @@
             <div class="gb-category-heading-banner">{{ category.name() }}</div>
             <div class="gb-info">
                 {{ icon('special.item_category_selected', class='gb-icon-sm') | safe }}
-                {% with icon_id = category_selection_id if category_selection_id != '_unset' else 'special.unset' %}{{ icon(category_selection_id, class='gb-icon-sm selection-it_cat-' + css_friendly(category.get_minimized_id()), id_buffer=buffer) | safe  }}{% endwith %}
+                {% with icon_id = category_selection_id if category_selection_id != '_unset' else 'special.unset' %}{{ icon(category_selection_id, class='gb-icon-sm selection-it_cat-' + css_friendly(category.get_minimized_id())) | safe  }}{% endwith %}
             </div>
         </div>
         <div class="gb-storage-category-items gb-info-container gb-foldout" id="{{ css_friendly(category.get_id()) }}-items">

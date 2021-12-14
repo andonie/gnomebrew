@@ -6,7 +6,8 @@ from os.path import join
 from typing import Callable, Union, List
 
 from gnomebrew import mongo, login_manager, socketio
-from gnomebrew.logging import log
+from gnomebrew.game.util import is_game_id_formatted
+from gnomebrew.logging import log, log_exception
 from flask_login import UserMixin
 from flask import render_template
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -211,7 +212,13 @@ class User(UserMixin):
             'storage': {
                 'content': {
                     'item': {
-                        'gold': 0
+                        'gold': 0,
+                        'wood': 10,
+                        'iron': 3,
+                        'banana': 5,
+                        'watermelon': 5,
+                        'kiwi': 5,
+                        'coal': 5
                     },
                     'quest_data': {
                     }
@@ -232,6 +239,7 @@ class User(UserMixin):
         :param db_data: Data stored in MongoDB database for this user.
         """
         self.username = username
+        self.buffer = IDBuffer()
 
     def __repr__(self):
         return f"<user {self.username}>"
@@ -315,10 +323,12 @@ class User(UserMixin):
         """
         Universal Method to retrieve an input with Game ID
         :param game_id: The ID of a game item, e.g. `attr.station.well.slots` or `data.storage.content`
-        :keyword id_buffer `id_buffer` should always be set. If a buffer is registered it will be consulted during this
-                            get-request as well as consecutive get-requests, provided the buffer is always forwarded.
         :return:        The result of the query
         """
+        if 'id_buffer' in kwargs:
+            raise Exception('id_buffer is deprecated')
+        if not is_game_id_formatted(game_id):
+            raise Exception(f"Requested Game ID '{game_id}' is malformatted.")
         splits = game_id.split('.')
         id_type = splits[0]
         if id_type not in _GET_RESOLVERS:
@@ -327,15 +337,13 @@ class User(UserMixin):
         log('game_id', 'received', f'id:{game_id}')
 
         # Always go for the Buffer!
-        if 'id_buffer' not in kwargs or not kwargs['id_buffer']:
-            # No Buffer yet.
-            kwargs['id_buffer'] = IDBuffer()
-        buffer = kwargs['id_buffer']
         # Use ID Buffer if possible.
         resolver_data = _GET_RESOLVERS[id_type]
         is_dynamic = resolver_data['dynamic_buffer']
-        if buffer.contains_id(game_id, dynamic_id=is_dynamic):
-            return buffer.evaluate_id(game_id, is_dynamic)
+
+        # Check if this result is already buffered
+        if self.buffer.contains_id(game_id, dynamic_id=is_dynamic):
+            return self.buffer.evaluate_id(game_id, is_dynamic)
 
         # If this is postfixed and the critical split length has been reached, remove postfix-info for basic get-request.
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
@@ -349,9 +357,8 @@ class User(UserMixin):
         if resolver_data['has_postfix'] and len(splits) > resolver_data['postfix_start']:
             result = resolver_data['postfix_fun'](result, splits[resolver_data['postfix_start']:])
 
-
-        if 'id_buffer' in kwargs:
-            kwargs['id_buffer'].include(game_id, result, dynamic_id=is_dynamic)
+        # Add this result to the buffer
+        self.buffer.include(game_id, result, dynamic_id=is_dynamic)
         return result
 
     def update(self, game_id: str, update, **kwargs):
@@ -371,9 +378,8 @@ class User(UserMixin):
         if id_type not in _UPDATE_RESOLVERS:
             raise Exception(f"Unkown ID type: {id_type}")
 
-        if 'id_buffer' in kwargs:
-            # If A Buffer is used currently, make sure it invalidates this ID properly
-            kwargs['id_buffer'].invalidate(game_id, dynamic_id=_GET_RESOLVERS[id_type]['dynamic_buffer'])
+        # Invalidate the updated ID in buffer to ensure it is reloaded next time.
+        self.buffer.invalidate(game_id, dynamic_id=_GET_RESOLVERS[id_type]['dynamic_buffer'])
 
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
@@ -391,14 +397,25 @@ class User(UserMixin):
             return
         self._data_update_to_frontends(mongo_command, res)
 
-        print(f"{mongo_command=} {res=}")
+
+        # Get the *exact* list of changes this updates induced, taking into account the `is_bulk` command:
+        id_update_list = list()
+        if 'is_bulk' in kwargs and kwargs['is_bulk']:
+            for id_append in update:
+                id_update_list.append(f"{game_id}.{id_append}")
+        else:
+            id_update_list.append(game_id)
 
         # Check all update listeners and trigger the appropriate ones
-        for listener_data in self.get('data.special.id_listeners'):
-            if listener_data['target_id'] == game_id or (listener_data['starts_with'] and game_id.startswith(listener_data['target_id'])):
-                # Hit. Interpret this listener as an Effect and execute.
-                from gnomebrew.game.objects.effect import Effect
-                Effect(listener_data).execute_on(self, updated_id=game_id, updated_value=update, **kwargs)
+        for updated_id in id_update_list:
+            for listener_data in self.get('data.special.id_listeners'):
+                if listener_data['target_id'] == updated_id or (listener_data['starts_with'] and updated_id.startswith(listener_data['target_id'])):
+                    # Hit. Interpret this listener as an Effect and execute.
+                    from gnomebrew.game.objects.effect import Effect
+
+                    # Determine the appropriate update value based on wheter or not this was a bulk update.
+                    updated_value = update if 'is_bulk' not in kwargs or not kwargs['is_bulk'] else update[updated_id[len(game_id)+1:]]
+                    Effect(listener_data).execute_on(self, updated_id=updated_id, updated_value=updated_value, **kwargs)
 
         return mongo_command, res
 
@@ -661,7 +678,10 @@ class IDBuffer:
         result = self._buffer_data[best_match]
         evaluation_steps = game_id[len(best_match)+1:].split('.')
         for step in evaluation_steps:
-            result = result[step]
+            try:
+                result = result[step]
+            except KeyError as e:
+                log_exception('game_id', e)
         return result
 
     def invalidate(self, game_id, dynamic_id):

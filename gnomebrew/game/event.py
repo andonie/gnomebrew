@@ -128,36 +128,6 @@ class Event(GameObject):
     def set_due_time(self, due_time: datetime.datetime):
         self._data['due_time'] = due_time
 
-    @staticmethod
-    def generate_event_from_recipe_data(target: str, result: list,
-                                        due_time: datetime.datetime, slots: int, station: str, recipe_id: str,
-                                        total_cost: dict):
-        """
-        Generates an event that modifies user inventory.
-        :param station:
-        :param slots:
-        :param due_time:
-        :param target:          the `username` of the target user.
-        :param result:
-        :return:
-        """
-        data = dict()
-        data['target'] = target
-        data['event_type'] = 'recipe'
-        data['effect'] = result
-        # for effect_type in data['effect']:
-        #     if type(data['effect'][effect_type]) is dict:
-        #         # Change dots (.) to dashes (-) because BSON/Mongo gets sad :(
-        #         for key, _ in data['effect'][effect_type].copy().items():
-        #             # Take an iteration copy to avoid concurrent modification horrors
-        #             data['effect'][effect_type][key.replace('.', '-')] = data['effect'][effect_type].pop(key)
-        data['due_time'] = due_time
-        data['slots'] = slots
-        data['station'] = station
-        data['recipe_id'] = recipe_id
-        data['cost'] = total_cost
-        return Event(data)
-
     def enqueue(self):
         """
         Registers this event with the event queue. This ensures that - once the event's due time happened - the event will

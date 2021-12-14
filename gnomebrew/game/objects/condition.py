@@ -96,7 +96,7 @@ def flag_check(value, condition_data: dict):
 id_eval_types = {
     'equals': lambda val, data: 1 if val == data['target_value'] else 0,
     'any': lambda val, data: 1,
-    'minimum': lambda val, data: val >= data,
+    'minimum': lambda val, data: val >= data['value'],
 }
 
 @Condition.type('id_eval')

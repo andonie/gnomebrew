@@ -1,4 +1,4 @@
-{# Bas rendering class for quests  #}
+{# Base rendering class for quests  #}
 <div class="gb-quest-content" id="{% block id %}{{ css_friendly(data.quest_id) }}{% endblock %}">
     {% block quest_header %}
     {{ foldout_id }}
@@ -6,7 +6,7 @@
         <img src="{{ url_for('get_icon', game_id=data.icon) }}" class="gb-icon-lg">
         <div class="title-wrap">
             <div class="quest-title">{{ data.name }}</div>
-            <div class="quest-subtitle">{{ data.description }}</div>
+            <div class="quest-subtitle">{{ data.description | safe }}</div>
         </div>
     </div>
     {% endblock %}

@@ -1,9 +1,9 @@
 {% set station_id = station.get_id() %}
 {% set station_css_id = css_friendly(station.get_id()) %}
-<div class="station grid-item {{ station_css_id }}" id="{{ station.get_id() }}">
+<div class="station grid-item {{ station_css_id }}" id="{{ station_css_id }}">
     {% block station_header_outer %}<div class="gb-title-wrapper">
         {% block pre_header %}{% endblock %}
-        <div class="station-header gb-toggle-view {% if current_user.get('selection._bool.' + css_friendly(station.get_id()) + '_open', default=True, id_buffer=id_buffer) %}gb-toggle-view-active{% endif %}" id="{{ css_friendly(station.get_id()) }}-header" data-toggles="#{{ css_friendly(station.get_id()) }}-content" data-sync="selection._bool.{{ css_friendly(station.get_id()) }}_open" data-display="#{{ css_friendly(station.get_id()) }}-header">
+        <div class="station-header gb-toggle-view {% if current_user.get('selection._bool.' + station.get_id() + '.open', default=True) %}gb-toggle-view-active{% endif %}" id="{{ station_css_id }}-header" data-toggles="#{{ station_css_id }}-content" data-sync="selection._bool.{{ station.get_id() }}.open" data-display="#{{ station_css_id }}-header">
             {% block station_header %}
             {{ icon( station.get_id() ) | safe }}
             <h3 id="{{ station.get_id() }}-title" title="{{ station.get_static_value('description') }}">{{ station.name() }}</h3>
@@ -12,11 +12,11 @@
         {% block station_actions %}{% endblock %}
     </div>{% endblock %}
     {% block station_subtitle %}{% endblock %}
-    <div class="gb-info-container" id="{{ css_friendly(station.get_id()) }}-infos">
+    <div class="gb-info-container" id="{{ station_css_id }}-infos">
         {% block infos %}{% if station_id in slots %}
         <div class="gb-info gb-info-default" title="Capacity">
             {{ icon('special.capacity', class='gb-icon-sm') | safe }}
-            <span class="attr-{{ station.get_id() }}-slots">{{ shorten_num(current_user.get('attr.' + station.get_id() + '.slots', id_buffer=buffer)) }}</span>
+            <span class="attr-{{ station_css_id }}-slots">{{ shorten_num(current_user.get('attr.' + station.get_id() + '.slots')) }}</span>
         </div>
         {% endif %}{% endblock %}
     </div>
@@ -29,14 +29,12 @@
     </div>
     {% endif %}
     {% endblock %}
-    <div class="gb-toggle gb-foldout{% if not current_user.get('selection._bool.' + css_friendly(station.get_id()) + '_open', default=True, id_buffer=id_buffer) %} gb-toggle-hidden{% endif %}" id="{{ css_friendly(station.get_id()) }}-content">
+    <div class="gb-toggle gb-foldout{% if not current_user.get('selection._bool.' + station.get_id() + '.open', default=True) %} gb-toggle-hidden{% endif %}" id="{{ css_friendly(station.get_id()) }}-content">
         {% block station_body %}{% endblock %}
         {% block station_recipes %}
-            {% set recipe_list = current_user.get('recipes.' + station.get_id(), id_buffer=buffer) %}
+            {% set recipe_list = current_user.get('recipes.' + station.get_id()) %}
             {% if recipe_list %}
-            <div id="recipes.{{ station.get_minimized_id() }}">
-                {{ render_object('render.recipe_list', data=recipe_list) | safe }}
-            </div>
+            <div id="recipes.{{ station.get_id() }}">{{ render_object('render.recipe_list', data=recipe_list) | safe }}</div>
             {% endif %}
         {% endblock %}
     </div>

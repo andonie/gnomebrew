@@ -76,7 +76,6 @@ class GameResponse(object):
             'content': html_content,
             'duration': 40
         })
-        print(f"{html_content=}")
 
     def log(self, log: str):
         """

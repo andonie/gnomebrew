@@ -12,6 +12,8 @@ from typing import List, Dict
 
 from gnomebrew import mongo
 from gnomebrew.game import event as event
+from gnomebrew.game.event import Event
+from gnomebrew.game.objects import Effect
 from gnomebrew.game.objects.item import ItemCategory, Item
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
@@ -36,8 +38,9 @@ def recipes(game_id: str, user: User, **kwargs) -> List['Recipe']:
     """
     splits = game_id.split('.')
     target_station = user.get('.'.join(splits[1:]), **kwargs)
-    if target_station.has_recipes():
-        return [user.get(recipe_id, **kwargs) for recipe_id in user.get(f"data.{target_station.get_id()}.recipes", **kwargs)]
+    if target_station.has_init_recipes():
+        return [user.get(recipe_id, **kwargs) for recipe_id in
+                user.get(f"data.{target_station.get_id()}.recipes", **kwargs)]
     else:
         return []
 
@@ -52,9 +55,11 @@ def _find_best_postfix(postfix_result: dict, total_cost: dict) -> str:
     pf_type = postfix_result['postfix_type']
     if pf_type == 'it_cat':
         target_category: ItemCategory = ItemCategory.from_id(postfix_result['cat'])
-        tg_item_names = [item.get_minimized_id() for item in target_category.get_matching_items() if item.get_id() in total_cost]
+        tg_item_names = [item.get_minimized_id() for item in target_category.get_matching_items() if
+                         item.get_id() in total_cost]
         if not tg_item_names:
-            raise Exception(f"This recipe was created without the necessary ingredients. Did not find items of cateogory {target_category.name()}")
+            raise Exception(
+                f"This recipe was created without the necessary ingredients. Did not find items of cateogory {target_category.name()}")
         return max(tg_item_names, key=lambda it_name: total_cost[f"item.{it_name}"])
     else:
         raise Exception(f"I don't know how to handle recipe postfix for {postfix_result}")
@@ -90,7 +95,8 @@ class Recipe(StaticGameObject):
         total_cost = copy.deepcopy(self._data['cost'])
 
         # Replace any item CATEGORY ingredients with the actual items to be used this time around:
-        for item_category in [ItemCategory.from_id(cost_name) for cost_name in self._data['cost'] if cost_name.startswith('it_cat.')]:
+        for item_category in [ItemCategory.from_id(cost_name) for cost_name in self._data['cost'] if
+                              cost_name.startswith('it_cat.')]:
             sl_category_item = user.get(f'selection.it_cat.{item_category.get_minimized_id()}', default=None, **kwargs)
             if not sl_category_item:
                 response.add_fail_msg(
@@ -102,11 +108,10 @@ class Recipe(StaticGameObject):
                 total_cost[sl_category_item] = total_cost[item_category.get_id()]
             del total_cost[item_category.get_id()]
 
-
         # 1. Hard Material Cost
         player_inventory = user.get('storage._content', **kwargs)
-        insufficent_items = [Item.from_id(item_id).get_id() for item_id in total_cost
-                             if item_id[5:] not in player_inventory or player_inventory[item_id[5:]] < total_cost[item_id]]
+        insufficent_items = [user.get(item_id).get_id() for item_id in total_cost
+                             if item_id not in player_inventory or player_inventory[item_id] < total_cost[item_id]]
         if insufficent_items:
             response.add_fail_msg(f"You are missing resources: {', '.join(insufficent_items)}")
             response.player_info(user, f"You are missing resources.", 'missing:', *insufficent_items)
@@ -132,25 +137,29 @@ class Recipe(StaticGameObject):
             response.player_info(user, 'Recipe not unlocked yet', self.get_id(), 'unavailable')
 
         # 5. Inventory change event can theoretically improve player inventory
-        delta_inventory = next(filter(lambda effect_dict: effect_dict['effect_type']=='delta_inventory', self._data['result']), None)
+        delta_inventory = next(
+            filter(lambda effect_dict: effect_dict['effect_type'] == 'delta_inventory', self._data['result']), None)
         if delta_inventory:
             max_capacity = user.get('attr.station.storage.max_capacity')
             at_capacity_results = [item for item in delta_inventory['delta']
                                    if item in player_inventory and player_inventory[item] >= max_capacity]
             if len(at_capacity_results) == len(delta_inventory['delta'].keys()):
                 response.add_fail_msg('You are at storage capacity for all resulting items.')
-                response.player_info(user, 'You are at storage capacity for all resulting items.', 'attr.station.storage.max_capacity'
-                                     ,'full:', *at_capacity_results)
-
+                response.player_info(user, 'You are at storage capacity for all resulting items.',
+                                     'attr.station.storage.max_capacity'
+                                     , 'full:', *at_capacity_results)
 
         # ~~~~ If all requirements are met, execute Recipe ~~~~
         if response.has_failed():
             return response
 
+        # Empty on_cancel object will contain all effects to be executed in case the recipe is cancelled
+        on_cancel = list()
+
         # Remove material from Inventory now
         update_data = dict()
         for material in total_cost:
-            update_data[material[5:]] = player_inventory[material[5:]] - total_cost[material]
+            update_data[material] = player_inventory[material] - total_cost[material]
         if update_data:
             user.update('data.station.storage.content', update_data, is_bulk=True)
 
@@ -163,13 +172,24 @@ class Recipe(StaticGameObject):
         # If the recipe is a one-time recipe, add a push to the result that ensures the finished recipe is logged
         result: list = copy.deepcopy(self._data['result'])
         if self.is_one_time():
-            result.append({
-                'effect_type': 'pull_data',
-                'pull_target': f'{self._data["station"]}.recipes',
-                'to_pull': self.get_id()
+            # Pull Recipe data from recipe list NOW.
+            user.update(f"data.{self._data['station']}.recipes", self._data['game_id'], mongo_command='$pull')
+
+            # Add an on_cancel effect that ensures the OTR recipe will be added again to the respective station.
+            on_cancel.append({
+                'effect_type': 'push_data',
+                'to_push': self.get_id(),
+                'push_target': f"data.{self._data['station']}.recipes"
             })
-            result.append({
+            # Also add a UI update so the user sees the updated recipe list
+            on_cancel.append({
                 'effect_type': 'ui_update',
+                'type': 'reload_element',
+                'element': f"recipes.{self._data['station']}"
+            })
+
+            # Update Recipe UI to reflect removeal of OTR.
+            user.frontend_update('ui', {
                 'type': 'reload_element',
                 'element': f"recipes.{self._data['station']}"
             })
@@ -178,21 +198,22 @@ class Recipe(StaticGameObject):
         if 'postfix_result' in self._data:
             postfix_blueprint = self._data['postfix_result']
             postfix = _find_best_postfix(postfix_blueprint, total_cost)
-            for target_dict in [effect_data[postfix_blueprint['target_attribute']] for effect_data in result if effect_data['effect_type'] == postfix_blueprint['target_effect_type']]:
+            for target_dict in [effect_data[postfix_blueprint['target_attribute']] for effect_data in result if
+                                effect_data['effect_type'] == postfix_blueprint['target_effect_type']]:
                 keys = list(target_dict.keys())
                 for key in keys:
                     target_dict[f"{key}.{postfix}"] = target_dict[key]
                     del target_dict[key]
 
-
         # Enqueue the update event that triggers on recipe completion
-        event.Event.generate_event_from_recipe_data(target=user.get_id(),
-                                                    result=result,
-                                                    due_time=due_time,
-                                                    slots=self._data['slots'],
-                                                    station=self._data['station'],
-                                                    recipe_id=self._data['game_id'],
-                                                    total_cost=total_cost).enqueue()
+        Recipe.generate_event_from_recipe_data(target=user.get_id(),
+                                               result=result,
+                                               due_time=due_time,
+                                               slots=self._data['slots'],
+                                               station=self._data['station'],
+                                               recipe_id=self._data['game_id'],
+                                               total_cost=total_cost,
+                                               on_cancel=on_cancel).enqueue()
 
         response.succeess()
         response.add_ui_update({
@@ -209,7 +230,8 @@ class Recipe(StaticGameObject):
         :param user:    a user
         :return:        `True` if this recipe can still be executed, otherwise `False`
         """
-        return self.get_id() in user.get(f"data.{self._data['station']}.recipes", **kwargs) and not mongo.db.events.find_one(
+        return self.get_id() in user.get(f"data.{self._data['station']}.recipes",
+                                         **kwargs) and not mongo.db.events.find_one(
             {'target': user.get_id(), 'recipe_id': self._data['game_id']})
 
     def is_one_time(self):
@@ -307,22 +329,77 @@ class Recipe(StaticGameObject):
             'target': user.get_id(),
             'event_id': recipe_event_id
         })
+        if not recipe_event:
+            # Could not find event -> Fail
+            response.add_fail_msg('Could not find recipe.')
+            return response
+
         response.add_ui_update({
             'type': 'reload_element',
-            'element': f"slots.{Recipe.from_id(recipe_event['recipe_id']).get_static_value('station')}"
+            'element': f"slots.{user.get(recipe_event['recipe_id']).get_static_value('station')}"
         })
-        cost = recipe_event['cost'] # No need to copy before edit because this data is from an event and will be
-                                    # deleted after this call finishes.
+        cost = recipe_event['cost']  # No need to copy before edit because this data is from an event and will be
+        # deleted after this call finishes.
         if cost:
             # If this recipe-related event had *cost* associated with it, make sure to add that cost back to storage.
             for key in list(cost.keys()):
                 target_item = user.get(key.replace('-', '.'))
-                cost[target_item.get_minimized_id()] = cost[key]
+                cost[target_item.get_id()] = cost[key]
                 del cost[key]
-            user.update('data.station.storage.content', cost, command='$inc', is_bulk=True)
+            user.update('data.station.storage.content', cost, mongo_command='$inc', is_bulk=True)
+
+        # Execute all associated effect data with a cancel.
+        for effect_data in recipe_event['on_cancel']:
+            Effect(effect_data).execute_on(user)
 
         response.succeess()
         return response
+
+    @staticmethod
+    def generate_event_from_recipe_data(target: str, result: list,
+                                        due_time: datetime, slots: int, station: str, recipe_id: str,
+                                        total_cost: dict, on_cancel: list):
+        """
+        Generates an event that modifies user inventory.
+        :param station:
+        :param slots:
+        :param due_time:
+        :param target:          the `username` of the target user.
+        :param result:
+        :return:
+        """
+        data = dict()
+        data['target'] = target
+        data['event_type'] = 'recipe'
+        data['effect'] = result
+        data['due_time'] = due_time
+        data['slots'] = slots
+        data['station'] = station
+        data['recipe_id'] = recipe_id
+        data['cost'] = total_cost
+        data['on_cancel'] = on_cancel
+        return Event(data)
+
+
+@Effect.type('add_recipe')
+def add_recipe(user: User, effect_data: dict, **kwargs):
+    """
+    Adds a given recipe to its target station's recipe list.
+    :param user:            Target user.
+    :param effect_data:     Should contain `recipe` containing the target recipe's ID.
+    :param kwargs:          kwargs
+    """
+    target_recipe = user.get(effect_data['recipe'])
+    print(f"{str(target_recipe)=}")
+    # Push this recipe's ID in the target station's recipes directory
+    user.update(f"data.{target_recipe.get_static_value('station')}.recipes", target_recipe.get_static_value('game_id'),
+                mongo_command='$push', **kwargs)
+
+    # Update the frontends to reflect the addition of the new recipe.
+    user.frontend_update('ui', {
+        'type': 'reload_element',
+        'element': f"recipes.{target_recipe.get_static_value('station')}"
+    })
 
 
 @PlayerRequest.type('recipe', is_buffered=True)
@@ -357,8 +434,10 @@ def generate_recipe_list(game_id: str, user: User, **kwargs):
     :param kwargs:
     :return:
     """
-    #
-    pass
+    splits = game_id.split('.')
+    # Get the station of the requested type
+    station: 'Station' = user.get('.'.join(splits[2:]), **kwargs)
+    return render_object('render.recipe_list', data=station.get_current_recipe_list(user, **kwargs))
 
 
 @global_jinja_fun

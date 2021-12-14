@@ -129,25 +129,27 @@ def boolean_selection_helper(game_id: str, user: User, set_value, **kwargs) -> b
     :param kwargs:      can have `default`
     """
     splits = game_id.split('.')
-    assert len(splits) == 3
     if set_value == None:
         # Set value was none. -> Read output.
-        current_data = user.get('data.special.selection._bool', **kwargs)
-        name = splits[2]
-        if name in current_data:
-            result = current_data[name]
-            if isinstance(result, str):
-                if result in valid_str_bool_mappings:
-                    return valid_str_bool_mappings[result]
-                else:
-                    raise Exception(f"Invalid Data was saved in selection: {result=} at {game_id}")
-            else:
-                return result
-        else:
+        current_value = user.get(f"data.special.selection._bool.{'.'.join(splits[2:])}", **kwargs)
+        if current_value is None:
             if 'default' in kwargs:
                 return kwargs['default']
             else:
-                raise Exception(f"Selection for {game_id} does not exist for user {user.get_id()}. No default was given.")
+                raise Exception(f"Selection for '{game_id}' does not exist for user {user.get_id()}. No default was given.")
+        if isinstance(current_value, dict):
+            # Current Value is a complex category
+            raise Exception(f"Reading complex selection not supported.")
+        elif isinstance(current_value, bool):
+            # Current Value is bool -> Selection
+            return current_value
+        elif isinstance(current_value, str):
+            # Current Value is str -> Interpret special strings
+            if current_value in ['true', 'True']:
+                return True
+            elif current_value in ['false', 'False']:
+                return False
+        raise Exception(f"Unknown input: {current_value=}")
     else:
         # Update the value
-        return user.update(f"data.special.selection._bool.{splits[2]}", set_value, **kwargs)
+        return user.update(f"data.special.selection._bool.{'.'.join(splits[2:])}", set_value, **kwargs)

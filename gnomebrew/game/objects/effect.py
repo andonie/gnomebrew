@@ -4,7 +4,6 @@ This module wraps Effect objects in Gnomebrew.
 from collections import Callable
 from typing import List
 
-from gnomebrew.game.objects import Item
 from gnomebrew.game.objects.game_object import GameObject
 from gnomebrew.game.user import User
 
@@ -102,8 +101,9 @@ def pull_data(user: User, effect_data: dict, **kwargs):
     :param effect_data:     The registered effect data formatted as `effect_data[data-id] = delta
     """
     pull_data = effect_data['to_pull']
-    push_target = effect_data['pull_target']
-    user.update(push_target, pull_data, mongo_command='$pull')
+    pull_target = effect_data['pull_target']
+    print(f"pulling {pull_target} from {pull_data}")
+    user.update(pull_target, pull_data, mongo_command='$pull')
 
 
 @Effect.type('ui_update')

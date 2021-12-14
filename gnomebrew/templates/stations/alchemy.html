@@ -2,7 +2,7 @@
 
 
 {% block station_body %}
-{% with current_selection = current_user.get('selection.alchemy.next_recipe', id_buffer = buffer), recipe_categories = [] %}
+{% with current_selection = current_user.get('selection.alchemy.next_recipe'), recipe_categories = [] %}
 
 <!--<div class="gb-top-buttons">
     <button class="gb-button" onclick="">{{ icon('it_cat.alchemy_liquids', class='gb-icon-hover gb-icon', onclick='change_class()') | safe }}</button>

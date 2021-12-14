@@ -10,5 +10,5 @@
 {% endblock %}
 
 {% block quest_content %}
-<div class="quest-objectives" id="quest-objectives.{{ css_friendly(data.quest_id.split('.')[1]) }}">{{ render_object('render.objective_list', data=data.current_objectives) | safe }}</div>
+<div class="quest-objectives" id="quest.objectives.{{ css_friendly(data.quest_id.split('.')[1]) }}">{{ render_object('render.objective_list', data=data.current_objectives) | safe }}</div>
 {% endblock %}

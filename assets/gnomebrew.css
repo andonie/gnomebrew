@@ -165,6 +165,10 @@ img {
     background: #E7BF8B;
 }
 
+.gb-info-default strong {
+    color: #a63e42;
+}
+
 .gb-info-default:hover {
     background: #FFEED9;
 }

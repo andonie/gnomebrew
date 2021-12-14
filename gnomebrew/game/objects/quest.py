@@ -102,7 +102,7 @@ class Quest(StaticGameObject, PublicGameObject):
         # Ensure that the user reloads their quest to have the correct information.
         user.frontend_update('ui', {
             'type': 'reload_element',
-            'element': f'quest-objectives.{self.get_minimized_id()}'
+            'element': f'quest.objectives.{self.get_minimized_id()}'
         })
 
     def progress_quest(self, user: User, **kwargs):
@@ -115,7 +115,6 @@ class Quest(StaticGameObject, PublicGameObject):
         last_state = user.get(f"data.station.quest.active.{self.get_minimized_id()}.current_state", **kwargs)
         # CLEAN UP CURRENT STATE
         # Remove all listeners from my the current quest state before transitioning
-        print(f'Checking {user.get_id_listeners()=} against {f"{self.get_minimized_id()}.{last_state}"=}')
         user.remove_from_id_listeners(
             lambda data: 'quest' in data and data['quest'] == f"{self.get_minimized_id()}.{last_state}")
 
@@ -163,6 +162,9 @@ class Quest(StaticGameObject, PublicGameObject):
             'type': 'remove_element',
             'selector': f"#{css_friendly(self.get_id())}-active"
         })
+
+        # Add this quest to user statistics
+        user.update('stat.quests_finished', self.get_id(), mongo_command='$push')
 
     def get_station_id_list(self) -> List[str]:
         """
@@ -414,6 +416,10 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
     if 'updated_id' not in kwargs or 'updated_value' not in kwargs:
         raise Exception(f"This effect should always be called on update but did not receive any 'updated_id' kwarg.")
 
+    # Remove is_bulk flag that could be set based on the update that triggered this
+    if 'is_bulk' in kwargs:
+        del kwargs['is_bulk']
+
     update_id = kwargs['updated_id']
     new_value = kwargs['updated_value']
 
@@ -591,7 +597,6 @@ def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwar
     :param game_id:     The updated full Game ID
     :param kwargs:      kwargs
     """
-    print(f"QUEST UPDATE {game_id=}")
     # An objective state has been updated. Is the update worthy to
     objective_state = data[game_id]
     if objective_state == 1:
@@ -633,10 +638,10 @@ def render_quest_data(game_id: str, user: User, **kwargs):
             return render_template(join("stations", "_station.html"), **kwargs)
 
 
-@html_generator(base_id='html.quest-objectives', is_generic=True)
+@html_generator(base_id='html.quest.objectives', is_generic=True)
 def render_quest_objective_html(game_id: str, user: User, **kwargs):
     return render_object('render.objective_list',
-                         data=user.get(f"data.station.quest.active.{game_id.split('.')[2]}.current_objectives", **kwargs))
+                         data=user.get(f"data.station.quest.active.{'.'.join(game_id.split('.')[3:])}.current_objectives", **kwargs))
 
 
 @application_test(name='Give Quest', category='Default')

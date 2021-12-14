@@ -7,12 +7,12 @@
 {% block infos %}
 <div class="gb-info gb-info-default" title="Storage Capacity">
     {{ icon('attr.station.storage.max_capacity', class='gb-icon-sm') | safe }}
-    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.station.storage.max_capacity', id_buffer=buffer)) }}</span>
+    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.station.storage.max_capacity')) }}</span>
 </div>
 {% endblock %}
 
 {% block station_body %}
-{% with category_data = get_available_category_data(current_user, storage_ui=True), player_inventory = current_user.get('storage._content', id_buffer=buffer) %}
+{% with category_data = get_available_category_data(current_user, storage_ui=True), player_inventory = current_user.get('storage._content') %}
 <div class="gb-storage-categories">
 {% for data_object in category_data %}
     {% with category = data_object.category %}
@@ -24,7 +24,7 @@
 {% endfor %}
 </div>
 <input type="text" id="storage-filter" class="gb-filter" placeholder="Filter Storage" data-filters=".gb-storage-item-view">
-<div class="gb-storage-category-view">{% for data_object in category_data %}{% with category_selection_id = current_user.get('data.station.storage.it_cat_selections.' + data_object.category.get_minimized_id(), default='_unset', id_buffer=buffer) %}{{ render_object('render.storage_category', data=data_object, player_inventory=player_inventory, category_selection_id=category_selection_id) | safe }}{% endwith %}{% endfor %}</div>
+<div class="gb-storage-category-view">{% for data_object in category_data %}{% with category_selection_id = current_user.get('data.station.storage.it_cat_selections.' + data_object.category.get_minimized_id(), default='_unset') %}{{ render_object('render.storage_category', data=data_object, player_inventory=player_inventory, category_selection_id=category_selection_id) | safe }}{% endwith %}{% endfor %}</div>
 {% endwith %}
 <div class="gb-storage-detail-view"></div>
 {% endblock %}

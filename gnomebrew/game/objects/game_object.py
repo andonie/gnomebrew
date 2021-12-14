@@ -2,7 +2,7 @@
 This module manages the game's in-loading
 """
 from os.path import join
-from typing import Type, Any, Callable, Union
+from typing import Type, Any, Callable
 
 from flask import render_template
 
@@ -24,9 +24,6 @@ class GameObject(DataObject):
         if uuid != None:
             if uuid not in self._data:
                 self._data[uuid] = generate_uuid()
-
-    def __str__(self):
-        return f"<GameObject: {self._data=}>"
 
     def get_id(self):
         """

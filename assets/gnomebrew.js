@@ -58,6 +58,7 @@ function animate_whole_ui(element) {
 
          var sync_id = $(this).attr('data-sync');
         if (typeof sync_id !== 'undefined' && sync_id !== false) {
+            console.log("SYNCING " + sync_id);
             // We have data to sync requested.
             // By default, the engine stores `True` for visible/open, not for hidden, so invert the bit.
             // Attempt to send selection to server.
@@ -109,7 +110,6 @@ function handle_update(data) {
             break;
         case 'change_attributes': //Change attributes
             data.attribute_change_data.forEach( job => {
-                console.log(job['selector']);
                 $(job['selector']).attr(job['attr'], job['value'])
             });
             break;

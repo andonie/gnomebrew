@@ -26,8 +26,7 @@ class PlayerRequest(GameObject):
         2. `request_object` JSON data of given `request-type`
         3. Possible kwargs
         :param request_type:    The type of Request this
-        :param is_buffered:     If `True`, the request type will be executed with an ID Buffer stored in
-                                `kwargs['id_buffer']`.
+        :param is_buffered:     If `True`, the request type will be executed with an ID Buffer stored
         """
         if request_type in cls.request_types:
             raise Exception(f"{request_type} is already a used Request Type.")
@@ -54,8 +53,6 @@ class PlayerRequest(GameObject):
         :param user:    Target user.
         :return:        The resulting `GameResponse` object.
         """
-        if 'id_buffer' not in kwargs:
-            kwargs['id_buffer'] = IDBuffer()
         result = PlayerRequest.request_types[self.get_static_value('request_type')]['fun'](user=user, request_object=self._data, **kwargs)
 
         return result

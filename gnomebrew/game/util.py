@@ -116,6 +116,16 @@ def css_friendly(game_id: str) -> str:
 
 
 @global_jinja_fun
+def css_unfriendly(css_game_id: str) -> str:
+    """
+    Turns a CSS friendly formatted GameID into the core engine's Format
+    :param css_game_id:     Game ID CSS formatted
+    :return:                Game ID commonly formatted
+    """
+    # TODO imperfect projection, because both : and . map to -
+    return css_game_id.replace('-', '.')
+
+@global_jinja_fun
 def icon(game_id: str, **kwargs):
     """
     Wraps the <img> tag formatted for game icons to increase code readability in HTML templates.
@@ -151,14 +161,16 @@ def icon(game_id: str, **kwargs):
 def render_info(user, *info_elements, **kwargs):
     new_info = f'<div class="gb-info {kwargs["info_class"] if "info_class" in kwargs else "gb-info-default"}" title="{kwargs["title"] if "title" in kwargs else ""}">'
     for element in info_elements:
-        if is_game_id_formatted(element):
-            with app.app_context():
-                new_info += icon(element, img_class='gb-icon-sm' if 'icon_class' not in kwargs else kwargs['icon_class'])
-        elif element.startswith('id:'):
+        if element.startswith('id:'):
             # Assume this to be a to-be updated Game ID and hence wrap it in an appropriate <span>
             target_id = element[3:]
             target_value = user.get(target_id, **kwargs, default=0)
             new_info += f'<div class="{css_friendly(target_id)} gb-info-content">{target_value}</div>'
+        elif element.startswith('txt:'):
+            new_info += f'<div class="gb-info-content">{element[4:]}</div>'
+        elif is_game_id_formatted(element):
+            with app.app_context():
+                new_info += icon(element, img_class='gb-icon-sm' if 'icon_class' not in kwargs else kwargs['icon_class'])
         else:
             new_info += f'<div class="gb-info-content">{element}</div>'
     new_info += '</div>'
@@ -269,7 +281,7 @@ def shift_matrix(matrix: List[List], d_x, d_y) -> List[List]:
             range(len(matrix))]
 
 
-game_id_regex = re.compile(r"^\w+(\.\w+)+$")
+game_id_regex = re.compile(r"^\w+(\.([\w:])+)+$")
 game_id_split_regex = re.compile(r"\w+")
 
 
@@ -281,6 +293,8 @@ def is_game_id_formatted(string: str) -> bool:
     :return:        `True`, if the string is formatted like a Game ID, otherwise `False`. Does not check if the ID
                     resolves.
     """
+    if not isinstance(string, str):
+        return False
     if game_id_regex.match(string):
         return True
     return False

@@ -13,7 +13,7 @@
     {{ icon('item.gold') | safe }}
 </div>
 <div class="mobile-line-end"></div>
-<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.storage_expanded', default=True, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles="#gb-sidebar-left" id="storage-icon" data-display="#storage-icon" data-inform=".gb-main" data-sync="selection._bool.storage_expanded">
+<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.storage_expanded', default=True) %} gb-toggle-view-active{% endif %}" data-toggles="#gb-sidebar-left" id="storage-icon" data-display="#storage-icon" data-inform=".gb-main" data-sync="selection._bool.storage_expanded">
     {{ icon('station.storage') | safe }}
 </div>
 {% with prompt_heads = get_prompt_head_dict(current_user) %}
@@ -26,7 +26,7 @@
 {% endfor %}
 {% endwith %}
 <div class="mobile-whitespace"></div>
-<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.quest_expanded', default=False, id_buffer=id_buffer) %} gb-toggle-view-active{% endif %}" data-toggles=".quest-sidebar" id="quest-icon" data-display="#quest-icon" data-inform=".gb-main" data-sync="selection._bool.quest_expanded">
+<div class="gb-navbar-item gb-navbar-item-clickable gb-toggle-view{% if current_user.get('selection._bool.quest_expanded', default=False) %} gb-toggle-view-active{% endif %}" data-toggles=".quest-sidebar" id="quest-icon" data-display="#quest-icon" data-inform=".gb-main" data-sync="selection._bool.quest_expanded">
     {{ icon('station.quest') | safe }}
 </div><div class="gb-navbar-line-end"></div>
 {{ super() }}
@@ -35,21 +35,21 @@
 {% block navbar_extras %}{% if 'feedback' in current_user.get('data.special.roles') %}<a class="" href="{{ url_for('feedback') }}">Feedback</a>{% endif %}{% endblock %}
 
 {% block sidebar_outer %}
-<div class="gb-sidebar storage-sidebar{% if not current_user.get('selection._bool.storage_expanded', default=True, id_buffer=id_buffer) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-left">
+<div class="gb-sidebar storage-sidebar{% if not current_user.get('selection._bool.storage_expanded', default=True) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-left">
     {% block sidebar %}
-    {{ current_user.get('html.station.storage', id_buffer=buffer) | safe }}
+    {{ current_user.get('html.station.storage') | safe }}
     {% endblock %}
 </div>
-<div class="quest-sidebar{% if not current_user.get('selection._bool.quest_expanded', default=False, id_buffer=id_buffer) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-right">
+<div class="quest-sidebar{% if not current_user.get('selection._bool.quest_expanded', default=False) %} gb-toggle-hidden{% endif %}" id="gb-sidebar-right">
     {{ current_user.get('html.station.quest') | safe }}
 </div>
 {% endblock %}
 
 {% block app_content %}
-{% with user_stations = get_unlocked_station_list(current_user, id_buffer=buffer),
-        slots= current_user.get('slots._all', id_buffer=buffer) %}
+{% with user_stations = get_unlocked_station_list(current_user),
+        slots= current_user.get('slots._all') %}
     {% for station in user_stations if not station.has_special_ui() %}
-    {{ current_user.get('html.' + station.get_id(), slots=slots, id_buffer=id_buffer)|safe }}
+    {{ current_user.get('html.' + station.get_id(), slots=slots)|safe }}
     {% endfor %}
 {% endwith %}
 {% endblock %}

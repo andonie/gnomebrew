@@ -1,7 +1,7 @@
 {% extends "stations/_station.html" %}
 
 {% block station_subtitle %}
-<h5 id="data.tavern.name">{% with name = current_user.get('data.tavern.name', id_buffer=buffer) %}{% if name %}{{ name }}{% else %}your tavern{% endif %}{% endwith %}</h5>
+<h5 id="data.tavern.name">{% with name = current_user.get('data.tavern.name') %}{% if name %}{{ name }}{% else %}your tavern{% endif %}{% endwith %}</h5>
 {% endblock %}
 
 {% block station_body %}
@@ -17,7 +17,7 @@
         {% endwith %}
     </div>
     <div class="gb-tab" id="gb-tavern-prices">
-        {% with prices = current_user.get('data.tavern.prices', id_buffer=buffer) %}
+        {% with prices = current_user.get('data.tavern.prices') %}
         {% include 'snippets/_tavern_price_list.html' %}
         {% endwith %}
     </div>
