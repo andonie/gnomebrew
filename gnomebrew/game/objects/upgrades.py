@@ -10,7 +10,7 @@ from flask import render_template
 from gnomebrew import mongo
 from gnomebrew.game.event import Event
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.user import get_resolver
+from gnomebrew.game.user import get_resolver, update_resolver
 from gnomebrew.game.user import User
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, render_object
 
@@ -28,35 +28,33 @@ def attr(game_id: str, user: User, **kwargs):
     return user.get(f"data.special.attr.{'.'.join(splits[1:])}", **kwargs)
 
 
-@Effect.type('upgrade')
-def upgrade(user: User, effect_data: list, **kwargs):
-    """
-    Event execution for an upgrade.
-    :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `['upgrade1', 'upgrade2']`
-    """
-    # Get Upgrade list (always sorted)
-    user_upgrade_list = user.get('data.workshop.upgrades', **kwargs)
+@update_resolver('attr')
+def update_attr(user: User, game_id: str, update, **kwargs):
+    # TODO implement
+    pass
 
-    stations_to_update = set()
-
-    for upgrade in effect_data:
-        assert upgrade not in user_upgrade_list
-        # Add the upgrade in the correct sorted position
-        user_upgrade_list.insert(bisect_left(user_upgrade_list, upgrade), upgrade)
-        # Check if there is a UI update to be done
-        upgrade_object = Upgrade.from_id(upgrade)
-        stations_to_update.update(upgrade_object.stations_to_update())
-
-    # Flush. Update Game Data
-    user.update('data.workshop.upgrades', user_upgrade_list)
-
-    # Flush to Frontend: Update User Frontends
-    for station in stations_to_update:
-        user.frontend_update('ui', {
-            'type': 'reload_station',
-            'station': station
-        })
+# DEPRECATED (?)
+# @Effect.type('upgrade', ('target_id', str), ('value', object))
+# def upgrade(user: User, effect_data: dict, **kwargs):
+#     """
+#     Event execution for an upgrade.
+#     :param user:            The user to execute on.
+#     :param effect_data:     The registered effect data formatted as
+#     """
+#     # Ensure data is not malformatted
+#     if 'target_id' not in effect_data or 'value' not in effect_data or not isinstance(effect_data['target_id'], str):
+#         raise Exception(f"Malformatted Effect Data: {effect_data}")
+#
+#     user.update()
+#
+#     stations_to_update = list()
+#
+#     # Flush to Frontend: Update User Frontends
+#     for station in stations_to_update:
+#         user.frontend_update('ui', {
+#             'type': 'reload_station',
+#             'station': station
+#         }
 
 
 def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str, List[dict]]:

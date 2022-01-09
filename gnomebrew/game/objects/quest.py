@@ -80,7 +80,8 @@ class Quest(StaticGameObject, PublicGameObject):
         user.frontend_update('ui', {
             'type': 'append_element',
             'selector': "#quests-active",
-            'element': render_object('render.active_quest', data=user.get(f"data.station.quest.active.{self.get_minimized_id()}"))
+            'element': render_object('render.active_quest',
+                                     data=user.get(f"data.station.quest.active.{self.get_minimized_id()}"))
         })
 
     def transition_state(self, user: User, state_id: str, **kwargs):
@@ -152,10 +153,12 @@ class Quest(StaticGameObject, PublicGameObject):
 
         # Remove any traces of quest items (from storage) and quest stations (from station list)
         station_list = user.get("data.special.stations", **kwargs)
-        user.update("data.special.stations", list(filter(lambda s_id: not s_id.startswith(f"quest_data.{self.get_minimized_id()}.station"),
-                                                         station_list)), **kwargs)
+        user.update("data.special.stations",
+                    list(filter(lambda s_id: not s_id.startswith(f"quest_data.{self.get_minimized_id()}.station"),
+                                station_list)), **kwargs)
         # Remove any quest items
-        user.update(f"data.station.storage.content.quest_data.{self.get_minimized_id()}", '', mongo_command='$unset', **kwargs)
+        user.update(f"data.station.storage.content.quest_data.{self.get_minimized_id()}", '', mongo_command='$unset',
+                    **kwargs)
 
         # Remove this quest from the quest data
         user.frontend_update('ui', {
@@ -238,10 +241,16 @@ class Quest(StaticGameObject, PublicGameObject):
                 quest_data[entity_class] = copy.deepcopy(self._data['data'][entity_class])
                 if entity_class not in Quest.no_id_quest_data_entities:
                     for entity in quest_data[entity_class]:
-                        quest_data[entity_class][entity]['game_id'] = f"quest_data.{self.get_minimized_id()}.{entity_class}.{entity}"
-
+                        quest_data[entity_class][entity][
+                            'game_id'] = f"quest_data.{self.get_minimized_id()}.{entity_class}.{entity}"
 
         return quest_data
+
+
+# Quest Data Validation
+Quest.validation_parameters(('game_id', str), ('name', str), ('description', str), ('foldout', str), ('game_id', str),
+                            ('slots', int), ('icon', str), ('data', dict), ('quest_start', str), ('tier', str),
+                            ('reward', list), ('quest_flow', dict))
 
 
 class QuestState(GameObject):
@@ -381,6 +390,7 @@ questdata_entity_types = {
     '_flags': lambda x: x,
 }
 
+
 def _validate_questdata_splits(splits: List[str], user: User):
     """
     :param splits: Splits of a `quest_data` Game ID
@@ -397,7 +407,8 @@ def _validate_questdata_splits(splits: List[str], user: User):
 def get_quest_data(user: User, game_id: str, **kwargs):
     splits = game_id.split('.')
     _validate_questdata_splits(splits, user)
-    return questdata_entity_types[splits[2]](user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
+    return questdata_entity_types[splits[2]](
+        user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
 
 
 @update_resolver('quest_data')
@@ -410,8 +421,7 @@ def resolve_quest_update(user: User, game_id: str, update, **kwargs):
     return user.update(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", update, **kwargs)
 
 
-
-@Effect.type('qu')
+@Effect.type('qu', ('quest', str))
 def review_quest_objectives(user: User, effect_data: dict, **kwargs):
     if 'updated_id' not in kwargs or 'updated_value' not in kwargs:
         raise Exception(f"This effect should always be called on update but did not receive any 'updated_id' kwarg.")
@@ -463,7 +473,7 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
         user.get(f"quest.{quest_id}").progress_quest(user, **kwargs)
 
 
-@Effect.type('add_available_quests')
+@Effect.type('add_available_quests', ('quest_ids', list))
 def add_available_quest(user: User, effect_data: dict, **kwargs):
     """
     This effect adds a number of quest to the given user's list of available quests.
@@ -471,7 +481,7 @@ def add_available_quest(user: User, effect_data: dict, **kwargs):
     :param effect_data:     Effect data
     :param kwargs:          kwargs
     """
-    if 'quest_ids' not in effect_data or len(effect_data['quest_ids'])==0:
+    if 'quest_ids' not in effect_data or len(effect_data['quest_ids']) == 0:
         raise Exception(f"No quest_ids was given for command.")
 
     quest_data = user.get("data.station.quest", **kwargs)
@@ -510,10 +520,11 @@ def render_available_quest_info(effect_data: dict) -> List[List[str]]:
     :param effect_data:     Effect data.
     :return:                Relevant info data.
     """
+    # TODO needs proper implementation
     return [['New', 'tier.tier_1']]
 
 
-@Effect.type('add_active_quest')
+@Effect.type('add_active_quest', ('quest_id', str))
 def start_quest_immediately(user: User, effect_data: dict, **kwargs):
     """
     Unlike `add_available_quest`, this function adds a quest immediately to the list of active quests.
@@ -610,7 +621,6 @@ def react_to_objective_state_change(user: User, data: dict, game_id: str, **kwar
         })
 
 
-
 @html_generator(base_id='html.quest_data', is_generic=True)
 def render_quest_data(game_id: str, user: User, **kwargs):
     """
@@ -641,7 +651,9 @@ def render_quest_data(game_id: str, user: User, **kwargs):
 @html_generator(base_id='html.quest.objectives', is_generic=True)
 def render_quest_objective_html(game_id: str, user: User, **kwargs):
     return render_object('render.objective_list',
-                         data=user.get(f"data.station.quest.active.{'.'.join(game_id.split('.')[3:])}.current_objectives", **kwargs))
+                         data=user.get(
+                             f"data.station.quest.active.{'.'.join(game_id.split('.')[3:])}.current_objectives",
+                             **kwargs))
 
 
 @application_test(name='Give Quest', category='Default')

@@ -1,6 +1,8 @@
 """
 This module manages the game's in-loading
 """
+import logging
+from copy import deepcopy
 from os.path import join
 from typing import Type, Any, Callable
 
@@ -197,6 +199,7 @@ class PublicGameObject(GameObject):
     def generate_get_resolver(cls, id_prefix: str) -> Callable:
         dynamic_collection = mongo.db[cls._public_id_lookup[id_prefix]['dynamic_collection']]
         special_id_lookup = cls._public_id_lookup[id_prefix]['special_get']
+
         def resolve_id_get(game_id: str, user: User, **kwargs) -> 'GameObject':
             if game_id in special_id_lookup:
                 return special_id_lookup[game_id](game_id=game_id, user=user, **kwargs)
@@ -214,7 +217,6 @@ class PublicGameObject(GameObject):
             return PublicGameObject(dict(result))
 
         return resolve_id_get
-
 
     @classmethod
     def generate_update_resolver(cls, id_prefix: str) -> Callable:
@@ -256,18 +258,21 @@ _static_lookup_tiered = dict()
 
 # Interface
 
-def load_on_startup(collection_name: str):
+def load_on_startup(collection_name: str, validate: bool = True):
     """
     Marks a class of **static** game data that's identical for all players and should be stored in RAM always.
     Expects a **dedicated collection** in the game's MongoDB instance to load from.
+    :param validate:            Whether or not each object loaded in at startup should be validated before adding it to
+                                the object collection. Default `True`
     :param collection_name      Name of the DB collection to load from
-    :return:            Ensures this class is loaded
+    :return:                    Ensures this class is loaded
     """
 
     def wrapper(static_data_class: Type[StaticGameObject]):
         job_object = {
             'class': static_data_class,
-            'collection': collection_name
+            'collection': collection_name,
+            'validate': validate
         }
         _load_job_list.append(job_object)
         return static_data_class
@@ -290,23 +295,47 @@ def update_static_data():
     tiered_lookup = dict()
 
     for job in _load_job_list:
-        log('gb_core', f'loading {job["collection"]}', 'boot_routines')
         base_dict = dict()
         entity_type = None
         for doc in mongo.db[job['collection']].find({}, {'_id': False}):
+            # Make Checks (for Exception Level Malformatted Input) before adding input to doc
+            # Check if Empty Object was given
             if not doc:
-                # Read an empty doc!
                 raise Exception(f"Loaded an empty doc in {job['collection']}.")
+
+            # Ensure all game_id fields start with the same first split
             read_type = doc['game_id'].split('.')[0]
             if entity_type is None:
                 entity_type = read_type
             else:
                 assert read_type == entity_type
+
+            # Ensure the Game ID is not yet taken
             if doc['game_id'] in base_dict:
                 raise Exception(f"Game ID {doc['game_id']} is used on multiple DB documents.")
-            base_dict[doc['game_id']] = job['class'](doc)
+
+            game_object: DataObject = job['class'](doc)
+
+            # If objects loaded from this source should be validated before adding, do so now.
+            if job['validate']:
+                validation_result = game_object.validate()
+                if validation_result.has_failed():
+                    # This object has failed the validation check. This should not happen.
+                    # Ignore this object for runtime purposes and log the exception on console.
+                    log("gb_system", f"Game Object malformatted:\n{validation_result.get_fail_messages()}",
+                        f"id:{game_object.get_static_value('game_id', default='<unkown>')}",
+                        "sanity", level=logging.WARN)
+                    continue
+
+            # All tests checked approved. Add this document to the others
+            base_dict[doc['game_id']] = game_object
+
+        # All tests passed. Add this to the loaded object pool
         flat_lookup.update(base_dict)
         tiered_lookup[entity_type] = base_dict
+
+    # Finished boot routine: Report success succinctly to console
+    log('gb_core', f"DB Collections Loaded: {', '.join([job['collection'] for job in _load_job_list])}", 'boot_routines')
 
     # Update Game Entity Registry
 
@@ -346,6 +375,7 @@ static_getters = {
     'special': lambda id: StaticGameObject.from_id(id),
     'item': lambda id: StaticGameObject.from_id(id)
 }
+
 
 @global_jinja_fun
 def static_get(game_id: str) -> GameObject:

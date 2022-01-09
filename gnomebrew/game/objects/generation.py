@@ -499,6 +499,11 @@ class GenerationRule(StaticGameObject):
             cls.rules_by_name[all_rules[rule].name()] = all_rules[rule]
 
 
+# Generation Rule Data Validation
+
+GenerationRule.validation_parameters(('game_id', str), ('name', str), ('description', str),
+                                     ('gen_attr', dict), ('env_rules', dict))
+
 ## INTERFACING for generation algos:
 
 _generation_functions: Dict[str, Dict] = dict()

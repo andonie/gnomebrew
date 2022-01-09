@@ -19,6 +19,7 @@ def process_alchemy_recipe_selection(game_id: str, user: User, set_value, **kwar
         # Read out the current selection.
         return user.get('data.alchemy.next_recipe', **kwargs)
 
+
 @Effect.type('restart_alchemy')
 def restart_alchemy_effect(user: User, effect_data: dict, **kwargs):
     """
@@ -41,4 +42,3 @@ def restart_alchemy_effect(user: User, effect_data: dict, **kwargs):
 
     # We want to execute any frontend-info the response received.
     response.finalize(user)
-

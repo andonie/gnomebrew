@@ -25,3 +25,7 @@ class Tier(StaticGameObject):
         if 'quest_description' in self._data:
             info.append(self._data['quest_description'])
         return info
+
+
+# Tier data validation
+Tier.validation_parameters(('game_id', str), ('name', str), ('description', str), ('quest_description', str))

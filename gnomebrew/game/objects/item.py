@@ -1,6 +1,7 @@
 import copy
 from typing import List, Dict, Callable
 
+from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, GameObject
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import get_resolver, User, get_postfix
@@ -101,6 +102,10 @@ class Item(StaticGameObject):
         return [ItemCategory.from_id(f"it_cat.{cat_name}") for cat_name in self._data['categories']]
 
 
+# Item Validation Code
+Item.validation_parameters(('game_id', str), ('name', str), ('description', str), ('categories', list))
+
+
 @load_on_startup('item_categories')
 class ItemCategory(StaticGameObject):
     """
@@ -180,6 +185,11 @@ class ItemCategory(StaticGameObject):
         return sum([inventory[item.get_minimized_id()] for item in self.get_matching_items()
                     if item.get_minimized_id() in inventory])
 
+
+# Item Category Data Validation
+
+ItemCategory.validation_parameters(('game_id', str), ('name', str), ('description', str),
+                                   ('name_individual_entity', str), ('cat_order', int))
 
 
 # GAME ID STUFF

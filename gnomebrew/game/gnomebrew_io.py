@@ -56,7 +56,7 @@ class GameResponse(object):
         :param msg: The error message to be added.
         """
         if 'fail_msg' in self._data:
-            self._data['fail_msg'] += '<br/>' + msg
+            self._data['fail_msg'] += '\n' + msg
         else:
             self._data['fail_msg'] = msg
         self._data['type'] = 'fail'
@@ -158,12 +158,21 @@ class GameResponse(object):
             for ui_update in self.ui:
                 user.frontend_update('ui', ui_update, **kwargs)
 
-    def has_failed(self):
+    def has_failed(self) -> bool:
         """
         Returns whether or not this response has fail messages associated with it.
         :return:    `True` if this is a fail response, else `False`
         """
         return self._data['type']=='fail' if 'type' in self._data else False
+
+    def get_fail_messages(self) -> str:
+        """
+        :return:    An accumulation of this response's fail messages in a string format to be used for *console output*.
+                    If multiple messages are present, they are separated with `\n'` characters.
+                    If no fail messages have been recorded through `add_fail_msg`, returns empty string.
+        """
+        return self._data['fail_msg'] if 'fail_msg' in self._data else ""
+
 
 
 TYPE_ERROR = GameResponse()

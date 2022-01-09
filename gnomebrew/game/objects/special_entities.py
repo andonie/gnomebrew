@@ -12,6 +12,10 @@ class SpecialEntity(StaticGameObject):
         super().__init__(mongo_data)
 
 
+# Special Entity Data Validation
+
+SpecialEntity.validation_parameters(('game_id', str), ('name', str), ('description', str))
+
 @get_resolver('special')
 def get_special(game_id: str, user: User, **kwargs) -> SpecialEntity:
     """

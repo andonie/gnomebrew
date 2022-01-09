@@ -237,12 +237,21 @@ def update_storage_amounts(user: User, game_id: str, update, **kwargs):
     return user.update(f"data.station.storage.content{appendage}", update, **kwargs)
 
 
-@Effect.type('delta_inventory')
+@Effect.type('delta_inventory', ('delta', dict))
 def delta_inventory(user: User, effect_data: dict, **kwargs):
     """
     Event execution for a change in inventory data.
     :param user:            The user to execute on.
-    :param effect_data:     The registered effect data formatted as `effect_data[material_id] = delta`
+    :param effect_data:     The registered effect data formatted as
+    ```python
+    {
+        'effect_type': 'delta_inventory',
+        'delta': {
+            'item-water': -10,
+            'item-sword-short-diamond': 1
+        }
+    }
+    ```
     """
     log('effect', f'executing effect', 'delta_inventory', f'usr:{user.get_id()}')
     user_inventory = user.get('storage._content', **kwargs)

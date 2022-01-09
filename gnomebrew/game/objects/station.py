@@ -101,7 +101,12 @@ class Station(StaticGameObject):
         """
         return [user.get(recipe_id) for recipe_id in user.get(f"data.{self.get_id()}.recipes")]
 
-@Effect.type('add_station')
+
+# Station data validation
+Station.validation_parameters(('game_id', str), ('name', str), ('description', str), ('init_data', dict))
+
+
+@Effect.type('add_station', ('station', str))
 def add_station(user: User, effect_data: dict, **kwargs):
     """
     Fired when a new station is to be added to a user's game data.
@@ -116,14 +121,14 @@ def add_station(user: User, effect_data: dict, **kwargs):
         station: Station = user.get(station_id, **kwargs)
     except Exception as a:
         # Load the respective station and initialize it for this user
-        log_exception('effect', a, 'Could not find station')
+        log_exception('effect', a, f'Could not find target station: {station_id}')
         return
 
     # Initialize Station
     station.initialize_for(user)
 
 
-@Effect.type('remove_station')
+@Effect.type('remove_station', ('station', str))
 def remove_station(user: User, effect_data: dict, **kwargs):
     """
     Removes a station from the user's game data.
@@ -187,4 +192,3 @@ def process_alchemy_recipe_selection(game_id: str, user: User, set_value, **kwar
     else:
         # Read out the current selection.
         return user.get(target_location, default=False, **kwargs)
-

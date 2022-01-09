@@ -381,7 +381,13 @@ class Recipe(StaticGameObject):
         return Event(data)
 
 
-@Effect.type('add_recipe')
+# Recipe data validation
+Recipe.validation_parameters(('game_id', str), ('name', str), ('description', str),
+                             ('cost', dict), ('base_time', int), ('slots', int), ('station', str),
+                             ('result', list))
+
+
+@Effect.type('add_recipe', ('recipe', str))
 def add_recipe(user: User, effect_data: dict, **kwargs):
     """
     Adds a given recipe to its target station's recipe list.
@@ -389,8 +395,8 @@ def add_recipe(user: User, effect_data: dict, **kwargs):
     :param effect_data:     Should contain `recipe` containing the target recipe's ID.
     :param kwargs:          kwargs
     """
-    target_recipe = user.get(effect_data['recipe'])
-    print(f"{str(target_recipe)=}")
+    # Test Effect Data for sanity before execution by trying to retrieve target recipe
+    target_recipe: Recipe = user.get(effect_data['recipe'])
     # Push this recipe's ID in the target station's recipes directory
     user.update(f"data.{target_recipe.get_static_value('station')}.recipes", target_recipe.get_static_value('game_id'),
                 mongo_command='$push', **kwargs)

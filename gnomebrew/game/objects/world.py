@@ -257,7 +257,7 @@ class WorldLocation:
         if len(hex_str) == 1:
             # Add leading 0 if necessary
             hex_str = '0' + hex_str
-        #print(f"{i=} {hex_str=}")
+        # print(f"{i=} {hex_str=}")
         return hex_str
 
     @staticmethod
@@ -284,6 +284,11 @@ class Plane(StaticGameObject, WorldLocation):
         # Make DB Data Available to Plane Environment
         for env_var in self._data['env_rules']:
             self.environment.set_env_var(env_var, self._data['env_rules'][env_var])
+
+
+# Plane Data Validation
+
+Plane.validation_parameters(('game_id', str), ('name', str), ('description', str), ('env_rules', dict))
 
 
 class GeneratedLocation(GeneratedGameObject, WorldLocation):

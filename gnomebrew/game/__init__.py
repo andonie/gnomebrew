@@ -6,7 +6,7 @@ boot routines marked `@boot_routine`.
 import os
 from typing import Callable
 import logging
-import gnomebrew.index
+from gnomebrew import app
 
 
 from gnomebrew import log
@@ -28,16 +28,17 @@ def boot_routine(fun: Callable, name: str=None):
 
 
 # Load all Game Modules
-log('gb_core', 'Loading Core Modules:', 'boot_routines')
 _game_module_names = ['gnomebrew.logging', 'gnomebrew.game.objects', 'gnomebrew.game.play_modules', 'gnomebrew.game.objects.world',
                       'gnomebrew.game.testing', 'gnomebrew.admin', 'gnomebrew.game.static_data',
                        'gnomebrew.game.selection']
 
 # Load in Game Modules
 game_modules = list(map(__import__, _game_module_names))
+log('gb_core', 'Core Modules loaded', 'boot_routines')
 
 # Execute all boot routines
-log('gb_core', 'Starting module boot routines:', 'boot_routines')
 for routine in _boot_routines:
-    log('gb_core', f"Executing: {routine['name']}", 'boot_routines')
     routine['fun']()
+
+
+log('gb_core', f"Gnomebrew {app.config['VERSION']} Server Running on {app.config['SERVER_NAME']}")

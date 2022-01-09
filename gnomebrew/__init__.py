@@ -15,14 +15,12 @@ app = Flask(__name__)
 log('gb_core', 'Loading Config')
 app.config.from_envvar('GNOMEBREW_CONFIG')
 
-log('gb_core', f'Booting server at {app.config["SERVER_NAME"]}:')
+log('gb_core', f'Booting server at {app.config["SERVER_NAME"]} ...')
 
 # Load Database (flask-pymongo)
-log('gb_core', 'Starting PyMongo', 'boot_routines')
 mongo = PyMongo(app)
 
 # SocketIO Setup
-log('gb_core', 'Starting SocketIO', 'boot_routines')
 socketio = SocketIO(app, logger=False)
 
 

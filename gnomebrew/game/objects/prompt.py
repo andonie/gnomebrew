@@ -20,7 +20,7 @@ class Prompt(GameObject):
     Wraps a player prompt.
     """
 
-    prompt_types = [ 'guild', 'main', 'server' ]
+    prompt_types = ['guild', 'main', 'server']
 
     def __init__(self, data: dict):
         GameObject.__init__(self, data, uuid='prompt_id')
@@ -70,7 +70,8 @@ class Prompt(GameObject):
         prompt_list = user.get('data.special.prompts')
         pre_length = len(prompt_list)
 
-        prompt_list = list(filter(lambda prompt_data: prompt_data['prompt_id'] != response_data['target_id'], prompt_list))
+        prompt_list = list(
+            filter(lambda prompt_data: prompt_data['prompt_id'] != response_data['target_id'], prompt_list))
         if len(prompt_list) == pre_length:
             response.add_fail_msg(f'Did not find prompt with ID {response_data["prompt_id"]}')
 
@@ -92,11 +93,10 @@ class Prompt(GameObject):
 
         # Provide an update on the prompt states for the user.
         prompt_heads = get_prompt_head_dict(user)
-        response.set_value('prompt_states', {f"#{key}-prompt": bool(v) for key, v in prompt_heads.items() })
+        response.set_value('prompt_states', {f"#{key}-prompt": bool(v) for key, v in prompt_heads.items()})
 
         response.succeess()
         return response
-
 
     def has_input(self) -> bool:
         """
@@ -169,7 +169,8 @@ class PlayerInput(DataObject):
         if 'validation_functions' not in PlayerInput.prompt_types[input_type]:
             raise Exception(f"No validation function registered for {input_type}")
         for validation in self._data['validate_input']:
-            PlayerInput.prompt_types[input_type]['validation_functions'][validation['validation_type']](validation, data, response)
+            PlayerInput.prompt_types[input_type]['validation_functions'][validation['validation_type']](validation,
+                                                                                                        data, response)
 
     def process_input(self, user, data):
         input_type = self._data['input_type']
@@ -207,6 +208,7 @@ def resolve_get_prompt(user: User, game_id: str, **kwargs):
 
 prompt_identifiers = ['prompt_id', 'prompt_type']
 
+
 @PlayerRequest.type('give_prompt', is_buffered=False)
 def resolve_give_prompt(user: User, request_object: dict, **kwargs):
     """
@@ -229,7 +231,9 @@ def resolve_give_prompt(user: User, request_object: dict, **kwargs):
     prompt = None
     for prompt_identifier in prompt_identifiers:
         if prompt_identifier in request_object:
-            result = next(filter(lambda prompt_data: prompt_data[prompt_identifier] == request_object[prompt_identifier], prompt_list), None)
+            result = next(
+                filter(lambda prompt_data: prompt_data[prompt_identifier] == request_object[prompt_identifier],
+                       prompt_list), None)
             if result:
                 prompt = Prompt(result)
             else:
@@ -241,14 +245,13 @@ def resolve_give_prompt(user: User, request_object: dict, **kwargs):
     if response.has_failed():
         return response
 
-    user.frontend_update('ui',{
+    user.frontend_update('ui', {
         'type': 'prompt',
         'prompt_html': prompt.render_html(user)
     })
 
     response.succeess()
     return response
-
 
 
 @PlayerRequest.type('prompt', is_buffered=True)
@@ -290,10 +293,12 @@ def get_prompt_head_dict(user: User) -> dict:
     :return:        Well-Formatted prompt dict
     """
     prompt_queue = user.get('data.special.prompts')
-    head_dict = {prompt_type: next(filter(lambda prompt_data:prompt_data['prompt_type'] == prompt_type, prompt_queue), None)
-                  for prompt_type in Prompt.prompt_types}
+    head_dict = {
+        prompt_type: next(filter(lambda prompt_data: prompt_data['prompt_type'] == prompt_type, prompt_queue), None)
+        for prompt_type in Prompt.prompt_types}
 
     return head_dict
+
 
 # Some Basic Prompt Types
 
@@ -323,16 +328,15 @@ def min_length(input_data: dict, data, response: GameResponse):
     """
     if len(data) < input_data['min_length']:
         response.add_fail_msg(f"Minimum length is {input_data['min_length']}")
-        response.player_info(None, f'Input must be longer than {input_data["min_length"]}', 'must be', 'special.greater_than', str(input_data['min_length']))
-
+        response.player_info(None, f'Input must be longer than {input_data["min_length"]}', 'must be',
+                             'special.greater_than', str(input_data['min_length']))
 
 
 # Effect Compatibility
 
-@Effect.type('queue_prompts')
+@Effect.type('queue_prompts', ('prompts', list))
 def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
     # Assert effect_data is well-formatted.
-
     display_immediately = None
 
     prompt_types = list()
@@ -373,6 +377,7 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
             'class_data': 'gb-navbar-hidden'
         })
 
+
 @application_test(name='Add Prompt', context='Prompt')
 def add_prompt(username: str, prompt_content: str):
     response = GameResponse()
@@ -401,4 +406,3 @@ def add_prompt(username: str, prompt_content: str):
     Effect(effect_data).execute_on(user)
 
     return response
-
