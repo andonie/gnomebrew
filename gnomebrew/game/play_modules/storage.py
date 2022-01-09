@@ -283,8 +283,12 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     user.update('storage', inventory_update, is_bulk=True)
 
     for new_item in new_items:
-        data = {'item_id': new_item.get_id(), "amount": inventory_update[new_item.get_id()] }
-        item_amount_html = render_object('render.item_amount', data=data)
+        # Generate The classes this item_amount render would belong to based on known convenctions
+        container_class = "gb-storage-item-view gb-info gb-info-highlight"
+        # Generate data that is the same for all renders independently of category
+        base_data = {'item_id': new_item.get_id(), "amount": inventory_update[new_item.get_id()], "class": container_class }
+        # Add `current_user` to this render to enable user-context-bound get requests (e.g. for quest data)
+        item_amount_html = render_object('render.item_amount', data=base_data, current_user=user)
         for category in new_item.get_categories():
             if category.get_id() not in known_frontend_category_ids and category.is_frontend_category():
                 # Update user inventory locally to reflect the changes in this item before rendering the new category
