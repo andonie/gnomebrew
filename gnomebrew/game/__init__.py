@@ -41,4 +41,4 @@ for routine in _boot_routines:
     routine['fun']()
 
 
-log('gb_core', f"Gnomebrew {app.config['VERSION']} Server Running on {app.config['SERVER_NAME']}")
+log('gb_core', f"<%Gnomebrew%> {app.config['VERSION']} Server Running on {app.config['SERVER_NAME']}")

@@ -121,6 +121,9 @@ def log(category: str, message: str, *args, **kwargs):
     config['logger'].log(kwargs['level'] if 'level' in kwargs else config['default_level'], message)
 
 
+# Matches "<%some.text.like.id%>" at \1
+bold_log_regex = re.compile(r"<%(\w+(\.([\w:])+)*)%>")
+
 def _format_message(category: str, message: str, *args, **kwargs):
     if category not in _log_lookup:
         raise Exception(f"Logging with category '{category}' is not configured.")
@@ -132,7 +135,10 @@ def _format_message(category: str, message: str, *args, **kwargs):
             kwargs['level'] = logging.ERROR
     brackets = ''.join([f"[{_color_string(CYAN, arg)}]" for arg in args])
     verbose_addtion = '' if 'verbose' not in kwargs or 'verbose' not in config or not config['verbose'] else f": {kwargs['verbose']}"
-    message = f"{brackets} {message}{verbose_addtion}"
+
+    # Format <% %> groups
+    message_formatted = formatter_message(bold_log_regex.sub(r"$BOLD\1$RESET", message))
+    message = f"{brackets} {message_formatted}{verbose_addtion}"
     return message
 
 
