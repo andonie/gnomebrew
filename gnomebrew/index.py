@@ -40,9 +40,15 @@ def get_icon(game_id: str):
     :param game_id: ID of the entity to get the icon for
     """
     splits = game_id.split('.')
-    target_directory = join(app.config['ICO_DIR'], splits[0])
 
-    for possible_image_name in [f"{'.'.join(splits[1:x])}.png" for x in range(len(splits), 1, -1)]:
+    if splits[0] in ['quest_data']:
+        target_directory = join(app.config['ICO_DIR'], splits[0], splits[1])
+        start_by = 2
+    else:
+        target_directory = join(app.config['ICO_DIR'], splits[0])
+        start_by = 1
+
+    for possible_image_name in [f"{'.'.join(splits[start_by:x])}.png" for x in range(len(splits), 1, -1)]:
         if isfile(join(target_directory, possible_image_name)):
             return send_from_directory(target_directory, possible_image_name)
 
