@@ -161,9 +161,9 @@ class GameResponse(object):
     def has_failed(self) -> bool:
         """
         Returns whether or not this response has fail messages associated with it.
-        :return:    `True` if this is a fail response, else `False`
+        :return:    `True` if this message has failed on some point (via `add_fail_msg`), else `False`
         """
-        return self._data['type']=='fail' if 'type' in self._data else False
+        return 'fail_msg' in self._data or self._data['type']=='fail' if 'type' in self._data else False
 
     def get_fail_messages(self) -> str:
         """

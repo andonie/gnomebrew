@@ -8,6 +8,7 @@ from typing import List, Callable
 
 from flask import render_template
 
+import gnomebrew.game.objects.effect
 from gnomebrew import app
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import Station
@@ -22,7 +23,7 @@ from gnomebrew.game.objects.objective import Objective
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, get_resolver, load_user, id_update_listener, html_generator, get_postfix, \
     update_resolver
-from gnomebrew.game.util import generate_uuid, css_friendly, render_info
+from gnomebrew.game.util import generate_uuid, css_friendly, render_info, is_game_id_formatted
 
 
 @PublicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest', dynamic_buffer=False)
@@ -253,6 +254,31 @@ Quest.validation_parameters(('game_id', str), ('name', str), ('description', str
                             ('reward', list), ('quest_flow', dict))
 
 
+@Quest.validation_function()
+def validate_quest_data(data: dict, response: GameResponse):
+    """
+    Validates a quest data object.
+    Given the complexity of quests relative to most other dataclasses in the game, this valilidation has more involved
+    computation than most validations, involving cascading validations.
+    :param data:        Complete JSON data that's supposed to be validated as a quest data object.
+                        `validation_parameters` has been taken into account already.
+    :param response:    Response object to log fails with.
+    """
+    # Does 'quest_start' lead somewhere? Check 'quest_flow'
+    if data['quest_start'] not in data['quest_flow']:
+        response.add_fail_msg(f"<%quest_start%> ({data['quest_start']}) is not found in <%quest_flow%>")
+
+    # Evaluate each element of the `reward` data list as an effect and validate
+    for effect in [Effect(e_data) for e_data in data['reward']]:
+        response.append_into(effect.validate())
+
+    # Validate each element in `quest_flow` as an individual quest state
+    for quest_state in [QuestState(qs_data) for qs_data in data['quest_flow'].values()]:
+        response.append_into(quest_state.validate())
+
+    # TODO possible: Validate interconnections in this object here (e.g. quest-states' `on_complete`)
+
+
 class QuestState(GameObject):
     """
     Describes one possible quest state. Quests can have multiple nonlinear states. This class describes one such state.
@@ -337,6 +363,27 @@ class QuestState(GameObject):
         return user.get('data.station.quest.active', **kwargs)
 
 
+# Validating Quest State Data
+
+QuestState.validation_parameters(('objectives', list), ('effect', list), ('on_complete', object))
+
+@QuestState.validation_function()
+def validate_quest_state_data(data: dict, response: GameResponse):
+    """
+    Validates a quest state data object.
+    :param data:        Complete JSON data that's supposed to be validated as a quest state data object.
+                        `validation_parameters` has been taken into account already.
+    :param response:    Response object to log fails with.
+    """
+    # each element in `effect` is a an effect to be validated
+    for effect in [Effect(e_data) for e_data in data['effect']]:
+        response.append_into(effect.validate())
+
+    # each element in `objectives` is an objective to be validated
+    for objective in [Objective(o_data) for o_data in data['objectives']]:
+        response.append_into(objective.validate())
+
+
 class QuestObjective(GameObject):
     """
     Wraps a Quest Objective.
@@ -372,6 +419,10 @@ class QuestObjective(GameObject):
         return player_conditions
 
 
+# Quest Objective Data Validation
+
+QuestObjective.validation_parameters(('name', str), ('description', str), ('conditions', list))
+
 @load_on_startup('static_quests')
 class StaticQuest(Quest, StaticGameObject):
     """
@@ -381,6 +432,10 @@ class StaticQuest(Quest, StaticGameObject):
     def __init__(self, db_data: dict):
         StaticGameObject.__init__(self, db_data)
         Quest.__init__(self, db_data)
+
+
+# Copy Validation Scheme
+StaticQuest.use_validation_scheme_of(Quest)
 
 
 questdata_entity_types = {

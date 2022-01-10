@@ -2,6 +2,7 @@
 Essentially, Gnomebrew tries to keep all entity information formatted as JSON data.
 The `DataObject` class wraps any such data with rich features and a dedicated inheritance tree.
 """
+import copy
 import logging
 import uuid
 from typing import Union, Any, Callable, List, Tuple
@@ -60,6 +61,21 @@ class DataObject:
             raise Exception(f"Class {cls} already has associated required fields.")
 
         cls.type_validators[cls]['required_fields'] = list(fields)
+
+    @classmethod
+    def use_validation_scheme_of(cls, other_cls):
+        """
+        Will ensure that the called-on data class will use the same validation scheme as an existing class.
+        :param other_cls:   Another data class to copy the validation scheme from. Must have validation scheme.
+        """
+        # Ensure parameters are OK
+        if cls in cls.type_validators:
+            raise Exception(f"{cls} already has a validation scheme.")
+        if other_cls not in cls.type_validators:
+            raise Exception(f"{other_cls} does not have a validation scheme attached.")
+
+        # Copy Validation Scheme and assign it to this class
+        cls.type_validators[cls] = copy.copy(cls.type_validators[other_cls])
 
     def __init__(self, data: dict):
         """
