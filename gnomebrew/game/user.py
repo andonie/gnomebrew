@@ -152,6 +152,7 @@ def id_update_listener(game_id_regex):
         global _FRONTEND_DATA_RESOLVERS
         assert game_id_regex not in _FRONTEND_DATA_RESOLVERS
         _FRONTEND_DATA_RESOLVERS[re.compile(game_id_regex)] = fun
+        return fun
 
     return wrapper
 

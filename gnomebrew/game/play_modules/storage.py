@@ -1,41 +1,24 @@
 """
 Storage Module
 """
-import operator
-from os.path import join
 from typing import List
 
-from flask import render_template, url_for
+from flask import url_for
 
 from gnomebrew import log
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.objects.game_object import StaticGameObject, render_object
+from gnomebrew.game.objects.game_object import render_object
 from gnomebrew.game.objects.item import ItemCategory, Item
 from gnomebrew.game.selection import selection_id
-from gnomebrew.game.user import html_generator, User, id_update_listener, get_resolver, get_postfix, update_resolver
-from gnomebrew.game.util import global_jinja_fun, css_friendly, render_info, css_unfriendly
-
-
-def _get_display_function(game_id: str) -> str:
-    """
-    Returns the string that describes which display function to use for a given ID.
-    :param game_id:     A game_id
-    :return:            The function with which this data is to be displayed (e.g. 'shorten_num')
-    """
-    if game_id in ['data.station.storage.content.gold']:
-        return 'shorten_cents'
-    if game_id in ['special.time']:
-        return 'shorten_time'
-
-    # Default Case: Handle data at ID as number
-    return 'shorten_num'
+from gnomebrew.game.user import User, id_update_listener, get_resolver, update_resolver
+from gnomebrew.game.util import global_jinja_fun, css_friendly, render_info, css_unfriendly, get_id_display_function
 
 
 @id_update_listener(r'^data\.station\.storage\.content\.*')
 def forward_storage_update_to_ui(user: User, data: dict, game_id: str, **kwargs):
     updated_elements = {
         css_friendly(f"storage.{'.'.join(data_update_id.split('.')[4:])}"): {'data': data[data_update_id],
-                                                                             'display_fun': _get_display_function(
+                                                                             'display_fun': get_id_display_function(
                                                                                  game_id)} for data_update_id in data}
     if 'command' in kwargs:
         update_type = 'inc' if kwargs['command'] == '$inc' else 'set'
@@ -233,7 +216,7 @@ def get_storage_amounts(user: User, game_id: str, **kwargs):
 def update_storage_amounts(user: User, game_id: str, update, **kwargs):
     # Forward update data straight to the data location
     splits = game_id.split('.')
-    appendage = '.'.join(splits[1:]) if game_id != 'storage' else ''
+    appendage = '.' + '.'.join(splits[1:]) if game_id != 'storage' else ''
     return user.update(f"data.station.storage.content{appendage}", update, **kwargs)
 
 

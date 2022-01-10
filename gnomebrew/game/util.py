@@ -333,3 +333,18 @@ def generate_uuid() -> str:
     :return:    A unique identifier string that can be used to uniquely address an object in the game.
     """
     return str(uuid.uuid4()).replace('-', ':')
+
+
+def get_id_display_function(game_id: str) -> str:
+    """
+    Returns the string that describes which display function to use for a given ID.
+    :param game_id:     A game_id
+    :return:            The function with which this data is to be displayed (e.g. 'shorten_num')
+    """
+    if game_id in ['data.station.storage.content.gold']:
+        return 'shorten_cents'
+    if game_id in ['special.time']:
+        return 'shorten_time'
+
+    # Default Case: Handle data at ID as number
+    return 'shorten_num'

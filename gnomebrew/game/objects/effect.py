@@ -172,7 +172,7 @@ def id_update(user: User, effect_data: dict, **kwargs):
     :param effect_data: Effect data formatted as:
     ```python
     {
-        'effect_type': 'upgrade',
+        'effect_type': 'id_update',
         'game_id': 'attr.workshop.slots',
         'value': 1,
         'mongo_command': '$mul' # This parameter is optional, default is attr-default ("$inc")
