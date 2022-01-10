@@ -354,6 +354,27 @@ img {
     background: #FFEED9;
 }
 
+/* gb-pending animation */
+
+@keyframes buttonAnimation {
+  0% {
+    background: #aca7a9;
+  }
+  50% {
+    background: #ffeed9;
+  }
+  90% {
+    background: #aca7a9;
+  }
+}
+
+.gb-button.gb-pending {
+    animation-name: buttonAnimation;
+    animation-duration: 0.8s;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
 .row-margin-05 {
     margin-top: 0.5em;
 }
