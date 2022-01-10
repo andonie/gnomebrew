@@ -9,7 +9,7 @@ from flask_login import current_user
 from gnomebrew.game.objects.game_object import StaticGameObject, update_static_data
 from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.user import User, load_user
-from gnomebrew.game.util import global_jinja_fun
+from gnomebrew.game.util import global_jinja_fun, is_game_id_formatted
 from gnomebrew.game.gnomebrew_io import GameResponse
 from markdown import markdown
 from datetime import datetime
@@ -24,7 +24,6 @@ class TestSuite:
         """
         self.function = function
         self.name = kwargs['name'] if 'name' in kwargs else function.__name__
-
 
     def __lt__(self, other):
         return self.function.__name__.__lt__(other.function.__name__)
@@ -65,6 +64,7 @@ class TestSuite:
 _test_suites_by_category = dict()
 _test_suites_by_id = dict()
 
+
 def application_test(**kwargs):
     """
     Marks a function as an application test in Gnomebrew.
@@ -75,6 +75,7 @@ def application_test(**kwargs):
     """
 
     category = kwargs['category'] if 'category' in kwargs else 'Default'
+
     def wrapper(fun: Callable):
         suite = TestSuite(fun, **kwargs)
 
@@ -101,7 +102,6 @@ def execute_test(user: User, request_object: dict, **kwargs):
         response.add_fail_msg("You are not authorized to execute tests.")
         return response
 
-
     try:
         suite: TestSuite = _test_suites_by_id[request_object.pop('test_id')]
     except KeyError as e:
@@ -111,7 +111,7 @@ def execute_test(user: User, request_object: dict, **kwargs):
     start = datetime.now()
     response.append_into(suite.run_test(**request_object))
     end = datetime.now()
-    response.set_parameter('exec_time', str(end-start))
+    response.set_parameter('exec_time', str(end - start))
 
     # No failed test means success in request
     if 'type' not in response.to_json() or response.to_json()['type'] != 'fail':
@@ -164,8 +164,8 @@ def user_assertions(username: str):
     return response
 
 
-@application_test(name='Update Game ID', category='Mechanics')
-def update_game_id(game_id: str, update_json: str, username: str):
+@application_test(name='Update Game ID - JSON', category='Mechanics')
+def update_game_id_json(game_id: str, update_json: str, username: str):
     response = GameResponse()
     if username and username != "":
         user = load_user(username)
@@ -184,9 +184,6 @@ def update_game_id(game_id: str, update_json: str, username: str):
     return response
 
 
-
-
-
 @application_test(name='Evaluate Game ID', category='Mechanics')
 def evaluate_game_id(game_id: str, username: str):
     """
@@ -194,7 +191,7 @@ def evaluate_game_id(game_id: str, username: str):
     evaluates on current player. Valid IDs are for example:
 
     * `item.gold`
-    * `data.station.storage.content.iron`
+    * `data.station.storage.content.item.iron`
     """
     response = GameResponse()
     if username is None or username == '':
@@ -210,6 +207,46 @@ def evaluate_game_id(game_id: str, username: str):
 
     return response
 
+
+@application_test(name='Update Game ID', category='Mechanics')
+def update_game_id(game_id: str, update: str, username: str):
+    """
+    Updates a given `game_id` on a user.
+
+    The `update` will be parsed as a number if possible. If not, the `update` value will be parsed as a string.
+    """
+    response = GameResponse()
+    if username is None or username == '':
+        user = current_user
+    else:
+        user = load_user(username)
+        if not user:
+            response.add_fail_msg(f"Username {username} not found.")
+
+    if not is_game_id_formatted(game_id):
+        response.add_fail_msg(f"Game ID is malformatted: {game_id}")
+
+    # Update Formatting: Try to interpret as number
+    try:
+        float_interpret = float(update)
+        int_interpret = int(update)
+        if int_interpret == float_interpret:
+            update = int_interpret
+        else:
+            update = float_interpret
+        response.log("Interpreting update as Number")
+    except ValueError:
+        # `update` is certainly not formatted as a number. Abort this and keep update as it is - a string.
+        response.log("Interpreting update as String")
+
+    if response.has_failed():
+        return response
+
+    mongo_command, res = user.update(game_id, update)
+    response.log(f"Used Command {mongo_command} to the result of:")
+    response.log(str(res))
+
+    return response
 
 @application_test(name='Reload Static Objects', category='Data')
 def reload_static_objects():
