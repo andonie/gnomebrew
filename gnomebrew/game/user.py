@@ -150,7 +150,6 @@ def id_update_listener(game_id_regex):
 
     def wrapper(fun: Callable):
         global _FRONTEND_DATA_RESOLVERS
-        assert game_id_regex not in _FRONTEND_DATA_RESOLVERS
         _FRONTEND_DATA_RESOLVERS[re.compile(game_id_regex)] = fun
         return fun
 
@@ -384,16 +383,6 @@ class User(UserMixin):
 
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
-        # If any update listeners are registered for this game ID, inform update listeners of the update
-        # Dead Code: To review if the general (non user-specific) update feature is eneded
-        # global _UPDATE_LISTENERS
-        # for gid in res:
-        #     if gid in _UPDATE_LISTENERS:
-        #         for listener in _UPDATE_LISTENERS[gid]:
-        #             listener(user=self,
-        #                      update=res,
-        #                      mongo_command=mongo_command)
-
         if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
             return
         self._data_update_to_frontends(mongo_command, res)
@@ -428,15 +417,14 @@ class User(UserMixin):
         """
         for path in command_content:
             if type(command_content[path]) is datetime:
+                # Reformat datetime to be JS compatible
                 command_content[path] = command_content[path].strftime('%d %b %Y %H:%M:%S') + ' GMT'
 
             individual_data = {path: command_content[path]}
 
-            found_match = False
             for regex in _FRONTEND_DATA_RESOLVERS:
                 if regex.match(path):
                     # Found a match. Execute handler instead of default.
-                    found_match = True
                     _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path, command=mongo_command)
                     break
 

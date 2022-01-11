@@ -116,7 +116,11 @@ def add_station(user: User, effect_data: dict, **kwargs):
     if 'station' not in effect_data:
         raise Exception(f"Missing element 'station'")
 
+    # Ensure station is not yet added to user
     station_id = effect_data['station']
+    if station_id in user.get("data.special.stations"):
+        raise Exception(f"Station {station_id} already added in user's station list.")
+
     try:
         station: Station = user.get(station_id, **kwargs)
     except Exception as a:
@@ -144,6 +148,8 @@ def remove_station(user: User, effect_data: dict, **kwargs):
 
     # Remove Station ID from station list
     user.update("data.special.stations", station_id, mongo_command='$pull', **kwargs)
+
+    # If any recipes
 
     # Remove the station from frontends
     user.frontend_update('ui', {
