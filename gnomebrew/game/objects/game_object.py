@@ -301,7 +301,8 @@ def update_static_data():
             # Make Checks (for Exception Level Malformatted Input) before adding input to doc
             # Check if Empty Object was given
             if not doc:
-                raise Exception(f"Loaded an empty doc in {job['collection']}.")
+                log("gb_system", f"Loaded an empty doc in collection: {job['collection']}.", level=logging.WARN)
+                continue
 
             # Ensure all game_id fields start with the same first split
             read_type = doc['game_id'].split('.')[0]
