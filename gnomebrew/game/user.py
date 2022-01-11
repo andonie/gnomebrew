@@ -19,7 +19,7 @@ _GET_RESOLVERS = dict()
 _UPDATE_RESOLVERS = dict()
 _UPDATE_LISTENERS = dict()
 _USER_ASSERTIONS = list()
-_FRONTEND_DATA_RESOLVERS = dict()
+_GLOBAL_ID_UPDATE_LISTENERS = dict()
 _HTML_DIRECT_IDS = dict()
 _HTML_ID_RULES = dict()
 _USR_CACHE = dict()
@@ -149,8 +149,8 @@ def id_update_listener(game_id_regex):
     """
 
     def wrapper(fun: Callable):
-        global _FRONTEND_DATA_RESOLVERS
-        _FRONTEND_DATA_RESOLVERS[re.compile(game_id_regex)] = fun
+        global _GLOBAL_ID_UPDATE_LISTENERS
+        _GLOBAL_ID_UPDATE_LISTENERS[re.compile(game_id_regex)] = fun
         return fun
 
     return wrapper
@@ -372,7 +372,6 @@ class User(UserMixin):
 
         * `is_bulk`: If True, the update will be split the paths in keys
         * `command`: Default '$set' - mongo_db command to use for the update
-        * `suppress_frontend`: If this is set `True`, no frontend updates will be run.
         """
         id_type = game_id.split('.')[0]
         if id_type not in _UPDATE_RESOLVERS:
@@ -381,52 +380,44 @@ class User(UserMixin):
         # Invalidate the updated ID in buffer to ensure it is reloaded next time.
         self.buffer.invalidate(game_id, dynamic_id=_GET_RESOLVERS[id_type]['dynamic_buffer'])
 
+        # Run the actual update
         mongo_command, res = _UPDATE_RESOLVERS[id_type](user=self, game_id=game_id, update=update, **kwargs)
 
-        if 'suppress_frontend' in kwargs and kwargs['suppress_frontend']:
-            return
-        self._data_update_to_frontends(mongo_command, res)
-
-
+        # Inform global & user-local update listeners of the ID(s) changed
         # Get the *exact* list of changes this updates induced, taking into account the `is_bulk` command:
         id_update_list = list()
         if 'is_bulk' in kwargs and kwargs['is_bulk']:
             for id_append in update:
-                id_update_list.append(f"{game_id}.{id_append}")
+                id_update_list.append((f"{game_id}.{id_append}", update[id_append]))
         else:
-            id_update_list.append(game_id)
+            id_update_list.append((game_id, update))
 
-        # Check all update listeners and trigger the appropriate ones
-        for updated_id in id_update_list:
-            for listener_data in self.get('data.special.id_listeners'):
+        # Check GLOBAL Listeners
+        for updated_id, update_value in id_update_list:
+            # Prepare Data Package for listeners
+            individual_data = {updated_id: update_value}
+
+            # If the individual data is datetime, format into something that JS can read
+            if type(individual_data[updated_id]) is datetime:
+                individual_data[updated_id] = individual_data[updated_id].strftime('%d %b %Y %H:%M:%S') + ' GMT'
+
+            # Check all known global listeners and invoke when necessary
+            for regex in _GLOBAL_ID_UPDATE_LISTENERS:
+                if regex.match(updated_id):
+                    # Found a match. Execute handler instead of default.
+                    _GLOBAL_ID_UPDATE_LISTENERS[regex](user=self, data=individual_data, game_id=updated_id, command=mongo_command)
+
+        # Check USER listeners
+        user_listeners = self.get('data.special.id_listeners')
+        for updated_id, update_value in id_update_list:
+            for listener_data in user_listeners:
                 if listener_data['target_id'] == updated_id or (listener_data['starts_with'] and updated_id.startswith(listener_data['target_id'])):
                     # Hit. Interpret this listener as an Effect and execute.
                     from gnomebrew.game.objects.effect import Effect
 
-                    # Determine the appropriate update value based on wheter or not this was a bulk update.
-                    updated_value = update if 'is_bulk' not in kwargs or not kwargs['is_bulk'] else update[updated_id[len(game_id)+1:]]
-                    Effect(listener_data).execute_on(self, updated_id=updated_id, updated_value=updated_value, **kwargs)
+                    Effect(listener_data).execute_on(self, updated_id=updated_id, updated_value=update_value, **kwargs)
 
         return mongo_command, res
-
-    def _data_update_to_frontends(self, mongo_command, command_content):
-        """
-        Helper function.
-        Takes in the MongoDB content update and defines what/how to update the frontends
-        :return:
-        """
-        for path in command_content:
-            if type(command_content[path]) is datetime:
-                # Reformat datetime to be JS compatible
-                command_content[path] = command_content[path].strftime('%d %b %Y %H:%M:%S') + ' GMT'
-
-            individual_data = {path: command_content[path]}
-
-            for regex in _FRONTEND_DATA_RESOLVERS:
-                if regex.match(path):
-                    # Found a match. Execute handler instead of default.
-                    _FRONTEND_DATA_RESOLVERS[regex](user=self, data=individual_data, game_id=path, command=mongo_command)
-                    break
 
     def frontend_update(self, update_type: str, update_data: dict, **kwargs):
         """

@@ -16,7 +16,7 @@
         {% block infos %}{% if station_id in slots %}
         <div class="gb-info gb-info-default" title="Capacity">
             {{ icon('special.capacity', class='gb-icon-sm') | safe }}
-            <span class="attr-{{ station_css_id }}-slots">{{ shorten_num(current_user.get('attr.' + station.get_id() + '.slots')) }}</span>
+            {% with value = current_user.get('attr.' + station.get_id() + '.slots') %}<span class="attr-{{ station_css_id }}-slots" data-value="{{ value }}">{{ shorten_num(value) }}</span>{% endwith %}
         </div>
         {% endif %}{% endblock %}
     </div>

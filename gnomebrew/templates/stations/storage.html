@@ -7,7 +7,7 @@
 {% block infos %}
 <div class="gb-info gb-info-default" title="Storage Capacity">
     {{ icon('attr.station.storage.max_capacity', class='gb-icon-sm') | safe }}
-    <span class="attr-storage-max_capacity">{{ shorten_num(current_user.get('attr.station.storage.max_capacity')) }}</span>
+    {% with max_cap = current_user.get('attr.station.storage.max_capacity') %}<span class="attr-station-storage-max_capacity" data-value="{{ max_cap }}">{{ shorten_num(max_cap) }}</span>{% endwith %}
 </div>
 {% endblock %}
 

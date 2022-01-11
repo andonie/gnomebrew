@@ -4,6 +4,7 @@ from typing import List
 
 from flask import render_template
 
+from gnomebrew import mongo
 from gnomebrew.game.event import Event
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
@@ -149,7 +150,8 @@ def remove_station(user: User, effect_data: dict, **kwargs):
     # Remove Station ID from station list
     user.update("data.special.stations", station_id, mongo_command='$pull', **kwargs)
 
-    # If any recipes
+    # Check if any recipes for this station are still running. If so, remove the recipes from the time event collection
+    mongo.db.events.remove({'target': user.get_id(), 'station': station_id})
 
     # Remove the station from frontends
     user.frontend_update('ui', {

@@ -10,6 +10,6 @@
 <div class="{% if class is defined %}{{ class }} {% endif %}gb-hover" title="{% if item_id.startswith('it_cat') %}Any {{ item.get_static_value('name_individual_entity') }}{% else %}{{ item.name() }}{% endif %}"
      data-filter-match="{{ item.name() }} {% if category is defined%}{{ category.name() }}{% endif %}">
     {{ icon(item_id, class='gb-icon-sm gb-outcome-icon') | safe }}
-    <span class="{% if span_class is defined %}{{ span_class }}{% endif %}">{{ shorten_fun(amount) }}</span>
+    <span class="{% if span_class is defined %}{{ span_class }}{% endif %}" data-value="{{ amount }}">{{ shorten_fun(amount) }}</span>
 </div>
 {% endwith %}

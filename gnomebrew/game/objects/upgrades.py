@@ -10,9 +10,10 @@ from flask import render_template
 from gnomebrew import mongo
 from gnomebrew.game.event import Event
 from gnomebrew.game.objects.effect import Effect
-from gnomebrew.game.user import get_resolver, update_resolver
+from gnomebrew.game.user import get_resolver, update_resolver, id_update_listener
 from gnomebrew.game.user import User
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, render_object
+from gnomebrew.game.util import css_friendly, get_id_display_function
 
 
 @get_resolver('attr')
@@ -28,33 +29,61 @@ def attr(game_id: str, user: User, **kwargs):
     return user.get(f"data.special.attr.{'.'.join(splits[1:])}", **kwargs)
 
 
+_approved_attr_post_splits = ['station', 'quest_data']
+
 @update_resolver('attr')
 def update_attr(user: User, game_id: str, update, **kwargs):
-    # TODO implement
-    pass
+    """
+    Updates a user's attribute.
+    Attributes are variables that are expected to change (in most cases improve) over time, e.g. in *upgrades*.
+    Due to the
 
-# DEPRECATED (?)
-# @Effect.type('upgrade', ('target_id', str), ('value', object))
-# def upgrade(user: User, effect_data: dict, **kwargs):
-#     """
-#     Event execution for an upgrade.
-#     :param user:            The user to execute on.
-#     :param effect_data:     The registered effect data formatted as
-#     """
-#     # Ensure data is not malformatted
-#     if 'target_id' not in effect_data or 'value' not in effect_data or not isinstance(effect_data['target_id'], str):
-#         raise Exception(f"Malformatted Effect Data: {effect_data}")
-#
-#     user.update()
-#
-#     stations_to_update = list()
-#
-#     # Flush to Frontend: Update User Frontends
-#     for station in stations_to_update:
-#         user.frontend_update('ui', {
-#             'type': 'reload_station',
-#             'station': station
-#         }
+    :param user:            Target User
+    :param game_id:         Target ID
+    :param update:          Update Data
+    :keyword mongo_command: The mongo update command. By default is `'$inc'` due to improvements being the typical
+                            use case for attribute changes.
+    :return:            ~~
+    """
+    # Check Input
+    splits = game_id.split('.')
+    if splits[1] not in _approved_attr_post_splits:
+        raise Exception(f"Malformatted ID: {game_id}")
+
+    # Ensure The appropriate `mongo_command` is set, if not manually, make it INC instead of SET
+    if 'mongo_command' not in kwargs:
+        kwargs['mongo_command'] = '$inc'
+
+    # Update attribute data location
+    return user.update(f"data.special.attr.{'.'.join(splits[1:])}", update, **kwargs)
+
+
+@id_update_listener(r'^attr\.\w+(\.\w+)*$')
+def forward_attr_update_to_ui(user: User, data: dict, game_id: str, **kwargs):
+    """
+    Called whenever an `attr.<?>` ID is updated. Forwards the update to the frontend.
+    :param user:        Target user.
+    :param data:        Update Data
+    :param game_id:     Target ID
+    :param kwargs:
+    """
+    print(f"{data=}\n{game_id=}\n{kwargs=}")
+    update_data = list()
+
+    if 'command' in kwargs:
+        update_type = 'inc' if kwargs['command'] == '$inc' else 'set'
+    else:
+        update_type = 'set'
+
+    updated_element = { css_friendly(game_id): {
+        'data': data[game_id],
+        'display_fun': get_id_display_function(game_id)
+    }}
+
+    user.frontend_update('update', {
+        'update_type': update_type,
+        'updated_elements': updated_element
+    })
 
 
 def generate_complete_slot_dict(game_id: str, user: User, **kwargs) -> Dict[str, List[dict]]:
