@@ -137,7 +137,7 @@ def _format_message(category: str, message: str, *args, **kwargs):
     verbose_addtion = '' if 'verbose' not in kwargs or 'verbose' not in config or not config['verbose'] else f": {kwargs['verbose']}"
 
     # Format <% %> groups
-    message_formatted = formatter_message(bold_log_regex.sub(r"$BOLD\1$RESET", message))
+    message_formatted = formatter_message(bold_log_regex.sub(lambda match: f"$BOLD{_color_string(BLUE, match.group()[2:-2])}$RESET", message))
     message = f"{brackets} {message_formatted}{verbose_addtion}"
     return message
 
