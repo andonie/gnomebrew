@@ -17,6 +17,7 @@ from gnomebrew.game.objects.condition import Condition
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.item import Item
 from gnomebrew.game.objects.recipe import Recipe
+from gnomebrew.game.objects.entity import Entity
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, GameObject, PublicGameObject, \
     render_object
 from gnomebrew.game.objects.objective import Objective
@@ -442,6 +443,7 @@ questdata_entity_types = {
     'station': Station,
     'item': Item,
     'recipe': Recipe,
+    'entity': Entity,
     '_flags': lambda x: x,
 }
 

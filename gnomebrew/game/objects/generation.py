@@ -316,7 +316,8 @@ class Generator:
         :param type:    The type to be generated. Must have associated function decorated with `generator_logic`.
         :return:        A generated entity of the given type.
         """
-        assert type in _generation_functions
+        if type not in _generation_functions:
+            raise Exception(f"Unknown Generation Type: {type}")
         result = _generation_functions[type]['fun'](self, **kwargs)
         return result
 
@@ -339,7 +340,8 @@ class Generator:
                                 input column list with the values retrieved.
         :raises                 Any pandas-generated exception due to bad input.
         """
-        assert source in dataframes
+        if source not in dataframes:
+            raise Exception(f"Unknown data source: {source}")
         target_df = dataframes[source]
         total_rows = len(target_df.index)
 

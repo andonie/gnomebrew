@@ -3,6 +3,7 @@ This module contains the name generation logic of Gnomebrew.
 Provides environment-dependent generation rules for all kinds of strings, from real names for people and places to more
 generic strings like adjectives.
 """
+import re
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import Person
@@ -10,6 +11,8 @@ from gnomebrew.game.objects.generation import generation_type, Generator, Enviro
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.static_data import dataframes
 
+
+_name_regex = re.compile(r"\w+")
 
 @generation_type(gen_type='Person Name', ret_type=str)
 def generate_person_name(gen: Generator):
@@ -24,6 +27,11 @@ def generate_person_name(gen: Generator):
         full_name += f"{gen.generate('Title')} {gen.generate('First Name')} "
 
     full_name += f"{gen.generate('First Name')} {gen.generate('Surname')}"
+
+    # Sanitize full name to camel case
+    full_name = _name_regex.sub(lambda match: f"{match.group()[0].upper()}{match.group()[1:].lower()}", full_name)
+
+    return full_name
 
 
 @generation_type(gen_type='Title', ret_type=str)
@@ -49,7 +57,7 @@ def generate_first_name(gen: Generator):
 
 @generation_type(gen_type='Surname', ret_type=str)
 def generate_surname(gen: Generator):
-    return gen.choose_from_data('surnames', strategy='uniform')
+    return gen.choose_from_data('human_surnames', strategy='uniform')
 
 
 @generation_type(gen_type='Context Name', ret_type=str)

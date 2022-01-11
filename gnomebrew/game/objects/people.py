@@ -1,18 +1,23 @@
 """
 This module describes and generates people in Gnomebrew.
+People are a concrete implementation of `Entity` and share their general
 """
+from numbers import Number
+
 from gnomebrew.game.gnomebrew_io import GameResponse
-from gnomebrew.game.objects.generation import generation_type, Generator, GeneratedGameObject
+from gnomebrew.game.objects.entity import Entity
+from gnomebrew.game.objects.generation import generation_type, Generator, GeneratedGameObject, Environment
 from gnomebrew.game.testing import application_test
 
 
-class Person(GeneratedGameObject):
+class Person(Entity):
     """
-    Describes a person in Gnomebrew through some 'fundamental' attributes. People can generally be used for any module.
+    Wraps game person data.
+    Any person is an `Entity`, but also has additional abilities and functions.
     """
 
     def __init__(self, data: dict):
-        self._data = data
+        Entity.__init__(self, data)
 
     _race_postfixes = {
         'Human': 'light',
@@ -35,18 +40,33 @@ class Person(GeneratedGameObject):
         """
         return Person._race_postfixes[self._data['race']]
 
-    def get_id(self):
-        """
-        Returns the unique ID for this patron. Assumes the patron has already been assigned a user. Otherwise breaks
-        """
-        return self._data['id']
-
     def get_data(self):
         return self._data
 
     def name(self):
         return self._data['name']
 
+
+# Person Data Validation
+
+Person.validation_parameters(('personality', dict), ('race', str))
+
+
+@Person.validation_function()
+def validate_person_data(data: dict, response: GameResponse):
+    """
+    Validates the data of a person.
+    """
+    # Firstly, interpret oneself as a general entity and run tests
+    response.append_into(Entity(data).validate())
+
+    # Ensure personality is not malformatted
+    if not all([test_field in data['personality'] and isinstance(data['personality'][test_field], Number)
+                for test_field in ['openness', 'conscientousness', 'extraversion', 'agreeableness', 'neuroticism']]):
+        response.add_fail_msg(f"Malformatted Personality Data: {data['personality']}")
+
+
+# Generation Functions
 
 @generation_type(gen_type='Person', ret_type=Person)
 def generate_person(gen: Generator):
@@ -56,6 +76,7 @@ def generate_person(gen: Generator):
     :return:    The generated Person.
     """
     data = dict()
+    data['entity_class'] = 'person'
     # Generate
     data['race'] = gen.generate('Race')
     data['gender'] = gen.generate('Gender')
@@ -63,15 +84,16 @@ def generate_person(gen: Generator):
     # Budget is standardized independent of upgrade status of user. Budget will be modified upon patron entry
     # data['budget'] = random_normal(min=MIN, max=100)
     data['personality'] = gen.generate('Personality')
+    data['size'] = 1
     return Person(data)
 
 
 @generation_type(gen_type='Gender', ret_type=str)
 def generate_gender(gen: Generator):
-    if gen.get_env_var('Race') == 'warforged':
-        return 'nonbinary'
+    # if gen.get_env_var('Race') == 'warforged':
+    #     return 'nonbinary'
 
-    return gen.choose(choices)
+    return gen.choose(Person.GENDER_CHOICES)
 
 
 @generation_type(gen_type='Personality', ret_type=dict)
@@ -99,18 +121,21 @@ def generate_race(gen: Generator):
     return gen.choose(gen.get_env_var('Prevalent People', default=_RACE_BASE_CHOICES))
 
 
-
-
 @application_test(name='Generate People', context='Generation')
 def generate_many_people(seq_size):
     """
-    Generates `seq_size` (default=200) people and prints the results.
+    Generates `seq_size` (default=20) people and prints the results.
     """
     response = GameResponse()
 
     if seq_size is None or seq_size == '':
-        seq_size = 200
+        seq_size = 20
     else:
         seq_size = int(seq_size)
+
+    gen = Generator(Generator.true_random_generator_seed(), Environment())
+
+    for _ in range(seq_size):
+        response.log(str(gen.generate("Person")))
 
     return response
