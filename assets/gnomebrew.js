@@ -318,11 +318,9 @@ function one_way_game_request(request_data, error_target, trigger_element) {
 
 // Wrapper for all Game requests that do print output
 function two_way_game_request(request_data, trigger_element, output_id, success_logic) {
-    trigger_element.disabled = true;
     $(trigger_element).addClass('gb-pending');
 
     var reset_element = function(){
-        trigger_element.disabled = false;
         $(trigger_element).removeClass('gb-pending');
     };
 
