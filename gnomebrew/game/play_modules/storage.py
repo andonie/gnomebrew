@@ -236,7 +236,6 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     }
     ```
     """
-    log('effect', f'executing effect', 'delta_inventory', f'usr:{user.get_id()}')
     user_inventory = user.get('storage._content', **kwargs)
     max_capacity = user.get('attr.station.storage.max_capacity', **kwargs)
     inventory_update = dict()

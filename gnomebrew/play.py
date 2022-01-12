@@ -42,20 +42,13 @@ def player_request():
     Core Interface Function. Expects player data in request and evaluates it accordingly.
     """
     player_request_object = PlayerRequest(request.form)
-
-    log('gb_system', f"received", 'request', request.form['request_type'], f'usr:{current_user.get_id()}', verbose=player_request_object)
-
     # Create a buffer for this request to store all evaluated IDs
     try:
-        response: GameResponse = log_execution_time(lambda: player_request_object.execute(current_user), 'gb_system', 'processed', 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
+        response: GameResponse = log_execution_time(lambda: player_request_object.execute(current_user), 'gb_system', 'processed', f"rqs:{request.form['request_type']}", f'usr:{current_user.get_id()}')
         response.finalize(current_user)
     except Exception as e:
-        log_exception('gb_system', e, 'request', level=logging.ERROR)
+        log_exception('gb_system', e, f"rqs:{request.form['request_type']}", level=logging.ERROR)
         return SERVER_ERROR.to_json()
-
-
-    log('gb_system', f"processed", 'request', request.form['request_type'], f'usr:{current_user.get_id()}')
-
     return response.to_json()
 
 

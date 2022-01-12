@@ -122,7 +122,7 @@ def log(category: str, message: str, *args, **kwargs):
 
 
 # Matches "<%some.text.like.id%>" at \1
-bold_log_regex = re.compile(r"<%(\w+(\.([\w:])+)*)%>")
+bold_log_regex = re.compile(r"<%([\w\.:<> ]+)%>")
 
 def _format_message(category: str, message: str, *args, **kwargs):
     if category not in _log_lookup:
@@ -155,8 +155,8 @@ def log_execution_time(fun: Callable, category: str, message: str, *args, **kwar
     start_time = datetime.utcnow()
     result = fun()
     end_time = datetime.utcnow()
-    time_difference = str(end_time - start_time)
-    args = args + (f't:{time_difference}',)
+    delta_ms = (end_time - start_time).microseconds / 1000
+    message += f" in <%{delta_ms:>5,.0f}%> ms"
     log(category, message, *args, **kwargs)
     return result
 
