@@ -77,14 +77,11 @@ def generate_person(gen: Generator):
     """
     data = dict()
     data['entity_class'] = 'person'
-    # Generate
     data['race'] = gen.generate('Race')
     data['gender'] = gen.generate('Gender')
     data['name'] = gen.generate('Person Name')
-    # Budget is standardized independent of upgrade status of user. Budget will be modified upon patron entry
-    # data['budget'] = random_normal(min=MIN, max=100)
     data['personality'] = gen.generate('Personality')
-    data['size'] = 1
+    data['size'] = gen.generate('Size')
     return Person(data)
 
 
@@ -118,7 +115,7 @@ _RACE_BASE_CHOICES = {
 
 @Generator.generation_type(gen_type='Race', ret_type=str)
 def generate_race(gen: Generator):
-    return gen.choose(gen.get_env_var('Prevalent People', default=_RACE_BASE_CHOICES))
+    return gen.choose(gen.get_variable('Prevalent People', default=_RACE_BASE_CHOICES))
 
 
 @application_test(name='Generate People', context='Generation')
@@ -133,7 +130,7 @@ def generate_many_people(seq_size):
     else:
         seq_size = int(seq_size)
 
-    gen = Generator(Generator.true_random_generator_seed(), Environment())
+    gen = Generator(Generator.true_random_seed(), Environment())
 
     for _ in range(seq_size):
         response.log(str(gen.generate("Person")))

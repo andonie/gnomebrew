@@ -5,6 +5,7 @@ Across tiers, challenge, risk, and reward increases.
 """
 from typing import List
 
+from gnomebrew.game.objects import Generator
 from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup
 
 
@@ -29,3 +30,9 @@ class Tier(StaticGameObject):
 
 # Tier data validation
 Tier.validation_parameters(('game_id', str), ('name', str), ('description', str), ('quest_description', str))
+
+
+@Generator.generation_type(gen_type='Tier', ret_type=str)
+def generate_tier(gen: Generator):
+    # TODO implement
+    return 'tier_1'

@@ -45,11 +45,11 @@ def generate_first_name(gen: Generator):
     if gen.rand_int_limited(50) > 40:
         return f"{gen.generate('First Name')} {gen.generate('First Name')}"
 
-    gender = gen.get_env_var('Gender', default=None)
+    gender = gen.get_variable('Gender', default=None)
     if gender is None:
         # No gender was defined. Choose at random
         gender = gen.choose(Person.GENDER_CHOICES)
-    race = gen.get_env_var('Race', default='human')
+    race = gen.get_variable('Race', default='human')
 
     data_source = f"{race}_{gender}_names"
     return gen.choose_from_data(data_source)
@@ -84,31 +84,3 @@ def generate_context_name(gen: Generator):
 @Generator.generation_type(gen_type='City Name', ret_type=str)
 def generate_city_name(gen: Generator):
     return '<City Name>'
-
-
-@application_test(name='Evaluate Generation String', category='Generation')
-def evaluate_string_test(string: str, num_exec):
-    """
-    Evaluates a `string` (formatted as `Champion of <Name>|<Surname>'s Challenger`) and returns the generated result.
-    if `num_exec` is set, will generate `num_exec` times and print summary.
-    """
-    response = GameResponse()
-    generator = Generator(Generator.true_random_generator_seed(), Environment())
-
-    if not num_exec or num_exec == '':
-        num_exec = 1
-    else:
-        num_exec = int(num_exec)
-
-    res = dict()
-
-    for i in range(num_exec):
-        eval = generator.evaluate_string(string)
-        if eval not in res:
-            res[eval] = 0
-        res[eval] += 1
-
-    for ev in res:
-        response.log(f"{ev}: {res[ev]}")
-
-    return response

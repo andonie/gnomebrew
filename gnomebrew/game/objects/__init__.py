@@ -11,6 +11,7 @@ from gnomebrew.game.objects.world import WorldLocation as WorldLocation
 from gnomebrew.game.objects.station import Station as Station
 import gnomebrew.game.objects.upgrades
 from gnomebrew.game.objects.generation import Generator as Generator
+from gnomebrew.game.objects.environment import Environment
 from gnomebrew.game.objects.quest import Quest as Quest
 from gnomebrew.game.objects.quest import Objective as Objective
 from gnomebrew.game.objects.condition import Condition as Condition

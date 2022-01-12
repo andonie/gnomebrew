@@ -9,122 +9,12 @@ from typing import Dict, Any, Union, Tuple, Callable, List
 import numpy
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects.data_object import DataObject
+from gnomebrew.game.objects.environment import Environment
 from gnomebrew.game.static_data import dataframes
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.util import random_uniform
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, GameObject
-
-
-class Environment:
-    """
-    Manages an environment of generated (and fixed) variables.
-    """
-
-    # Stragies for updating an existing value based on the update value type
-    _update_strategies_by_type = {
-        Number: lambda gen, old, new: old + new,
-        str: lambda gen, old, new: new,
-        list: lambda gen, old, new: old + new,
-        dict: lambda gen, old, new: {**old, **new}
-    }
-
-    _update_strategies_by_name = dict()
-
-    def __init__(self):
-        self.variables = dict()
-
-    def __str__(self):
-        var_str = ''
-        for variable in self.variables:
-            var_str += f"{variable}: {str(self.variables[variable])}\n"
-        return f"<Environment:\n{var_str}>"
-
-    def create_copy(self):
-        """
-        Creates a new environment with identical properties to this one.
-        :return:    A new environment with identical properties to this one.
-        """
-        copy = Environment()
-        copy.variables = self.variables.copy()
-        return copy
-
-    def is_set(self, varname) -> bool:
-        return varname in self.variables
-
-    def set_env_var(self, varname, val):
-        self.variables[varname] = val
-
-    def get(self, varname):
-        return self.variables[varname]
-
-    def get_variables(self):
-        return self.variables
-
-    def update(self, gen: 'Generator', varname: str, value):
-        """
-        Updates an environment variable with given details.
-        If the variable has not been set, it will be set. If it already exists and there is a more sophisticated
-        strategy available, the existing and the update value will be combined accordingly; if not, the value will
-        be set hard to the new input.
-        :param gen:         The active generator of this environment
-        :param varname:     The variable to update.
-        :param value:       The update value.
-        """
-        if varname not in self.variables:
-            self.variables[varname] = value
-        else:
-            # Variable is already defined. Pick the most appropriate update strategy
-            if varname in Environment._update_strategies_by_name:
-                # There's a strategy specific to this variable name. Use it
-                strategy = Environment._update_strategies_by_name[varname]
-            else:
-                strategy = next(Environment._update_strategies_by_type[datatype]
-                                for datatype in Environment._update_strategies_by_type
-                                if isinstance(value, datatype))
-            if not strategy:
-                # no match, hard set
-                self.variables[varname] = value
-            else:
-                self.variables[varname] = strategy(gen, self.variables[varname], value)
-
-    def incorporate_env(self, other):
-        """
-        Incorporates the data from another environment.
-        :param other:   Another environment.
-        """
-        self.incorporate_rule_dict(other.variables)
-
-    def incorporate_rule_dict(self, gen: 'Generator', rules: dict):
-        """
-        Incorporates a dictionary of environment variables. After this function has been called, this environment will
-
-        * Contain all environment variables that have not been set yet as they appear in `rules`.
-        * call `update` on all variables in `rules` that already exist in this environment
-
-        :param gen:   A generator to use for eventual RNG
-        :param rules: A `dict` of values to incorporate
-        """
-        intersect = set(self.variables.keys()) & set(rules.keys())
-        # Directly insert whatever value from other we don't have set in self
-        self.variables.update({k: v for k, v in rules.items() if k not in intersect})
-        for key in intersect:
-            # Properly configure updates for variables already set
-            self.update(gen, key, rules[key])
-
-    @staticmethod
-    def update_rule(var_name: str):
-        """
-        Annotation method to signify a special rule for how to update a particular environment variable.
-        :param var_name:    The name of the environment variable for which this rule is to be applied.
-        :return         Expects a function with two parameters (old & new) that returns the result of the applied
-                        update rule.
-        """
-
-        def wrapper(fun: Callable):
-            Environment._update_strategies_by_name[var_name] = fun
-            return fun
-
-        return wrapper
 
 
 class Generator:
@@ -280,45 +170,67 @@ class Generator:
 
     # Regex to check against during string evaluations
 
-    _type_regex = re.compile(r"<([\w ]*)>")
+    _gen_cmd_regex = re.compile(r"<([A-Z][\w ]+)>")
+    _env_cmd_regex = re.compile(r"<#([A-Z][\w ]+)#>")
+    _single_gen_cmd_regex = re.compile(r"^<([A-Z][\w ]+)>$")
 
-    def evaluate_string(self, command_string: str) -> str:
+    def evaluate_string(self, command_string: str) -> Union[str, Any]:
         """
         Evaluates a command string and returns the resulting string
         :param command_string:  A string representing a 'recipe' to create a string, using `Raw text <Type>|Alternative`
                                 notation.
-        :return:                A generated string
+        :return:                A generated string. If `command_string` is a single generation (e.g. `<Ring>`, returns
+                                the object data instead of a string.
         """
         options = command_string.split('|')
         if len(options) > 1:
             # Choose one option randomly and continue
             return self.evaluate_string(options[self.rand_int_limited(len(options))])
 
+        # If this string is a single generation command, we want to directly return the result
+        one_cmd_match = self._single_gen_cmd_regex.match(command_string)
+        if one_cmd_match:
+            # Match Single-Generation Type. Return result as is, not as str default
+            return self.generate(one_cmd_match.group(1))
+
         # We now have no more options to weigh, only clear text and <Type> subgenerations
-        res = ''
-        next_index = 0
-        for match in Generator._type_regex.finditer(command_string):
-            match_start, match_end = match.span()
-            # Add the next clean part
-            res += command_string[next_index:match_start]
-            # Replace the match context
-            gen_type = match.group()
-            gen_type = gen_type[1:len(gen_type) - 1]
-            res += self.generate(gen_type)
-            next_index = match_end
-        if next_index < len(command_string):
-            res += command_string[next_index:]
-        return res
+        # Replace all <Type> elements with generated aspects
+        result = self._gen_cmd_regex.sub(lambda match: self.generate(match.group(1)), command_string)
+        result = self._env_cmd_regex.sub(lambda match: self.get_variable(match.group(1)) if self.has_variable(match.group(1)) else self.generate(match.group(1)),
+                                         result)
+        return result
 
     def generate(self, type: str, **kwargs):
         """
-        Generates any type that can be generated.
+        Generates any type that can be generated using any information available to this generator.
+        This is the bread-and-butter execution function to generate typed content in the game.
+
         :param type:    The type to be generated. Must have associated function decorated with `generator_logic`.
+        :param kwargs   Will be forwarded to `generation_type` implementation
+        :keyword stack_offset:  Offsets when/were this generated data invalidates. Offset of `1` means that
+                                this value will be preserved in the environment for layer below this layer's call.
         :return:        A generated entity of the given type.
         """
+        # Ensure Input is clean
         if type not in _generation_functions:
             raise Exception(f"Unknown Generation Type: {type}")
+
+        # Extract Stack Offset Data
+        stack_offset = kwargs.pop('stack_offset') if 'stack_offset' in kwargs else 0
+
+        # Raise the environment's stack level to accommodate that we begin generating a new entity
+        self.environment.increase_stacklevel()
+
+        # Actual generation happens here: Forward to `generation_type` implementation
         result = _generation_functions[type]['fun'](self, **kwargs)
+
+        # Lower the environment's stack level again
+        # and flush all the environment variables that this generation task set
+        self.environment.decrease_stacklevel()
+
+        # The result will automatically be logged as an update in this environment
+        self.environment.update(self, type, result, stack_offset=stack_offset)
+
         return result
 
     def choose_from_data(self, source: str, strategy: str = 'uniform', columns: Union[int, str, List] = 0):
@@ -379,7 +291,16 @@ class Generator:
 
     # Environment Wrap
 
-    def get_env_var(self, varname: str, **kwargs):
+    def with_variables(self, *variables: Tuple[str, Any]):
+        """
+        Adds variables to this generator\'s current environment.
+        Variables added will be added to the current Generator\'s stack level
+        :param variables:   List of variables with type to include, e.g. `('Race', 'orc'), ('Tier', 'tier_6')`
+        """
+        for var_name, var_value in variables:
+            self.environment.update(self, var_name, var_value)
+
+    def get_variable(self, varname: str, **kwargs):
         """
         Evaluates an environment variable.
         :param varname: The environment variable to test, e.g. 'Humidity'
@@ -387,33 +308,20 @@ class Generator:
         :return:        The result of the evaluation, or `default`. If `default` is not set and the variable does not
                         exist, raises an Exception
         """
-        if self.environment.is_set(varname):
+        if self.environment.has_variable(varname):
             return self.environment.get(varname)
         elif 'default' in kwargs:
             return kwargs['default']
         else:
             raise Exception(f"Variable {varname} is not set in this context: {self.environment}.")
 
-    def get_environment(self):
+    def has_variable(self, varname: str) -> bool:
         """
-        :return:    This generator's entire environment.
+        Tests if a given `varname` is set within the current context.
+        :param varname:     Variable name to test.
+        :return:            `True`, if variable is currently set. Otherwise, false.
         """
-        return self.environment
-
-    def update_env_var(self, varname: str, val):
-        """
-        Updates an environment variable value.
-        :param varname:     The name of the variable to update.
-        :param val:         The value of the variable to update.
-        """
-        self.environment.update(self, varname, val)
-
-    def incorporate_env_rules(self, rules: dict):
-        """
-        Incorporates a set of environment rules into this generator's environment.
-        :param rules:   A set of rules to be incorporated into this generator's environment.
-        """
-        self.environment.incorporate_rule_dict(self, rules)
+        return self.environment.has_variable(varname)
 
     # Static Methods
 
@@ -441,7 +349,7 @@ class Generator:
         return hex_repr
 
     @staticmethod
-    def true_random_generator_seed():
+    def true_random_seed():
         """
         Generates a random generator seed.
         For many use cases, we want generators to be 'deterministic' (e.g always generate the same location at the same
@@ -451,29 +359,92 @@ class Generator:
         generated = int(random_uniform(min=0, max=Generator.m_bit_and))
         return generated
 
+    @staticmethod
+    def encode_to_seed(input) -> int:
+        """
+        Encodes an `input` into a valid seed for a generator.
+        Used to generate deterministic seeds from loose-context data.
+        :param input:   Input for the seed. Same input will always map to same seed.
+        :return:        Valid seed for a generator for the given `input`.
+        """
+        # TODO implement
+        pass
 
-class GeneratedGameObject(GameObject):
-    """
-    Describes a game object that, unlike e.g. a `StaticGameObject` is not read from a data repository but instead
-    generated dynamically on the fly.
-    A `seed` is given when instantiating any such object. The same seed generates the same game object every time.
-    """
+    @classmethod
+    def generation_type(cls, gen_type: str, ret_type: Any = Any, update_env: bool = True, **kwargs):
+        """
+        Decorator to mark a **function** as a generator for Gnomebrew.
+        A decorated function expects a `generator` variable to use for any and all RNG based operation and for potentially
+        generating sub-parts of the associated entity.
+        :keyword replace:   If `True`, no checks will be made with the mentioned logic already exists. Instead,
+                            any possibly existing logic associated with `gen_type` will be replaced
+        :param gen_type:    The type of the generated entity. Calling `generator.generate(gen_type)` executes the decorated
+                            function.
+        :param ret_type:    (optional) Type of the returned value when a respective entity is generated.
+        """
+        if 'replace' not in kwargs or kwargs['replace']:
+            assert gen_type not in _generation_functions
+
+        def wrapper(fun: Callable):
+            fun_data = dict()
+            fun_data['fun'] = fun
+            fun_data['return'] = ret_type
+            fun_data['update_env'] = update_env
+            _generation_functions[gen_type] = fun_data
+            return fun
+
+        return wrapper
 
 
 @load_on_startup('generation_rules')
 class GenerationRule(StaticGameObject):
     """
-    Describes a general rule for generating something based on simple rules in the game.
-    Used for World Generation, can be used for more.
+    Describes a general rule for generating data based on simple rules in the game.
+    Generation rules can in principle generate any kind of object, even other generation rules. This makes them practical
+    to generate quest line
     """
 
     rules_by_name = dict()
+    forbidden_bp_keys = ['game_id']
 
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
 
-    def get_generation_class(self):
-        return self._data['game_id'].split('.')[1]
+    def generate_instance(self, gen: Generator) -> dict:
+        """
+        Generates one data instance of this rule's `gen_data` blueprint.
+        :param gen:     Generator to use
+        :return:        Generated instance of this rule's blueprint
+        """
+        blueprint = self._data['gen_data']
+        return self._interpret_value(blueprint, gen)
+
+    _bp_type_strategies = dict()
+
+    @classmethod
+    def _interpret_key(cls, key, gen: Generator):
+        if key in cls.forbidden_bp_keys:
+            raise Exception(f"Key {key} is not allowed in blueprints.")
+        # As of now, no key-changes are needed. So after sanitization, just return the source key as is.
+        return key
+
+    @classmethod
+    def _interpret_value(cls, value, gen: Generator):
+        for s_type, strategy in cls._bp_type_strategies.items():
+            if isinstance(value, s_type):
+                # Match: Use this strategy
+                return strategy(value, gen)
+
+        raise Exception(f"Did not find a matching type for value {value}")
+
+    # Strategies for all supported blueprint value types
+    _bp_type_strategies.update({
+        str: lambda value, gen: gen.evaluate_string(value),
+        Number: lambda value, gen: value,
+        list: lambda value, gen: [GenerationRule._interpret_value(item, gen) for item in value],
+        dict: lambda value, gen: {GenerationRule._interpret_key(k, gen): GenerationRule._interpret_value(v, gen) for k, v in value.items()},
+        bool: lambda value, gen: value,
+    })
 
     @classmethod
     def get_rule_by_name(cls, name: str, **kwargs) -> 'GenerationRule':
@@ -494,11 +465,20 @@ class GenerationRule(StaticGameObject):
     def on_data_update(cls):
         """
         Called when all generation rules from the DB have been loaded (or re-loaded).
-        In here,
+        Performs some housekeeping to ensure the generation rules loaded are accessible appropriately from
+        generator objects.
         """
+        # Fetch all updated generation rules
         all_rules = StaticGameObject.get_all_of_type('gen')
-        for rule in all_rules:
-            cls.rules_by_name[all_rules[rule].name()] = all_rules[rule]
+
+        # Update each rule
+        for rule_id, rule_object in all_rules.items():
+            cls.rules_by_name[rule_object.name()] = rule_object
+
+            # Add the rule name as the generation type in question
+            if rule_object.has_static_key('gen_data'):
+                Generator.generation_type(gen_type=rule_object.name(), ret_type=object, replace=True)(
+                    lambda gen: cls._interpret_value(rule_object.get_static_value('gen_data'), gen))
 
 
 # Generation Rule Data Validation
@@ -509,32 +489,6 @@ GenerationRule.validation_parameters(('game_id', str), ('name', str), ('descript
 ## INTERFACING for generation algos:
 
 _generation_functions: Dict[str, Dict] = dict()
-
-
-def generation_type(gen_type: str, ret_type: Any = Any, update_env: bool = True, **kwargs):
-    """
-    Decorator to mark a **function** as a generator for Gnomebrew.
-    A decorated function expects a `generator` variable to use for any and all RNG based operation and for potentially
-    generating sub-parts of the associated entity.
-    :keyword replace:   If `True`, no checks will be made with the mentioned logic already exists. Instead,
-                        any possibly existing logic associated with `gen_type` will be replaced
-    :param gen_type:    The type of the generated entity. Calling `generator.generate(gen_type)` executes the decorated
-                        function.
-    :param ret_type:    (optional) Type of the returned value when a respective entity is generated. 
-    """
-    if 'replace' not in kwargs or kwargs['replace']:
-        assert gen_type not in _generation_functions
-
-    def wrapper(fun: Callable):
-        fun_data = dict()
-        fun_data['fun'] = fun
-        fun_data['return'] = ret_type
-        fun_data['update_env'] = update_env
-        _generation_functions[gen_type] = fun_data
-        return fun
-
-    return wrapper
-
 
 _generation_rules_by_name = dict()
 
@@ -618,7 +572,7 @@ def rng_test(seq_size, seed):
     response = GameResponse()
 
     if not seed or seed == '':
-        seed = Generator.true_random_generator_seed()
+        seed = Generator.true_random_seed()
     else:
         seed = int(seed)
 
@@ -681,7 +635,7 @@ def pareto_test(seq_size, num_options):
     else:
         options = [f"Option {i}" for i in range(int(num_options))]
 
-    generator = Generator(Generator.true_random_generator_seed(), None)
+    generator = Generator(Generator.true_random_seed(), None)
     counter = dict()
     for option in options:
         counter[option] = 0
@@ -724,7 +678,7 @@ def choose_from_data_test(source: str, strategy: str, seq_size):
     else:
         seq_size = int(seq_size)
 
-    generator = Generator(Generator.true_random_generator_seed(), Environment())
+    generator = Generator(Generator.true_random_seed(), Environment())
     count = dict()
 
     for i in range(seq_size):
@@ -735,5 +689,54 @@ def choose_from_data_test(source: str, strategy: str, seq_size):
 
     for res in count:
         response.log(f"{res}: {count[res]}")
+
+    return response
+
+@application_test(name='Generate', category='Generation')
+def evaluate_string_test(string: str, num_exec):
+    """
+    Evaluates a `string` (formatted as `Champion of <Name>|<Surname>'s Challenger`) and returns the generated result.
+    if `num_exec` is set, will generate `num_exec` times and print summary.
+    Generation will happen in empty environment.
+    """
+    response = GameResponse()
+    generator = Generator(Generator.true_random_seed(), Environment.empty())
+
+    if not num_exec or num_exec == '':
+        num_exec = 1
+    else:
+        num_exec = int(num_exec)
+
+    res = dict()
+
+    for i in range(num_exec):
+        eval = generator.evaluate_string(string)
+        if eval not in res:
+            res[eval] = 0
+        res[eval] += 1
+
+    for ev in res:
+        response.log(f"{ev}: {res[ev]}")
+
+    return response
+
+@application_test(name='Generate Objects', category='Generation')
+def generate_objects(gen_type: str, num_exec):
+    """
+    Generates objects of `gen_type` and returns the generated result.
+    If `num_exec` is set, will generate `num_exec` times and print summary.
+    Generation will happen in empty environment.
+    """
+    response = GameResponse()
+    generator = Generator(Generator.true_random_seed(), Environment.empty())
+
+    if not num_exec or num_exec == '':
+        num_exec = 1
+    else:
+        num_exec = int(num_exec)
+
+    if num_exec > 1:
+        for i in range(num_exec):
+            response.log(f"#{i+1}\n{generator.generate(gen_type)}")
 
     return response
