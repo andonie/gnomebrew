@@ -4,7 +4,7 @@ Governs adventure module of Gnomebrew
 from gnomebrew.game.objects.game_object import PublicGameObject
 
 # @PublicGameObject.setup(dynamic_collection_name='adventures', game_id_prefix='adventure')
-from gnomebrew.game.objects.generation import generation_type, Generator
+from gnomebrew.game.objects.generation import Generator
 
 
 class Adventure(PublicGameObject):
@@ -15,7 +15,7 @@ class Adventure(PublicGameObject):
 Adventure.validation_parameters(('game_id', str))
 
 
-@generation_type(gen_type='Attributes', ret_type=dict)
+@Generator.generation_type(gen_type='Attributes', ret_type=dict)
 def generate_attributes(gen: Generator):
     """
     Generates the six core attributes of any sentient entity in the world: DEX, STR, GRT, WIL, INT, CHA

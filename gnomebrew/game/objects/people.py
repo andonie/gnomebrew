@@ -6,7 +6,7 @@ from numbers import Number
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.entity import Entity
-from gnomebrew.game.objects.generation import generation_type, Generator, GeneratedGameObject, Environment
+from gnomebrew.game.objects.generation import Generator, Environment
 from gnomebrew.game.testing import application_test
 
 
@@ -68,7 +68,7 @@ def validate_person_data(data: dict, response: GameResponse):
 
 # Generation Functions
 
-@generation_type(gen_type='Person', ret_type=Person)
+@Generator.generation_type(gen_type='Person', ret_type=Person)
 def generate_person(gen: Generator):
     """
     Generates a person.
@@ -88,7 +88,7 @@ def generate_person(gen: Generator):
     return Person(data)
 
 
-@generation_type(gen_type='Gender', ret_type=str)
+@Generator.generation_type(gen_type='Gender', ret_type=str)
 def generate_gender(gen: Generator):
     # if gen.get_env_var('Race') == 'warforged':
     #     return 'nonbinary'
@@ -96,7 +96,7 @@ def generate_gender(gen: Generator):
     return gen.choose(Person.GENDER_CHOICES)
 
 
-@generation_type(gen_type='Personality', ret_type=dict)
+@Generator.generation_type(gen_type='Personality', ret_type=dict)
 def generate_personality(gen: Generator):
     personality = dict()
     personality['extraversion'] = gen.rand_normal(min=-1, max=1)
@@ -116,7 +116,7 @@ _RACE_BASE_CHOICES = {
 }
 
 
-@generation_type(gen_type='Race', ret_type=str)
+@Generator.generation_type(gen_type='Race', ret_type=str)
 def generate_race(gen: Generator):
     return gen.choose(gen.get_env_var('Prevalent People', default=_RACE_BASE_CHOICES))
 

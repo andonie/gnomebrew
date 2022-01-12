@@ -7,14 +7,14 @@ import re
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects import Person
-from gnomebrew.game.objects.generation import generation_type, Generator, Environment
+from gnomebrew.game.objects.generation import Generator, Environment
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.static_data import dataframes
 
 
 _name_regex = re.compile(r"\w+")
 
-@generation_type(gen_type='Person Name', ret_type=str)
+@Generator.generation_type(gen_type='Person Name', ret_type=str)
 def generate_person_name(gen: Generator):
     """
     Takes into account any relevant environment data and generates a name for a person.
@@ -34,12 +34,12 @@ def generate_person_name(gen: Generator):
     return full_name
 
 
-@generation_type(gen_type='Title', ret_type=str)
+@Generator.generation_type(gen_type='Title', ret_type=str)
 def generate_title(gen: Generator):
     return gen.choose_from_data('titles')
 
 
-@generation_type(gen_type='First Name', ret_type=str)
+@Generator.generation_type(gen_type='First Name', ret_type=str)
 def generate_first_name(gen: Generator):
     # Might have multiple first names
     if gen.rand_int_limited(50) > 40:
@@ -55,12 +55,12 @@ def generate_first_name(gen: Generator):
     return gen.choose_from_data(data_source)
 
 
-@generation_type(gen_type='Surname', ret_type=str)
+@Generator.generation_type(gen_type='Surname', ret_type=str)
 def generate_surname(gen: Generator):
     return gen.choose_from_data('human_surnames', strategy='uniform')
 
 
-@generation_type(gen_type='Context Name', ret_type=str)
+@Generator.generation_type(gen_type='Context Name', ret_type=str)
 def generate_context_name(gen: Generator):
     return gen.choose_from_data(gen.choose({
         'human_male_names': 99,
@@ -69,19 +69,19 @@ def generate_context_name(gen: Generator):
     }))
 
 
-@generation_type(gen_type='Context Adjective', ret_type=str)
+@Generator.generation_type(gen_type='Context Adjective', ret_type=str)
 def generate_context_name(gen: Generator):
     # TODO: Add environment influence
     return gen.choose_from_data('adjectives')
 
 
-@generation_type(gen_type='Context Noun', ret_type=str)
+@Generator.generation_type(gen_type='Context Noun', ret_type=str)
 def generate_context_name(gen: Generator):
     # TODO: Add environment influence
     return gen.choose_from_data('nouns')
 
 
-@generation_type(gen_type='City Name', ret_type=str)
+@Generator.generation_type(gen_type='City Name', ret_type=str)
 def generate_city_name(gen: Generator):
     return '<City Name>'
 
