@@ -42,7 +42,7 @@ class EventThread(object):
     LOG_INTERVAL = 30
 
     def run(self):
-        log('event', '<%Event Thread starting%>')
+        log('gb_core', '<%Event Thread starting%>')
         last_log = datetime.datetime.utcnow()
         event_successes = event_errors = 0
         while True:

@@ -47,7 +47,6 @@ class Prompt(GameObject):
         :param response_data:   Player Response data
         :param user:    Target user.
         """
-        log('prompt', 'processing', f"usr:{user.get_id()}", verbose=response_data)
         response = GameResponse()
         response.set_ui_target('#gb-prompt-infos')
         input_items = PlayerRequest.parse_inputs(response_data)
@@ -257,7 +256,6 @@ def resolve_give_prompt(user: User, request_object: dict, **kwargs):
 @PlayerRequest.type('prompt', is_buffered=True)
 def player_prompt_request(request_object, user: User, **kwargs):
     response = GameResponse()
-    log('prompt', 'processing', f"usr:{user.get_id()}", verbose=request_object)
 
     if 'target_id' not in request_object:
         response.add_fail_msg('Missing Target ID')
