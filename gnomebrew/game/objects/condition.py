@@ -1,10 +1,15 @@
 """
-Describes conditions in game
+Describes conditions in game.
+A condition in Gnomebrew consists of:
+`target_id`, describing the relevant ID for this condition
+`eval_type`, describing the evaluation type
 """
 from collections import Callable
+from numbers import Number
 from typing import List, Any, Tuple
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects import Effect
 from gnomebrew.game.objects.game_object import GameObject
 from gnomebrew.game.user import User
 
@@ -61,14 +66,16 @@ class Condition(GameObject):
 
         return self._data['target_id'] == game_id
 
-    def current_completion(self, value) -> float:
+    def current_completion(self, value, is_update=False) -> float:
         """
         Checks if the current value meets the condition.
         :param value:   A value.
+        :param is_update:   If this is `True`, expects `value` to be the result of a `user.update` call of the relevant
+                            Game ID.
         :return:        A number between 0 and 1, representing the degree of completion of this conditon.
                         Only 1 will be recognized as condition met.
         """
-        return Condition.condition_resolvers[self._data['condition_type']]['fun'](value, self._data)
+        return Condition.condition_resolvers[self._data['eval_type']]['fun'](value, self._data, is_update=is_update)
 
     def has_display(self) -> bool:
         """
@@ -90,10 +97,28 @@ class Condition(GameObject):
             # Assume the quest data is the info display as it is to be shown.
             return display_data
 
+    def completion_for(self, user: User) -> float:
+        """
+        Checks the completion-percentage of this condition.
+        :param user:    Target user.
+        :return:        A number between 0 (condition not met at all) and 1 (condition fully met). Only with 1 value of
+                        1 is this condition considered met.
+        """
+        return self.current_completion(user.get(self._data['target_id']))
+
+    def is_fulfilled_for(self, user: User) -> bool:
+        """
+        Tests, if this condition is fulfilled for a given user `user`.
+        :param user:        Target user.
+        :return:            `True`, if this condition is currently fulfilled. Otherwise `False`.
+        """
+        return self.completion_for(user) == 1
+
 
 # Condition Data Validation
 
-Condition.validation_parameters(('condition_type', str))
+Condition.validation_parameters(('target_id', str), ('eval_type', str))
+
 
 @Condition.validation_function()
 def validate_condition_data(data: dict, response: GameResponse):
@@ -102,40 +127,47 @@ def validate_condition_data(data: dict, response: GameResponse):
     :param data:            data
     :param response:        response to log
     """
-    # Ensure given `condition_type` is known
-    if data['condition_type'] not in Condition.condition_resolvers:
-        response.add_fail_msg(f"Unknown <%condition_type%>: {data['condition_type']}")
-        return
+    # Check if `eval_type` is known
+    if data['eval_type'] not in Condition.condition_resolvers:
+        response.add_fail_msg(f"Unknown evaluation type: <%{data['eval_type']}%>")
 
-    # Make additional parameter checks for the given `condition_type`
-    for p_name, p_type in Condition.condition_resolvers[data['condition_type']]['validation_parameters']:
+    if response.has_failed():
+        return response
+
+    # Make additional parameter checks for the given `eval_type`
+    for p_name, p_type in Condition.condition_resolvers[data['eval_type']]['validation_parameters']:
         if p_name not in data:
             response.add_fail_msg(f"Missing Condition Parameter <%{p_name}%>")
         elif not isinstance(data[p_name], p_type):
-            response.add_fail_msg(f"Malformatted Condition Data: <%{p_name}%> should be {p_type}, is {type(data[p_name])}")
+            response.add_fail_msg(
+                f"Malformatted Condition Data: <%{p_name}%> should be {p_type}, is {type(data[p_name])}")
+
 
 # Condition Types
 
+@Condition.type('equals', ('value', object))
+def equals_check(value, condition_data: dict, **kwargs):
+    return 1 if value == condition_data['value'] else 0
 
-@Condition.type('flag')
-def flag_check(value, condition_data: dict):
+
+@Condition.type('minimum', ('value', Number))
+def min_check(value, condition_data: dict, **kwargs):
+    return 1 if value >= condition_data['value'] else value / condition_data['value']
+
+
+@Condition.type('update')
+def update_check(value, condition_data: dict, **kwargs):
+    return kwargs['is_update']
+
+
+@Effect.type('conditional', ('condition', dict), ('on_condition', dict))
+def conditional_effect(user: User, effect_data: dict, **kwargs):
     """
-    Checks if a certain flag is set.
-    :param value:
-    :param condition_data:
-    :return:
+    Executes another effect `on_condition` if a condition `condition` is fulfilled.
+    Otherwise, does nothing.
+    :param user:            Target user
+    :param effect_data:     Effect data
+    :param kwargs:          kwargs
     """
-
-
-id_eval_types = {
-    'equals': lambda val, data: 1 if val == data['target_value'] else 0,
-    'any': lambda val, data: 1,
-    'minimum': lambda val, data: val >= data['value'],
-}
-
-
-@Condition.type('id_eval', ('eval_type', str), ('target_id', str))
-def id_eval_check(value, condition_data: dict):
-    if condition_data['eval_type'] not in id_eval_types:
-        raise Exception(f"Evaluation Type {condition_data['eval_type']} not supported")
-    return id_eval_types[condition_data['eval_type']](value, condition_data)
+    if Condition(effect_data['condition']).is_fulfilled_for(user):
+        Effect(effect_data['on_condition']).execute_on(user, **kwargs)
