@@ -38,12 +38,18 @@ class EventThread(object):
         self.thread.daemon = True
         self.thread.start()
 
+    # Interval in minutes
+    LOG_INTERVAL = 30
+
     def run(self):
-        log('event', 'Event Thread starting')
-        due_event_buffer = list()
+        log('event', '<%Event Thread starting%>')
+        last_log = datetime.datetime.utcnow()
+        event_successes = event_errors = 0
         while True:
-            # Find all events that are due
+            # START measuring exeuction time
             start_time = datetime.datetime.utcnow()
+
+            # Find all events that are due
             query = {'due_time': {'$lt': start_time}}
             due_event_buffer = list(self.mongo.db.events.find(query))
             remove_ids = [event['_id'] for event in due_event_buffer]
@@ -51,18 +57,26 @@ class EventThread(object):
             for event_data in due_event_buffer:
                 # Do something
                 event = Event(mongo_data=event_data)
-                log('event', 'executing', event.get_type(), event.get_type(), f'usr:{event.get_target_username()}')
                 try:
                     event.execute()
+                    event_successes = event_successes + 1
                 except Exception as err:
                     # An error occured managing the event.
                     # In this case, just log the traceback but still remove the event.
                     log_exception('event', err, f"usr:{event.get_target_username()}")
+                    event_errors = event_errors + 1
 
                 if event.is_remove_on_trigger():
                     remove_ids.append(event_data['_id'])
 
+            # END measuring exeuction time and sleep if necessary
             end_time = datetime.datetime.utcnow()
+
+            # If the `LOG_INTERVAL` has passed, log an update to the console
+            if (end_time - last_log).total_seconds() / 60 > EventThread.LOG_INTERVAL:
+                log("event", f"Dispatched <%{event_successes+event_errors:>5}%> timed events in the last {EventThread.LOG_INTERVAL} minutes (<%{(event_successes / event_successes+event_errors) * 100 if event_successes + event_errors > 0 else '-':>5}%>% success)")
+                last_log = end_time
+                event_successes = event_errors = 0
             sleep_time = _SLEEP_TIME - (end_time - start_time).total_seconds()
             if sleep_time > 0:
                 try:

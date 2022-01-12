@@ -122,7 +122,7 @@ def log(category: str, message: str, *args, **kwargs):
 
 
 # Matches "<%some.text.like.id%>" at \1
-bold_log_regex = re.compile(r"<%([\w\.:<> ]+)%>")
+bold_log_regex = re.compile(r"<%([\w\.:\-<> ]+)%>")
 
 def _format_message(category: str, message: str, *args, **kwargs):
     if category not in _log_lookup:
