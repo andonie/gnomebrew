@@ -200,6 +200,14 @@ class Generator:
                                          result)
         return result
 
+    def evaluate_blueprint(self, blueprint: dict) -> dict:
+        """
+        Evaluates a blueprint and generates one instance.
+        :param blueprint:   Target blueprint
+        :return:            A generated data instance
+        """
+        return GenerationRule.interpret_blueprint_value(blueprint, self)
+
     def generate(self, type: str, **kwargs):
         """
         Generates any type that can be generated using any information available to this generator.
@@ -405,7 +413,7 @@ class GenerationRule(StaticGameObject):
     """
 
     rules_by_name = dict()
-    forbidden_bp_keys = ['game_id']
+    forbidden_bp_keys = [] # had 'game_id' but that is a used parameter in other object types
 
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
@@ -417,19 +425,19 @@ class GenerationRule(StaticGameObject):
         :return:        Generated instance of this rule's blueprint
         """
         blueprint = self._data['gen_data']
-        return self._interpret_value(blueprint, gen)
+        return self.interpret_blueprint_value(blueprint, gen)
 
     _bp_type_strategies = dict()
 
     @classmethod
-    def _interpret_key(cls, key, gen: Generator):
+    def interpret_blueprint_key(cls, key, gen: Generator):
         if key in cls.forbidden_bp_keys:
             raise Exception(f"Key {key} is not allowed in blueprints.")
         # As of now, no key-changes are needed. So after sanitization, just return the source key as is.
         return key
 
     @classmethod
-    def _interpret_value(cls, value, gen: Generator):
+    def interpret_blueprint_value(cls, value, gen: Generator):
         for s_type, strategy in cls._bp_type_strategies.items():
             if isinstance(value, s_type):
                 # Match: Use this strategy
@@ -441,8 +449,8 @@ class GenerationRule(StaticGameObject):
     _bp_type_strategies.update({
         str: lambda value, gen: gen.evaluate_string(value),
         Number: lambda value, gen: value,
-        list: lambda value, gen: [GenerationRule._interpret_value(item, gen) for item in value],
-        dict: lambda value, gen: {GenerationRule._interpret_key(k, gen): GenerationRule._interpret_value(v, gen) for k, v in value.items()},
+        list: lambda value, gen: [GenerationRule.interpret_blueprint_value(item, gen) for item in value],
+        dict: lambda value, gen: {GenerationRule.interpret_blueprint_key(k, gen): GenerationRule.interpret_blueprint_value(v, gen) for k, v in value.items()},
         bool: lambda value, gen: value,
     })
 
@@ -478,7 +486,7 @@ class GenerationRule(StaticGameObject):
             # Add the rule name as the generation type in question
             if rule_object.has_static_key('gen_data'):
                 Generator.generation_type(gen_type=rule_object.name(), ret_type=object, replace=True)(
-                    lambda gen: cls._interpret_value(rule_object.get_static_value('gen_data'), gen))
+                    lambda gen: cls.interpret_blueprint_value(rule_object.get_static_value('gen_data'), gen))
 
 
 # Generation Rule Data Validation
