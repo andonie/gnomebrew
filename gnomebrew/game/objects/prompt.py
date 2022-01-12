@@ -375,6 +375,17 @@ def execute_queue_prompts(user: User, effect_data: dict, **kwargs):
             'class_data': 'gb-navbar-hidden'
         })
 
+@Effect.type('prompt', ('title', str), ('content', list), ('effects', list))
+def queue_single_prompt(user: User, effect_data: dict, **kwargs):
+    """
+    Convenience effect. Overlaps effect and prompt data to minimize code hassle.
+    The effect itself will be interpreted as a prompt.
+    :param user:            Target User
+    :param effect_data:     Effect Data
+    """
+    return execute_queue_prompts(user, {
+        'prompts': [effect_data]
+    }, **kwargs)
 
 @application_test(name='Add Prompt', context='Prompt')
 def add_prompt(username: str, prompt_content: str):
