@@ -507,7 +507,7 @@ def review_quest_objectives(user: User, effect_data: dict, **kwargs):
             condition_data = objective_data['conditions'][c_id]
             condition = Condition(condition_data)
             if condition.cares_for(update_id):
-                new_completion = condition.current_completion(new_value)
+                new_completion = condition.current_completion(new_value, is_update=True)
                 update_data[
                     f"{quest_id}.current_objectives.{objective_data['objective_id']}.conditions.{condition_data['condition_id']}.state"] = new_completion
                 # Also update local copy to make summing up for main state easier
