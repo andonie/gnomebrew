@@ -34,6 +34,10 @@ strong {
     color: #e19093;
 }
 
+p > strong {
+    vertical-align: text-bottom;
+}
+
 /* IMAGES */
 
 img {
@@ -69,6 +73,11 @@ img {
 
 .gb-click-icon:hover {
     cursor: pointer;
+}
+
+.gb-icon.gb-inline {
+    margin-left: -0.2em;
+    margin-top: -0.03em;
 }
 
 
@@ -569,17 +578,16 @@ img {
     color: #FF6B71;
 }
 
-.gb-modal-delta-inventory-wrap {
-    display: flex;
-    justify-content: center;
+.gb-modal-box {
+    background: #E7BF8B;
+    border-radius: 15px;
+    color: #5E484F;
+    padding: 1em;
+    margin: 1em 0;
 }
 
-.gb-modal-delta-inventory-wrap td {
-    padding: 8px;
-}
-
-.gb-modal-delta-inventory-wrap tr:hover {
-    background: #8c7d7d;
+.gb-modal-box strong {
+    color: #A63E42;
 }
 
 .gb-delta-inventory {

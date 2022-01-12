@@ -1,0 +1,1 @@
+<div class="gb-modal-box"><p>New {{ icon('station.quest', class="gb-icon gb-inline") | safe }}<strong>Quest</strong> available:</p><p>{{ icon(id, class="gb-icon gb-inline") | safe }}<strong>{{ name | safe }}</strong></p></div>
