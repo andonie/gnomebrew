@@ -57,7 +57,10 @@ def generate_first_name(gen: Generator):
 
 @Generator.generation_type(gen_type='Surname', ret_type=str)
 def generate_surname(gen: Generator):
-    return gen.choose_from_data('human_surnames', strategy='uniform')
+    surname = gen.choose_from_data('human_surnames', strategy='uniform')
+    # Unfortunately, `human_surnames` is formatted in CAPS LOCK. Rectify:
+    surname = f"{surname[0].upper()}{surname[1:].lower()}"
+    return surname
 
 
 @Generator.generation_type(gen_type='Context Name', ret_type=str)

@@ -67,9 +67,6 @@ def forward_attr_update_to_ui(user: User, data: dict, game_id: str, **kwargs):
     :param game_id:     Target ID
     :param kwargs:
     """
-    print(f"{data=}\n{game_id=}\n{kwargs=}")
-    update_data = list()
-
     if 'command' in kwargs:
         update_type = 'inc' if kwargs['command'] == '$inc' else 'set'
     else:
