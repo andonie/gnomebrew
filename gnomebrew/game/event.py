@@ -63,7 +63,7 @@ class EventThread(object):
                 except Exception as err:
                     # An error occured managing the event.
                     # In this case, just log the traceback but still remove the event.
-                    log_exception('event', err, f"usr:{event.get_target_username()}")
+                    log_exception('event', f"{err}\nThis happened during the exeuction of this event data:\n{event_data}", f"usr:{event.get_target_username()}")
                     event_errors = event_errors + 1
 
                 if event.is_remove_on_trigger():

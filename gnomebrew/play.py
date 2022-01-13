@@ -47,7 +47,7 @@ def player_request():
         response: GameResponse = log_execution_time(lambda: player_request_object.execute(current_user), 'gb_system', 'processed', f"rqs:{request.form['request_type']}", f'usr:{current_user.get_id()}')
         response.finalize(current_user)
     except Exception as e:
-        log_exception('gb_system', e, f"rqs:{request.form['request_type']}", level=logging.ERROR)
+        log_exception('gb_system', e, f"usr:{current_user.get_name()}", f"rqs:{request.form['request_type']}", level=logging.ERROR)
         return SERVER_ERROR.to_json()
     return response.to_json()
 

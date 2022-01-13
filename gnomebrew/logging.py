@@ -161,7 +161,7 @@ def log_execution_time(fun: Callable, category: str, message: str, *args, **kwar
     return result
 
 
-def log_exception(category: str, exception: Exception, *args, **kwargs):
+def log_exception(category: str, exception, *args, **kwargs):
     """
     Logs any occuring exception.
     :param category:    Log category
