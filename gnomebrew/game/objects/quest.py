@@ -11,7 +11,7 @@ from flask import render_template
 import gnomebrew.game.objects.effect
 from gnomebrew import app
 from gnomebrew.game.gnomebrew_io import GameResponse
-from gnomebrew.game.objects import Station
+from gnomebrew.game.objects import Station, Generator, Environment, Person
 from gnomebrew.game.objects.request import PlayerRequest
 from gnomebrew.game.objects.condition import Condition
 from gnomebrew.game.objects.effect import Effect
@@ -54,6 +54,10 @@ class Quest(StaticGameObject, PublicGameObject):
         if qid in quest_data['available']:
             user.update(f"data.station.quest.available.{qid}", '', mongo_command='$unset', **kwargs)
 
+        # Generate a basic generator in case this quest has variables
+        # TODO context sensitive generator (environment & seed) instead of random seed & empty environment
+        gen = Generator(Generator.true_random_seed(), Environment.empty())
+
         # Update User Data to include this as an active quest and have the storage's `quest_data` fields include this
         # category's ID:
         update_data = dict()
@@ -65,7 +69,7 @@ class Quest(StaticGameObject, PublicGameObject):
             'foldout': self._data['foldout'],
             'icon': self._data['icon'],
             'slots': self._data['slots'] if 'slots' in self._data else 0,
-            'data': self.generate_initial_quest_data()
+            'data': self.generate_initial_quest_data(gen)
         }
 
         # Update for Storage
@@ -225,12 +229,13 @@ class Quest(StaticGameObject, PublicGameObject):
 
     no_id_quest_data_entities = ['_flags']
 
-    def generate_initial_quest_data(self) -> dict:
+    def generate_initial_quest_data(self, gen: Generator) -> dict:
         """
         Generates this quest's intial data.
         Quests can contain various data from quest entities (quest stations/recipes/items/etc.) to quest variables
         (e.g. player quest decisions). All of this data is stored in `data.quest.active.<quid>.data`.
         This function generates the this quest's initial data.
+        :param gen  Generator to use for blueprint evaluation
         :return:    Quest's initial `data`.
         """
         quest_data = dict()
@@ -240,11 +245,13 @@ class Quest(StaticGameObject, PublicGameObject):
         # Quest Entities visible to player:
         if 'data' in self._data:
             for entity_class in self._data['data']:
-                quest_data[entity_class] = copy.deepcopy(self._data['data'][entity_class])
+                # Evaluate each entity as a blueprint to individualize where possible
+                quest_data[entity_class] = gen.evaluate_blueprint(copy.deepcopy(self._data['data'][entity_class]))
                 if entity_class not in Quest.no_id_quest_data_entities:
-                    for entity in quest_data[entity_class]:
-                        quest_data[entity_class][entity][
-                            'game_id'] = f"quest_data.{self.get_minimized_id()}.{entity_class}.{entity}"
+                    # Add generated Game IDs (on `quest_data` prefix)
+                    for entity_name in quest_data[entity_class]:
+                        quest_data[entity_class][entity_name][
+                            'game_id'] = f"quest_data.{self.get_minimized_id()}.{entity_class}.{entity_name}"
 
         return quest_data
 
@@ -438,12 +445,21 @@ class StaticQuest(Quest, StaticGameObject):
 # Copy Validation Scheme
 StaticQuest.use_validation_scheme_of(Quest)
 
+best_entity_subtype = {
+    'person': Person
+}
 
-questdata_entity_types = {
+def _data_to_best_entity(data: dict) -> Entity:
+    if data['entity_class'] in best_entity_subtype:
+        return best_entity_subtype[data['entity_class']](data)
+    else:
+        return Entity(data)
+
+questdata_object_types = {
     'station': Station,
     'item': Item,
     'recipe': Recipe,
-    'entity': Entity,
+    'entity': _data_to_best_entity,
     '_flags': lambda x: x,
 }
 
@@ -454,17 +470,17 @@ def _validate_questdata_splits(splits: List[str], user: User):
     :param user     Target user
     :raises         An exception if the ID is obviously malformatted
     """
-    if len(splits) != 4 or splits[2] not in questdata_entity_types:
+    if len(splits) != 4 or splits[2] not in questdata_object_types:
         raise Exception(f"Malformatted ID: {splits=}")
     if splits[1] not in user.get("data.station.quest.active"):
-        raise Exception(f"Quest currently not taken by user.")
+        raise Exception(f"Quest {splits[1]} currently not taken by user.")
 
 
 @get_resolver('quest_data', dynamic_buffer=True)
 def get_quest_data(user: User, game_id: str, **kwargs):
     splits = game_id.split('.')
     _validate_questdata_splits(splits, user)
-    return questdata_entity_types[splits[2]](
+    return questdata_object_types[splits[2]](
         user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
 
 
@@ -719,9 +735,13 @@ def give_quest(quest_id: str, target_username: str):
     if not User.user_exists(target_username):
         result.add_fail_msg(f'Cannot find user {target_username}')
     target_user = load_user(target_username)
+
+
     # Get quest and give to user.
     quest = target_user.get(quest_id)
 
     quest.initialize_for(target_user)
+
+    result.log(f"Gave quest {quest.name()} to user {target_username}")
 
     return result
