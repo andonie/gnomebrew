@@ -480,8 +480,11 @@ def _validate_questdata_splits(splits: List[str], user: User):
 def get_quest_data(user: User, game_id: str, **kwargs):
     splits = game_id.split('.')
     _validate_questdata_splits(splits, user)
-    return questdata_object_types[splits[2]](
-        user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs))
+    on_location = user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs)
+    if on_location:
+        return questdata_object_types[splits[2]]()
+    else:
+        raise Exception(f"Cannot find object on location {game_id}")
 
 
 @update_resolver('quest_data')
