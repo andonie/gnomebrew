@@ -387,7 +387,7 @@ Recipe.validation_parameters(('game_id', str), ('name', str), ('description', st
                              ('result', list))
 
 
-@Effect.type('add_recipe', ('recipe', str))
+@Effect.type('add_recipe', ('recipe', object))
 def add_recipe(user: User, effect_data: dict, **kwargs):
     """
     Adds a given recipe to its target station's recipe list.
@@ -397,9 +397,20 @@ def add_recipe(user: User, effect_data: dict, **kwargs):
     """
     # Test Effect Data for sanity before execution by trying to retrieve target recipe
     target_recipe: Recipe = user.get(effect_data['recipe'])
-    # Push this recipe's ID in the target station's recipes directory
-    user.update(f"data.{target_recipe.get_static_value('station')}.recipes", target_recipe.get_static_value('game_id'),
-                mongo_command='$push', **kwargs)
+
+    recipe_ids = []
+
+    if isinstance(effect_data['recipe'], list):
+        # Add multiple recipes
+        recipe_ids = effect_data['recipe']
+    else:
+        # Just add this one recipe
+        recipe_ids.append(effect_data['recipe'])
+
+    for recipe_id in recipe_ids:
+        # Push this recipe's ID in the target station's recipes directory
+        user.update(f"data.{target_recipe.get_static_value('station')}.recipes", recipe_id,
+                    mongo_command='$push', **kwargs)
 
     # Update the frontends to reflect the addition of the new recipe.
     user.frontend_update('ui', {

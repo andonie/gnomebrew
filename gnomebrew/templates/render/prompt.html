@@ -15,7 +15,7 @@
                 <div class="prompt-infos gb-info-container" id="gb-prompt-infos"></div>
                 {% block event_body %}
                 {% for content in data.content %}
-                {{ render_object('render.prompt_content', data={'prompt': data, 'prompt_content': content}) | safe }}
+                {{ render_object('render.prompt_content', data={'prompt': data, 'prompt_content': content}, current_user=current_user) | safe }}
                 {% endfor %}
                 {% endblock %}
                 {% if data.effect is defined %}

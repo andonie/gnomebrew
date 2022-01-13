@@ -614,12 +614,14 @@ class IDBuffer:
     def _split_at_game_id(self, game_id: str, invalidate_id: str, dynamic_id: bool):
         result = self.evaluate_id(game_id, dynamic_id)
         del self._buffer_data[game_id]
-        for key in result:
-            sub_id = f"{game_id}.{key}"
-            self.include(sub_id, result[key], dynamic_id)
-            if invalidate_id.startswith(sub_id):
-                # Must split this key, too.
-                self._split_at_game_id(sub_id, invalidate_id, dynamic_id)
+        # If this is a dict, forward the split
+        if isinstance(result, dict):
+            for key in result:
+                sub_id = f"{game_id}.{key}"
+                self.include(sub_id, result[key], dynamic_id)
+                if invalidate_id.startswith(sub_id):
+                    # Must split this key, too.
+                    self._split_at_game_id(sub_id, invalidate_id, dynamic_id)
 
 
     def contains_id(self, game_id: str, dynamic_id: bool):

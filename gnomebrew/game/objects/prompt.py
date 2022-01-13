@@ -39,6 +39,8 @@ class Prompt(GameObject):
         :param user:    Target user.
         :return:        HTML data that displays this prompt entirely.
         """
+        if 'current_user' not in kwargs:
+            kwargs['current_user'] = user
         return render_object('render.prompt', data=self._data, **kwargs)
 
     def process_input(self, user: User, response_data: dict, **kwargs):

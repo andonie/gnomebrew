@@ -6,7 +6,7 @@ import copy
 from os.path import join, isdir, isfile
 from typing import List, Callable
 
-from flask import render_template
+from flask import render_template, render_template_string
 
 import gnomebrew.game.objects.effect
 from gnomebrew import app
@@ -699,7 +699,7 @@ def render_quest_data(game_id: str, user: User, **kwargs):
     """
     Responds to any request to render quest data. Given that quest data can encompass many different entities,
     this function is built to accommodate this.
-    Main usage is for rendering station HTML.
+    Main usage is for rendering station HTML of quest stations.
     :param game_id:     Target ID
     :param user:        Target user
     :param kwargs:      kwargs
@@ -707,6 +707,8 @@ def render_quest_data(game_id: str, user: User, **kwargs):
     """
     splits = game_id.split('.')
     quest_name = splits[2]
+    station_id = game_id[5:]
+    station_obj:Station = user.get(station_id, **kwargs)
     if splits[3] == 'station':
         if 'station' not in kwargs:
             kwargs['station'] = user.get(f"quest_data.{quest_name}.station.{splits[4]}", **kwargs)
@@ -717,8 +719,13 @@ def render_quest_data(game_id: str, user: User, **kwargs):
         if isfile(station_path):
             return render_template(station_path, **kwargs)
         else:
+            if station_obj.has_static_key('html_template'):
+                print(f"\n{station_obj.get_static_value('html_template')}\n")
+                return render_template_string(station_obj.get_static_value('html_template'), **kwargs)
             # No template data for this quest exists, so we assume this is rendered as a pure standard station.
             return render_template(join("stations", "_station.html"), **kwargs)
+    else:
+        raise Exception(f"Cannot render: {game_id}")
 
 
 @html_generator(base_id='html.quest.objectives', is_generic=True)

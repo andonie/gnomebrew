@@ -174,6 +174,8 @@ class Generator:
     _env_cmd_regex = re.compile(r"<#([A-Z][\w ]+)#>")
     _single_gen_cmd_regex = re.compile(r"^<([A-Z][\w ]+)>$")
 
+    OPTION_DELINEATOR = '||'
+
     def evaluate_string(self, command_string: str) -> Union[str, Any]:
         """
         Evaluates a command string and returns the resulting string
@@ -182,7 +184,7 @@ class Generator:
         :return:                A generated string. If `command_string` is a single generation (e.g. `<Ring>`, returns
                                 the object data instead of a string.
         """
-        options = command_string.split('|')
+        options = command_string.split(Generator.OPTION_DELINEATOR)
         if len(options) > 1:
             # Choose one option randomly and continue
             return self.evaluate_string(options[self.rand_int_limited(len(options))])

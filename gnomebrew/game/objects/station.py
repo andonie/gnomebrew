@@ -173,6 +173,8 @@ def generate_station_html(game_id: str, user: User, **kwargs):
         kwargs['station'] = Station.from_id(f"station.{splits[2]}")
     if 'slots' not in kwargs:
         kwargs['slots'] = user.get('slots._all', **kwargs)
+    if 'current_user' not in kwargs:
+        kwargs['current_user'] = user
     res = render_template(join("stations", splits[2] + ".html"), **kwargs)
     return res
 
