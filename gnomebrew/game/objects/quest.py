@@ -723,7 +723,6 @@ def render_quest_data(game_id: str, user: User, **kwargs):
             return render_template(station_path, **kwargs)
         else:
             if station_obj.has_static_key('html_template'):
-                print(f"\n{station_obj.get_static_value('html_template')}\n")
                 return render_template_string(station_obj.get_static_value('html_template'), **kwargs)
             # No template data for this quest exists, so we assume this is rendered as a pure standard station.
             return render_template(join("stations", "_station.html"), **kwargs)
