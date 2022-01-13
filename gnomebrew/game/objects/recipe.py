@@ -407,6 +407,21 @@ def add_recipe(user: User, effect_data: dict, **kwargs):
         'element': f"recipes.{target_recipe.get_static_value('station')}"
     })
 
+@Effect.type('remove_recipe', ('recipe', str))
+def remove_recipe(user: User, effect_data: dict, **kwargs):
+    # Test Effect Data for sanity before execution by trying to retrieve target recipe
+    target_recipe: Recipe = user.get(effect_data['recipe'])
+
+    # Pull this recipe's ID from the relevant list
+    user.update(f"data.{target_recipe.get_static_value('station')}.recipes", target_recipe.get_static_value('game_id'),
+                mongo_command='$pull', **kwargs)
+
+    # Update the frontend to reflect the removal of a recipe
+    user.frontend_update('ui', {
+        'type': 'reload_element',
+        'element': f"recipes.{target_recipe.get_static_value('station')}"
+    })
+
 
 @PlayerRequest.type('recipe', is_buffered=True)
 def recipe(user: User, request_object: dict, **kwargs):
