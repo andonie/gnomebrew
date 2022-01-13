@@ -482,7 +482,7 @@ def get_quest_data(user: User, game_id: str, **kwargs):
     _validate_questdata_splits(splits, user)
     on_location = user.get(f"data.station.quest.active.{splits[1]}.data.{'.'.join(splits[2:])}", **kwargs)
     if on_location:
-        return questdata_object_types[splits[2]]()
+        return questdata_object_types[splits[2]](on_location)
     else:
         raise Exception(f"Cannot find object on location {game_id}")
 
