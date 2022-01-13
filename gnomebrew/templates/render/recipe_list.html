@@ -10,7 +10,7 @@
         {% if recipe_list|length > 1 %}
         <div class="gb-search gb-icon-group">
             {{ icon( 'special.search', class='gb-icon gb-recipe-icon') | safe }}
-            <input type="text" class="gb-filter" placeholder="Filter Recipes" data-filters=".{{ recipe_list[0].get_static_value('station') }}-recipe">
+            <input type="text" class="gb-filter" placeholder="Filter Recipes" data-filters=".{{ css_friendly(recipe_list[0].get_static_value('station')) }}-recipe">
         </div>
         {% endif %}
         {% for recipe in recipe_list %}{{ render_object('render.recipe', data=recipe) | safe }}{% endfor %}

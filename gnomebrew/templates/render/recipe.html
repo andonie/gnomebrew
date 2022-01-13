@@ -3,7 +3,7 @@
  # Expects a `recipe` to be set.
  #}
 {% if recipe is not defined %}{% set recipe = data %}{% endif %}
-<div class="gb-recipe {{ recipe.get_static_value('station') }}-recipe {% if class is defined %}{{ class }}{% endif %}" data-filter-match="{{ recipe.name() }}">
+<div class="gb-recipe {{ css_friendly(recipe.get_static_value('station')) }}-recipe {% if class is defined %}{{ class }}{% endif %}" data-filter-match="{{ recipe.name() }}">
     <div class="gb-recipe-view gb-icon-group">
         <button class="gb-button" onclick="execute_recipe('{{ recipe.get_id() }}', 'station.{{recipe.get_static_value('station') }}-warning', this)">{{ icon( recipe.get_id(), class='gb-icon gb-recipe-icon') | safe }}</button>
         <div class="gb-toggle-view" style="background: none; flex-basis: 100%" data-toggles="#{{ css_friendly(recipe.get_id()) }}-description">
