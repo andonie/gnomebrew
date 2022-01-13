@@ -14,13 +14,13 @@
             </div>
         </div>
         <div class="gb-storage-category-items gb-info-container gb-foldout" id="{{ css_friendly(category.get_id()) }}-items">
-            {% for item in category.get_matching_items() %}{% if item.get_id() in player_inventory %}
+            {% for item in data['items'] %}
             <div class="gb-storage-item-view gb-info gb-info-highlight {{ css_friendly(category.get_id()) }}-option {% if item.get_id() == category_selection_id %}gb-selected{% endif %}" data-filter-match="{{ category.name() }} {{ item.name() }}" title="{{ item.name() }}"
                  data-select-value="{{ item.get_id() }}" data-peers=".{{ css_friendly(category.get_id()) }}-option" onclick="select('selection.{{ category.get_id() }}', this)">
                 {{ icon(item.get_id(), class='gb-icon-sm') | safe }}
                 <span class="storage-{{ css_friendly(item.get_id()) }}" data-value="{{ player_inventory[item.get_id()] }}">{{ shorten_num(player_inventory[item.get_id()]) }}</span>
             </div>
-            {% endif %}{% endfor %}
+            {% endfor %}
         </div>
     </div>
 {% endwith %}

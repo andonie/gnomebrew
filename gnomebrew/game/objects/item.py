@@ -101,6 +101,14 @@ class Item(StaticGameObject):
         """
         return [ItemCategory.from_id(f"it_cat.{cat_name}") for cat_name in self._data['categories']]
 
+    def in_category(self, cat_id: str) -> bool:
+        """
+        Tests if this item is in a given category
+        :param cat_id:      Full ID of the category (e.g. it_cat.tier_0)
+        :return:            `True` if the item belongs to the given category. Otherwise `False`
+        """
+        # Magic Number 7 cuts off `'it_cat.'` before using the pure identifier
+        return cat_id[7:] in self._data['categories']
 
 # Item Validation Code
 Item.validation_parameters(('game_id', str), ('name', str), ('description', str), ('categories', list))

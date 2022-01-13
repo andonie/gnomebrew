@@ -1,6 +1,7 @@
 """
 Storage Module
 """
+import re
 from typing import List
 
 from flask import url_for
@@ -134,21 +135,23 @@ def forward_selection_update_to_frontends(user: User, data: dict, game_id: str, 
             'value': target_item.name()
         })
 
-        
-
     user.frontend_update('update', {
         'update_type': 'change_attributes',
         'attribute_change_data': update_data
     })
 
 
-def _storage_dict_iter(data_source: dict, storage_dict: dict, parent_id: str) -> int:
+unwanted_dict_iter_keys = re.compile(r"(^quest_data.((\w+)|(\w+.item))$|^item$|^quest_data$)")
+
+
+def _storage_dict_iter(data_source: dict, storage_dict: dict, parent_id: str, only_items: bool = False) -> int:
     """
     Helper function to be used recursively. Iterates one layer of a storage dict and fills all relevant data for the
     storage-dict-output.
     :param data_source:     The source-dict to iterate. Expected to only contain dicts and end point int values.
     :param storage_dict:    The storage dict to fill with the relevant data from this iteration.
     :param parent_id:       The parent id layers to ensure correct naming in there.
+    :param only_items:      If `True`, will remove IDs that do not resolve to item objects, such as 'quest_data.welcome'
     :return                 Returns the sum of all underlying values.
     """
     total = 0
@@ -165,8 +168,9 @@ def _storage_dict_iter(data_source: dict, storage_dict: dict, parent_id: str) ->
             total += val
         elif isinstance(val, dict):
             # Layered case. iterate this dict recursively.
-            underlying = _storage_dict_iter(val, storage_dict, path)
-            storage_dict[path] = underlying
+            underlying = _storage_dict_iter(val, storage_dict, path, only_items)
+            if not only_items or not unwanted_dict_iter_keys.match(path):
+                storage_dict[path] = underlying
             total += underlying
         else:
             raise Exception(f"Unexpected data source: {val}")
@@ -182,7 +186,9 @@ def _full_storage_dict(user: User, **kwargs):
     storage_data = user.get('data.station.storage.content')
     result = dict()
 
-    _storage_dict_iter(storage_data, result, "")
+    only_items = kwargs['only_items'] if 'only_items' in kwargs else False
+
+    _storage_dict_iter(storage_data, result, "", only_items)
 
     return result
 
@@ -236,6 +242,7 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     }
     ```
     """
+    kwargs['only_items'] = True
     user_inventory = user.get('storage._content', **kwargs)
     max_capacity = user.get('attr.station.storage.max_capacity', **kwargs)
     inventory_update = dict()
@@ -268,16 +275,17 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
         # Generate The classes this item_amount render would belong to based on known convenctions
         container_class = "gb-storage-item-view gb-info gb-info-highlight"
         # Generate data that is the same for all renders independently of category
-        base_data = {'item_id': new_item.get_id(), "amount": inventory_update[new_item.get_id()], "class": container_class }
+        base_data = {'item_id': new_item.get_id(), "amount": inventory_update[new_item.get_id()],
+                     "class": container_class}
         # Add `current_user` to this render to enable user-context-bound get requests (e.g. for quest data)
         item_amount_html = render_object('render.item_amount', data=base_data, current_user=user,
-                                         span_class=f"gb-outcome-amount storage-{ css_friendly(new_item.get_id()) }")
+                                         span_class=f"gb-outcome-amount storage-{css_friendly(new_item.get_id())}")
         for category in new_item.get_categories():
             if category.get_id() not in known_frontend_category_ids and category.is_frontend_category():
                 # Update user inventory locally to reflect the changes in this item before rendering the new category
                 user_inventory[new_item.get_id()] = inventory_update[new_item.get_id()]
                 # New category added. Add this to the frontend.]
-                render_data = generate_category_render_data(user, category)
+                render_data = generate_category_render_data(user, category, user_inventory)
                 user.frontend_update('ui', {
                     'type': 'append_element',
                     'selector': '.gb-storage-category-view',
@@ -329,23 +337,27 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
     :param kwargs:  List of elements will be filtered by JSON data key/values from kwargs
     :return:        List of all item categories that meet the requirements.
     """
-    player_storage = user.get('storage._content')
+    player_storage = user.get('storage._content', only_items=True)
     cat_dict = ItemCategory.get_all_of_type('it_cat')
     result = list()
 
     for category in cat_dict.values():
         if all([category.has_static_key(key) and category.get_static_value(key) == kwargs[key] for key in kwargs]) and \
-                any([item for item in category.get_matching_items() if item.get_id() in player_storage]):
-            result.append(generate_category_render_data(user, category))
+                any([item_id for item_id in player_storage if user.get(item_id).in_category(category.get_id())]):
+            # This category has:
+            # 1. Met all kwargs requirements
+            # 2. At least 1 item is owned by the user of this category
+            result.append(generate_category_render_data(user, category, player_storage))
 
     return sorted(result, key=lambda cat: cat['cat_order'])
 
 
-def generate_category_render_data(user: User, category: ItemCategory):
+def generate_category_render_data(user: User, category: ItemCategory, player_inventory: dict):
     """
     Generates the data expected by `render.storage_category` to render the data.
     :param user:        Target user.
     :param category:    Target category.
+    :param player_inventory:    Current Player Inventory for reference
     :return:            Appropriate data.
     """
     cat_data = dict()
@@ -353,4 +365,5 @@ def generate_category_render_data(user: User, category: ItemCategory):
     cat_data['collapsed'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_collapsed", default=True)
     cat_data['visible'] = user.get(f"selection._bool.cat_{category.get_minimized_id()}_visible", default=True)
     cat_data['cat_order'] = category.get_static_value('cat_order') if category.has_static_key('cat_order') else 50
+    cat_data['items'] = list(filter(lambda item: item.in_category(category.get_id()), [user.get(item_id) for item_id in player_inventory]))
     return cat_data
