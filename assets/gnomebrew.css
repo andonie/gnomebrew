@@ -207,6 +207,25 @@ img {
     color: #822929;
 }
 
+.gb-info-button {
+    border: 3.5px solid #5e484f;
+    background: #aca7a9;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.gb-info-button:hover {
+    cursor: pointer;
+    background: #99958f;
+}
+
+.gb-info-button.gb-pending {
+    animation-name: buttonAnimation;
+    animation-duration: 0.8s;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
 .gb-info-storage {
     background: #F78562;
 }
@@ -366,6 +385,27 @@ img {
 
 .gb-toggle-button.gb-toggle-view-active {
     background: #FFEED9;
+}
+
+.gb-radio-button {
+    border: 3.5px solid #5e484f;
+    border-radius: 20px;
+    background: #aca7a9;
+    transition: all 0.3s;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    font-family: 'Press Start 2P';
+    font-size: 0.8rem;
+}
+
+.gb-radio-button.gb-radio-active {
+    background: white;
+}
+
+.gb-radio-button:hover {
+    cursor: pointer;
+    background: #99958f;
 }
 
 /* gb-pending animation */

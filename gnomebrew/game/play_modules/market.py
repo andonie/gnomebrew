@@ -1,168 +1,164 @@
 """
 This module covers the functionality of the Market station
 """
+from typing import List
+import re
+
+from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.request import PlayerRequest
+from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, user_assertion, id_update_listener
 from gnomebrew.game.event import Event
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew import mongo
 from gnomebrew.game.objects.item import Item
-from gnomebrew.game.util import random_normal
+from gnomebrew.game.util import random_normal, global_jinja_fun, css_friendly
 from datetime import datetime, timedelta
 from random import random
 from numpy import random
 
+
 # Gameplay Dial Constants
 
-# Minimum/Maximum of Budget RNG component
-MARKETING_RNG_MEDIAN = 75
-MARKETING_RNG_STD_DEVIATION = 20
-
-
-# Market Game Mechanics
-
-def generate_new_inventory(user: User, **kwargs):
+class MarketOffer(DataObject):
     """
-    Generates a fresh inventory for a given user, taking into account all internal paramaters as well as
-    any and all upgrades they might have made.
-    :param user:
-    :return:
+    Wraps Data of one market offer for object-oriented handling
     """
-    # Get List of Items that are technically available in market
-    possible_items = user.get('attr.station.market.available_items', default=['grains', 'wood'], **kwargs)
 
-    # Identify this iteration's available funds
-    market_budget = generate_procurement_budget(user)
+    @classmethod
+    def from_datasource(cls, item_id: str, source_data: dict) -> 'MarketOffer':
+        """
+        Converts the data found in an offer into
+        :param item_id:     Item ID
+        :param source_data: Source Data
+        :return:            Fully set up market offer
+        """
+        mo_data = source_data
+        mo_data.update({'item': item_id})
+        return MarketOffer(mo_data)
 
-    new_inventory = dict()
+    def __init__(self, data: dict):
+        DataObject.__init__(self, data)
 
-    for item in possible_items:
-        item_data: Item = Item.from_id('item.' + item).get_json()
-        # TODO Make re-supply interesting and efficient
-        new_inventory[item] = {
-            'stock': item_data['base_supply'],
-            'price': item_data['base_value']
-        }
+    def get_current_stock(self) -> int:
+        return self._data['stock']
 
-    return new_inventory
+    def get_current_price(self) -> int:
+        return self._data['price']
+
+    def get_item_id(self) -> str:
+        return self._data['item']
 
 
-def generate_procurement_budget(user: User) -> float:
+@global_jinja_fun
+def get_offers_for(user: User) -> List[MarketOffer]:
     """
-    Generates a market cycle budget for this user.
-    :param user:    a user.
-    :return:        An amount of value this market is willing to spend this procurement cycle at max.
+    Returns a list of this user's currently running offers
+    :param user:    A user.
+    :return:        Offer list
     """
-    # RNG Factor
-    rng_factor = random_normal(median=MARKETING_RNG_MEDIAN, std_deviation=MARKETING_RNG_STD_DEVIATION)
-    # Revenue Factor Calculation
+    return [MarketOffer.from_datasource(f"item.{item_min_id}", offer_data)
+            for item_min_id, offer_data in user.get("data.station.market.offers.item").items()]
 
-    return rng_factor * user.get('attr.station.market.budget_factor', default=1, **kwargs)
+
+def get_offer_for(user: User, item_id: str) -> MarketOffer:
+    """
+    Returns a market offer corresponding to a given item.
+    :param user:        target user
+    :param item_id:     target item
+    :return:            Market Offer if exists else `None`
+    """
+
+
+# Market Offer Validation Parameters
+
+MarketOffer.validation_parameters(('item', str), ('stock', int), ('cost', int))
+
+
+@selection_id('selection.market.amount', is_generic=False)
+def select_purchase_amount(game_id: str, user: User, set_value, **kwargs):
+    if set_value:
+        return user.update('data.station.market.amount_choice', set_value, **kwargs)
+    else:
+        # Read out the current selection.
+        return user.get('data.station.market.amount_choice', **kwargs)
 
 
 @PlayerRequest.type('market_buy', is_buffered=True)
 def market_buy(user: User, request_object: dict, **kwargs):
     """
-    Handles a player request to buy something from the market.
+    Handles a player request to buy something from the market. Called when the player clicks on one item offer.
     :param request_object: player request. Should look something like:
     {
         'type': 'market_buy',
-        'item_id': 'item.grains',
-        'amount': 5
+        'item_id': 'item.iron'
     }
-    :return:
     """
-    amount = int(request_object['amount'])
-    assert amount > 0
     response = GameResponse()
-    item_name = request_object['item_id'].split('.')[1]
+    response.set_ui_target("#station-market-infos")
+
+    item_id = request_object['item_id']
     # Get Current Market Inventory
-    item = user.get('data.market.inventory.' + item_name)
     storage_capacity = user.get('attr.station.storage.max_capacity', **kwargs)
-    user_gold = user.get('data.station.storage.content.gold', **kwargs)
-    user_item_amount = user.get('data.station.storage.content.' + item_name, default=0, **kwargs)
-    ok = True
+    user_gold = user.get('storage.item.gold', **kwargs)
+    user_item_amount = user.get(f"storage.{item_id}", default=0, **kwargs)
 
-    if amount + user_item_amount > storage_capacity:
-        ok = False
+    requested_offer = MarketOffer.from_datasource(item_id, user.get(f'data.station.market.offers.{item_id}'))
+
+    amount_selection = user.get('selection.market.amount')
+    amount_to_buy = int(amount_selection) if amount_selection != 'A' else requested_offer.get_current_stock()
+
+    if amount_to_buy + user_item_amount > storage_capacity:
         response.add_fail_msg('Not enough space in your storage.')
-    if item['stock'] < amount:
-        ok = False
+        response.player_info(user, 'You cannot keep this much in your storage.', 'not enough',
+                             'attr.station.storage.max_capacity')
+    if requested_offer.get_current_stock() < amount_to_buy:
         response.add_fail_msg(f'Not enough {user.get(request_object["item_id"], **kwargs).name()} in stock.')
-    if item['price'] * amount > user_gold:
-        ok = False
+        response.player_info(user, 'There is not enough of this left.', 'station.market', 'is out')
+    if requested_offer.get_current_price() * amount_to_buy > user_gold:
         response.add_fail_msg("You can't afford this.")
+        response.player_info(user, "You can't afford this.", 'not enough', 'item.gold')
 
-    if ok:
-        response.succeess()
-        item['stock'] -= amount
-        user_gold -= amount * item['price']
-        user_item_num = int(user.get('data.station.storage.content.' + item_name, default=0, **kwargs))
-        user.update('data', {
-            'market.inventory.' + item_name: item,  # New Item Inventory
-            'storage.content.gold': user_gold,
-            'storage.content.' + item_name: user_item_num + amount
-        }, is_bulk=True)
+    if response.has_failed():
+        return response
+
+    # All checks passed. Execute trade
+    response.succeess()
+
+    # Update User Storage to reflect gained items and lost gold
+    user.update(f"storage", {
+        requested_offer.get_item_id(): amount_to_buy,
+        'item.gold': -amount_to_buy * requested_offer.get_current_price()
+    }, is_bulk=True, mongo_command='$inc')
+
+    # Update Market Data to reflect reduced inventory
+    user.update(f"data.station.market.offers.{item_id}.stock", -amount_to_buy, mongo_command="$inc")
 
     return response
 
 
-@user_assertion
-def assert_market_update_queued(user: User):
-    """
-    Assertion script.
-    At any point in the game, each user should have one 'market' update event targeted to them.
-    :param user:    A user
-    :raise: `AssertionError` if there's no queued update for a market inventory update for the user.
-    """
-    result = mongo.db.events.find_one({'target': user.get_id(), 'type': 'market'})
-    if result is None:
-        raise AssertionError(f"{user.get_id()} has no market event data!")
+find_item_name_regex = re.compile(r'^data\.station\.market\.offers\.item\.(\w+\.(stock|price))$')
 
 
-def _generate_market_update_event(target: str, due_time: datetime):
+@id_update_listener('^data\.station\.market\.offers\.item\.(\w+)\.(stock|price)$')
+def forward_stock_and_price_updates(user: User, data: dict, game_id: str, **kwargs):
     """
-    Generates a fresh event that starts generates a new market offer listing once it fires.
-    :param target:  user ID target
-    :param due_time: due time (server UTC) at which the event fires
+    Listens in on all direct data updates to the values of offer stock/prices to forward those numbers to the frontend.
+    :param user:        Target user
+    :param data:        Data change
+    :param game_id:     Target ID (either `data.station.market.offers.item.<id>.stock` or `... <id>.price`
     """
-    data = dict()
-    data['target'] = target
-    data['type'] = 'market'
-    data['effect'] = dict()
-    data['effect']['market_update'] = {}  # Market updates require no data. Computation happens at time of firing.
-    data['due_time'] = due_time
-    data['station'] = 'market'
-    return Event(data)
+    updated_elements = {
+        css_friendly(f"market-offers-item-{css_friendly(find_item_name_regex.match(game_id).group(1))}"):
+            {'data': data[data_update_id]} for data_update_id in data}
+    print(updated_elements)
+    if 'command' in kwargs:
+        update_type = 'inc' if kwargs['command'] == '$inc' else 'set'
+    else:
+        update_type = 'set'
 
-
-@Effect.type('market_update')
-def market_update(user: User, effect_data: dict, **kwargs):
-    """
-    Updates a user's inventory
-    :param user:        User targeted by the update.
-    :param effect_data: Inconsequential, as market_update does everything internally.
-    :keyword source     Should always be set.
-    """
-    latest_inventory = generate_new_inventory(user)
-    next_duetime = datetime.utcnow() + timedelta(minutes=3)
-    user.update('data.market', {
-        'due': next_duetime,
-        'inventory': latest_inventory
-    }, is_bulk=True)
-    # kwargs['source'].
-    _generate_market_update_event(user.get_id(), next_duetime).enqueue()
-
-
-@id_update_listener('^data.market.inventory$')
-def full_update_on_market_update(user: User, data: dict, game_id: str, **kwargs):
-    user.frontend_update('ui', {
-        'type': 'reload_station',
-        'station': 'market'
+    user.frontend_update('update', {
+        'update_type': update_type,
+        'updated_elements': updated_elements
     })
-
-
-@id_update_listener(r'^data.market.due$')
-def update_market_duetime(user: User, data: dict, game_id: str, **kwargs):
-    pass  # Due Time need not be updated, because on inventory update the entire market module will be reloaded

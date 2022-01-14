@@ -14,6 +14,15 @@ class Item(StaticGameObject):
     Item Wrapper Class
     """
 
+    @classmethod
+    def quality(cls, quality_type: str, *parameters):
+        """
+        Annotation function to mark a
+        :param quality_type:
+        :param parameters:
+        :return:
+        """
+
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
 

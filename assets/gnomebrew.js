@@ -36,7 +36,6 @@ function animate_whole_ui(element) {
         if (typeof attr !== 'undefined' && attr !== false) {
             console.log($(this).data('toggles'));
             var classname = 'toggle-'+ $(this).data('toggles').substring(1)
-            console.log(classname);
             var info_target = $($(this).data('inform'));
             console.log(info_target);
             if(is_hidden) {
@@ -54,9 +53,7 @@ function animate_whole_ui(element) {
         rescale_ui();
 
         // IF REQUESTED ATTEMPT TO SYNC DATA:
-
-
-         var sync_id = $(this).attr('data-sync');
+        var sync_id = $(this).attr('data-sync');
         if (typeof sync_id !== 'undefined' && sync_id !== false) {
             console.log("SYNCING " + sync_id);
             // We have data to sync requested.
@@ -64,7 +61,22 @@ function animate_whole_ui(element) {
             // Attempt to send selection to server.
             sync_selection(sync_id, !is_hidden);
         }
+    });
+    $(element).find('.gb-radio-button-group .gb-radio-button').on('click', function(event){
+        // Get the button group and de-select everyone
+        parent_group = $(this).parent();
+        parent_group.children('.gb-radio-button').each(function(index){
+            $(this).removeClass('gb-radio-active')
+        });
+        // Add visual highlight to THIS selection
+        $(this).addClass('gb-radio-active')
 
+        // If this selection is to be synced with the server, do so now.
+        var sync_id = parent_group.attr('data-sync');
+        var sync_val = $(this).attr('data-select-value')
+        if (typeof sync_id !== 'undefined' && sync_id !== false && typeof sync_val !== 'undefined' && sync_val !== false) {
+            sync_selection(sync_id, sync_val);
+        }
     });
 }
 
@@ -98,14 +110,14 @@ function handle_update(data) {
             for (var key in data.updated_elements) {
                 var data_selector = '.' + key;
                 var val_old = $(data_selector).data('value');
-                update_value_at(data_selector, val_old + data.updated_elements[key]['data'], data.updated_elements[key]['display_fun']);
+                update_value_at(data_selector, val_old + data.updated_elements[key]['data']);
             }
             break;
         case 'set': // Hard-Set update
             for (var key in data.updated_elements) {
                 var data_selector = '.' + key;
                 var val_old = $(data_selector).data('value');
-                update_value_at(data_selector, data.updated_elements[key]['data'], data.updated_elements[key]['display_fun']);
+                update_value_at(data_selector, data.updated_elements[key]['data']);
             }
             break;
         case 'change_attributes': //Change attributes
@@ -117,10 +129,17 @@ function handle_update(data) {
     rescale_ui();
 }
 
-function update_value_at(data_selector, new_val, display_fun_name) {
+function update_value_at(data_selector, new_val) {
     $(data_selector).data('value', new_val);
     // Decide how shorten numbers of this type
-    target_fun = styling_functions[display_fun_name];
+    // If this element has its own display function baked, use this
+    var display_fun = $(data_selector).attr('data-display-fun');
+    console.log(display_fun);
+    if (typeof display_fun === 'undefined' || display_fun === false) {
+        display_fun = 'shorten_num';
+    }
+    console.log(display_fun);
+    target_fun = styling_functions[display_fun];
     $(data_selector).html(target_fun(new_val));
 }
 
@@ -363,21 +382,10 @@ function cancel_recipe(event_id, error_target, trigger_element) {
 }
 
 // Buy From Market
-function market_buy(item_id, error_target, trigger_element, buy_all) {
-    var amount = 1;
-    if(buy_all) {
-        // Buy all section is chosen -> change amount to all that's left.
-        var stock_indicator = document.getElementById('data.market.inventory.' + item_id.substring(5) + '.stock')
-        amount = parseInt(stock_indicator.innerHTML, 10)
-        if (amount == 0) {
-            error_msg(error_target, 'Inventory is empty.');
-            return;
-        }
-    }
+function market_buy(item_id, error_target, trigger_element) {
     one_way_game_request({
         request_type: 'market_buy',
-        item_id: item_id,
-        amount: amount
+        item_id: item_id
     }, error_target, trigger_element);
 }
 

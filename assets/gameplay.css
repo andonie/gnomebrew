@@ -476,19 +476,22 @@ input {
 
 /* MARKET */
 
-.market-offers td {
-    padding: 5px;
+.offer-tag {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.offer-tag .offer-price {
+    font-size: 0.8rem;
+}
+
+.offer-tag .offer-stock {
     text-align: right;
-}
-
-.market-offers th {
-    padding: 5px;
-    text-align: center;
-}
-
-.market-offers button {
-    float: left;
-    margin-right: 5px;
+    font-family: "DotGothic16";
+    font-size: 1rem;
+    margin-top: -6px;
 }
 
 /* DIVINATION TABLE */
@@ -553,9 +556,10 @@ input {
 }
 
 
-/* ID SPECIFIC rules */
+/* SPECIFIC rules */
 
-.storage-gold {
+.storage-item-gold {
     color: #a63e42;
     margin-right: 5px;
+    font-family: 'Press Start 2P';
 }

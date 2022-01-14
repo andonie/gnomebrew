@@ -1,35 +1,24 @@
 {% extends "stations/_station.html" %}
 
 {% block station_body %}
-{% with offers = current_user.get('data.market.inventory') %}
-<table class="market-offers table gb-table table-hover">
-    <thead>
-        <tr>
-            <th scope="col"></th>
-            <th scope="col" title="Stock">{{ icon('special.stock') | safe }}</th>
-            <th scope="col" title="Cost">{{ icon('special.cost') | safe }}</th>
-            <th scope="col">Buy</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for offer in offers %}
-        {% with item = current_user.get('item.' + offer).get_json() %}
-        <tr>
-            <td>{{ icon('item.' + offer) | safe }}</td>
-            <td><span id="data.market.inventory.{{ offer }}.stock">{{ shorten_num(offers[offer].stock) }}</span></td>
-            <td><span id="data.market.inventory.{{ offer }}.price">{{ shorten_cents(offers[offer].price) }}</span></td>
-            <td>
-                <button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, false)">1</button>
-                <button class="gb-button btn btn-light" onclick="market_buy('item.{{ offer }}', 'station.market-warning', this, true)">all</button>
-            </td>
-        </tr>
-        {% endwith %}
-        {% endfor %}
-    </tbody>
-</table>
-<div class="description">
-    <div class="descriptor">New Inventory in:</div>
-    <div class="description-value countdown" id='data.market.due' data-due="{{ current_user.get('data.market.due').strftime('%d %b %Y %H:%M:%S') + ' GMT' }}"></div>
+{% with offers = current_user.get('data.station.market.offers') %}
+<div class="gb-icon-group" data-select-value="data.station.market.amount_choice">
+    {{ icon( 'special.quantity', class='gb-icon gb-recipe-icon') | safe }}
+    {% with selected_option = current_user.get('data.station.market.amount_choice') %}
+    <div class="gb-radio-button-group" data-sync="selection.market.amount">
+        <button class="gb-radio-button {% if selected_option == '1'  %}gb-radio-active{% endif %}" data-select-value="1">1</button>
+        <button class="gb-radio-button {% if selected_option == '10' %}gb-radio-active{% endif %}" data-select-value="10">10</button>
+        <button class="gb-radio-button {% if selected_option == 'A'  %}gb-radio-active{% endif %}" data-select-value="A">A</button>
+    </div>
+    {% endwith %}
+</div>
+<div class="gb-search gb-icon-group">
+    {{ icon( 'special.search', class='gb-icon gb-recipe-icon') | safe }}
+    <input type="text" class="gb-filter" placeholder="Filter Market Offers" data-filters=".gb-market-offer">
+</div>
+<div class="gb-info-container" id="market-offers">
+    {% for offer in get_offers_for(current_user) %}{{ render_object('render.market_offer', data=offer.get_json()) | safe }}{% endfor %}
 </div>
 {% endwith %}
+<div class="market-feedback"><span class="data-market-feedback">{{ current_user.get('data.station.market.feedback') }}</span></div>
 {% endblock %}
