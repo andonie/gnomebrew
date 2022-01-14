@@ -71,6 +71,11 @@ img {
     height: 128px;
 }
 
+.gb-icon-light {
+    width: 32px;
+    height: 32px;
+}
+
 .gb-click-icon:hover {
     cursor: pointer;
 }
