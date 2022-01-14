@@ -6,10 +6,12 @@ from flask import render_template
 
 from gnomebrew import mongo
 from gnomebrew.game.event import Event
+from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject
 from gnomebrew.game.selection import selection_id
-from gnomebrew.game.user import User, get_resolver, html_generator
+from gnomebrew.game.testing import application_test
+from gnomebrew.game.user import User, get_resolver, html_generator, load_user
 from gnomebrew.game.util import global_jinja_fun, css_friendly
 from gnomebrew.logging import log_exception, log
 
@@ -202,3 +204,24 @@ def process_alchemy_recipe_selection(game_id: str, user: User, set_value, **kwar
     else:
         # Read out the current selection.
         return user.get(target_location, default=False, **kwargs)
+
+@application_test(name='Add Station', category='Basics')
+def add_station_app_test(username: str, station_id: str):
+    """
+    Adds the station with `station_id` to the user with `username`
+    """
+    response = GameResponse()
+    if not User.user_exists(username):
+        response.add_fail_msg(f"User {username} does not exist.")
+        return response
+
+    user = load_user(username)
+
+    Effect({
+        'effect_type': 'add_station',
+        'station': station_id
+    }).execute_on(user)
+
+    response.log(f"Added station")
+
+    return response
