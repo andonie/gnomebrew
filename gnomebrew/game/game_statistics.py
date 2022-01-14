@@ -28,7 +28,6 @@ def statistical_update(user: User, game_id: str, update, **kwargs):
         of equal length)
     """
     splits = game_id.split('.')
-    assert splits[0] == 'stat'
 
     mongo_command = kwargs['mongo_command'] if 'mongo_command' in kwargs else '$inc'
 
@@ -41,7 +40,7 @@ def statistical_update(user: User, game_id: str, update, **kwargs):
         update_content[game_id] = update
 
     # Update DB
-    mongo.db.player_statistics.update_one({'username': user.get_id()}, {mongo_command: update_content})
+    mongo.db.player_statistics.update_one({'username': user.get_id()}, {mongo_command: update_content}, upsert=True)
 
     return mongo_command, update_content
 
@@ -68,7 +67,6 @@ def get_statistical_data(user: User, game_id: str, **kwargs):
 
     """
     splits = game_id.split('.')
-    assert splits[0] == 'stat'
 
     # Base projection ignores MongDB _id field
     mongo_projection = {'_id': 0}

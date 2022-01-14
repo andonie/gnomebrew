@@ -119,6 +119,11 @@ class Event(GameObject):
             # Call the registered handling function for the effect key
             Effect(effect_data).execute_on(user)
 
+        # Update Statistics
+        user.update('stat', {
+            f"event.{self._data['event_type']}_total": 1
+        }, is_bulk=True)
+
     def get_target_username(self):
         """
         Returns the target user

@@ -498,10 +498,14 @@ class User(UserMixin):
         # Remove user from event database
         mongo.db.events.delete_many({'target': self.get_id()})
 
-        # Reset all Game Data
-        res = mongo.db.users.update_one({'username': self.get_id()}, {'$set': {
+        # Reset all Game Data: Main Collection
+        proj = {'username': self.get_id()}
+        res = mongo.db.users.update_one(proj, {'$set': {
             'data': User.INITIAL_DATA}
         })
+
+        # Reset Game Data: Statistics Collection
+        res = mongo.db.player_statistics.update_one(proj, {'$set': {'stat': {}}})
 
         # The game is kicked off the quest `quest.welcome` by convention
         from gnomebrew.game.objects import Effect

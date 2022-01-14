@@ -22,5 +22,4 @@ from gnomebrew.game.objects.game_object import StaticGameObject as StaticGameObj
 from gnomebrew.game.objects.tier import Tier
 
 import gnomebrew.game.objects.names
-import gnomebrew.game.objects.game_statistics
 import gnomebrew.game.objects.special_entities
