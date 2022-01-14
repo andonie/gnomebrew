@@ -20,6 +20,9 @@ class Item(StaticGameObject):
     def __str__(self):
         return f"<Item {self._data['name']} -- {self._data=}>"
 
+    def get_name(self):
+        return self._data['name']
+
     def is_orderable(self):
         """
         Returns `True` if patrons can order this item.
