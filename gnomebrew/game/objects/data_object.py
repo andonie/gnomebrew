@@ -143,25 +143,12 @@ class DataObject:
         """
         DataObject._collection_key_replace(self._data, '-', '.')
 
-    def validate(self) -> GameResponse:
+    def _apply_validation_job(self, validation_job: dict, response: GameResponse):
         """
-        Tests the wrapped data's integrity. Based on the wrapped data's `data_type` field, the appropriate validation
-        code runs and checks the data thoroughly.
-        :return:        A `GameResponse` object that represents the results of the validation.
+        Helper Method for validating data objects. Executes *only* one `validation_job` dict
+        :param validation_job:  Validation Job to do
+        :return:                Response object for logging output
         """
-        if type(self) not in DataObject.type_validators:
-            raise Exception(f"No known validation strategies for: {type(self)}")
-
-        # Response Object to log nuanced result
-        response = GameResponse()
-
-        try:
-            validation_job = DataObject.type_validators[type(self)]
-        except KeyError:
-            log('gb_core', f'Requested Object Type {type(self)} has no associated validation scheme.',
-                level=logging.WARN)
-            validation_job = dict()
-
         # If this class has associated required fields (& types), make the necessary (strict) checks now.
         if 'required_fields' in validation_job:
             for field, field_type in validation_job['required_fields']:
@@ -177,6 +164,37 @@ class DataObject:
             # Hand response object to handling function along object data.
             # Response object is expected to record issues via `add_fail_msg`
             validation_function(data=self._data, response=response)
+
+    def validate(self) -> GameResponse:
+        """
+        Tests the wrapped data's integrity. Based on the wrapped data's `data_type` field, the appropriate validation
+        code runs and checks the data thoroughly.
+        :return:        A `GameResponse` object that represents the results of the validation.
+        """
+        own_type = type(self)
+
+        # Response Object to log nuanced result
+        response = GameResponse()
+
+        # Stores all validation types matched on this objet
+        validation_types = list()
+
+        # Validate any parent Types that apply first
+        for parent_type in own_type.__bases__:
+            if parent_type in DataObject.type_validators:
+                validation_types.append(parent_type)
+
+        # Validate Self
+        if own_type in DataObject.type_validators:
+            validation_types.append(own_type)
+
+        if not validation_types:
+            raise Exception(f"No known validation strategies for: {own_type}")
+
+        # Execute all validation jobs now (+ remove duplicates):
+        for validation_type in set(validation_types):
+            validation_job = DataObject.type_validators[validation_type]
+            self._apply_validation_job(validation_job, response)
 
         # If there have been no issues until this point, the validation is considered successful. Update response:
         if not response.has_failed():
