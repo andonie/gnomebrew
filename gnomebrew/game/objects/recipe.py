@@ -395,10 +395,8 @@ def add_recipe(user: User, effect_data: dict, **kwargs):
     :param effect_data:     Should contain `recipe` containing the target recipe's ID.
     :param kwargs:          kwargs
     """
-    # Test Effect Data for sanity before execution by trying to retrieve target recipe
-    target_recipe: Recipe = user.get(effect_data['recipe'])
-
     recipe_ids = []
+    elements_to_update = []
 
     if isinstance(effect_data['recipe'], list):
         # Add multiple recipes
@@ -408,15 +406,21 @@ def add_recipe(user: User, effect_data: dict, **kwargs):
         recipe_ids.append(effect_data['recipe'])
 
     for recipe_id in recipe_ids:
+        # Test Effect Data for sanity before execution by trying to retrieve target recipe
+        target_recipe: Recipe = user.get(recipe_id)
         # Push this recipe's ID in the target station's recipes directory
         user.update(f"data.{target_recipe.get_static_value('station')}.recipes", recipe_id,
                     mongo_command='$push', **kwargs)
+        element = f"recipes.{target_recipe.get_static_value('station')}"
+        if element not in elements_to_update:
+            elements_to_update.append(element)
 
-    # Update the frontends to reflect the addition of the new recipe.
-    user.frontend_update('ui', {
-        'type': 'reload_element',
-        'element': f"recipes.{target_recipe.get_static_value('station')}"
-    })
+    for element_to_update in elements_to_update:
+        # Update the frontends to reflect the addition of the new recipe.
+        user.frontend_update('ui', {
+            'type': 'reload_element',
+            'element': element_to_update
+        })
 
 @Effect.type('remove_recipe', ('recipe', str))
 def remove_recipe(user: User, effect_data: dict, **kwargs):
