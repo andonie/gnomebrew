@@ -116,7 +116,6 @@ function handle_update(data) {
         case 'set': // Hard-Set update
             for (var key in data.updated_elements) {
                 var data_selector = '.' + key;
-                var val_old = $(data_selector).data('value');
                 update_value_at(data_selector, data.updated_elements[key]['data']);
             }
             break;
@@ -131,14 +130,12 @@ function handle_update(data) {
 
 function update_value_at(data_selector, new_val) {
     $(data_selector).data('value', new_val);
-    // Decide how shorten numbers of this type
-    // If this element has its own display function baked, use this
+    // Decide how to display the data
     var display_fun = $(data_selector).attr('data-display-fun');
-    console.log(display_fun);
     if (typeof display_fun === 'undefined' || display_fun === false) {
+        // Default: Expect Number
         display_fun = 'shorten_num';
     }
-    console.log(display_fun);
     target_fun = styling_functions[display_fun];
     $(data_selector).html(target_fun(new_val));
 }

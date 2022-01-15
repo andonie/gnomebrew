@@ -3,7 +3,8 @@
 styling_functions = {
     'shorten_num': shorten_num,
     'shorten_time': shorten_time,
-    'shorten_cents': shorten_cents
+    'shorten_cents': shorten_cents,
+    'str': display_string
 }
 
 // Cosmetic Function To Make Big and small numbers look nice.
@@ -37,6 +38,10 @@ function shorten_time(val) {
     } else {
         return Math.floor(val/(60*60*24)) + ' days ' + shorten_time(val % (60*60*24));
     }
+}
+
+function display_string(val) {
+    return val;
 }
 
 /* GENERAL UI */
