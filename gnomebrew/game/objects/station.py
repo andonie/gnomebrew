@@ -5,7 +5,6 @@ from typing import List
 from flask import render_template
 
 from gnomebrew import mongo
-from gnomebrew.game.event import Event
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject

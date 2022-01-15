@@ -16,7 +16,7 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import GameObject
 from gnomebrew.game.objects.item import Item
 from gnomebrew.game.user import User, load_user, id_update_listener, user_assertion, html_generator
-from gnomebrew.game.event import Event
+from gnomebrew.game.objects.event import Event
 from gnomebrew.game.util import random_normal, random_uniform, is_weekday, fuzzify
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew import mongo

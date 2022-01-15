@@ -10,7 +10,6 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, get_resolver, update_resolver, load_user
 from gnomebrew import mongo
-from gnomebrew.game.event import Event
 
 
 @update_resolver('stat')

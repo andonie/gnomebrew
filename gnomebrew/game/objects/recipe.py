@@ -7,14 +7,13 @@ from bisect import bisect_left
 from datetime import datetime, timedelta
 from os.path import join
 
-from flask import url_for, render_template
+from flask import render_template
 from typing import List, Dict
 
 from gnomebrew import mongo
-from gnomebrew.game import event as event
-from gnomebrew.game.event import Event
+from gnomebrew.game.objects.event import Event
 from gnomebrew.game.objects import Effect
-from gnomebrew.game.objects.item import ItemCategory, Item
+from gnomebrew.game.objects.item import ItemCategory
 from gnomebrew.game.objects.game_object import load_on_startup, StaticGameObject, render_object
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.request import PlayerRequest
