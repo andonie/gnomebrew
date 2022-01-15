@@ -98,16 +98,15 @@ class DataObject:
                                             it will be considered to be of this subtype.
         :param validation_subparameters:    Parameters to add for validation *within* the field of `subtype_fieldname`
         """
-        if subtype_fieldname in cls._subtype_data:
-            raise Exception(f"Subtype Fieldname is already in use: {subtype_fieldname}")
-
         if cls not in cls.type_validators:
             raise Exception(f"Must create validation for base class {cls} before creating subtypes.")
 
         def wrapper(subtype_class):
-            # Check to make sure the subtype class
+            # Checks
             if not issubclass(subtype_class, cls):
                 raise Exception(f"{subtype_class} must be subclass of {cls} to be subtype.")
+            if subtype_class in cls._subtype_data:
+                raise Exception(f"Subtype Class is already in use: {subtype_class}")
 
             # Create and store subtype data
             data = dict()

@@ -202,9 +202,9 @@ class Event(DataObject):
         return self._data['event_data'][param_name]
 
 
-class RepeatEvent(Event):
+class PeriodicEvent(Event):
 
-    repeat_types = dict()
+    periodic_types = dict()
 
     @classmethod
     def repeat_type(cls, typename: str, default_interval: int = 1200):
@@ -214,39 +214,39 @@ class RepeatEvent(Event):
         :param default_interval:    Default interval (in s) for execution. Default is 1200 s = 20 min
         """
 
-        if typename in cls.repeat_types:
+        if typename in cls.periodic_types:
             raise Exception(f"Repeat Type {typename} already defined.")
 
         def wrapper(fun: Callable):
             data = dict()
             data['fun'] = fun
             data['default_interval'] = default_interval
-            cls.repeat_types[typename] = data
+            cls.periodic_types[typename] = data
             return fun
 
         return wrapper
 
     @classmethod
-    def generate_instance_for(cls, user: User, repeat_type: str) -> 'RepeatEvent':
+    def generate_instance_for(cls, user: User, periodic_type: str) -> 'PeriodicEvent':
         """
         Generates a fresh instance of a repeat event ready to enqueue.
         :param user:    target user
         :return:        a fresh (not yet enqueued) instance of a `RepeatEvent` for `user`
         """
-        if repeat_type not in cls.repeat_types:
-            raise Exception(f"Unknown repeat type: {repeat_type}")
+        if periodic_type not in cls.periodic_types:
+            raise Exception(f"Unknown repeat type: {periodic_type}")
 
         data = dict()
         data['target'] = user.get_id()
-        data['event_type'] = 'repeat_event'
-        data['repeat_type'] = repeat_type
+        data['event_type'] = 'periodic'
+        data['periodic_type'] = periodic_type
         data['effect'] = [{
-            'effect_type': 'repeat_event_exec',
-            'repeat_type': repeat_type
+            'effect_type': 'periodic_event_exec',
+            'periodic_type': periodic_type
         }]
         data['locked'] = True # Lock this event to ensure it won't be autoremoved on execution
-        data['interval'] = cls.repeat_types[repeat_type]['default_interval']
-        return RepeatEvent(data)
+        data['interval'] = cls.periodic_types[periodic_type]['default_interval']
+        return PeriodicEvent(data)
 
 
     def __init__(self, data: dict):
@@ -259,6 +259,9 @@ class RepeatEvent(Event):
         :param time_in_s:   The new interval.
         """
         self._data['interval'] = time_in_s
+
+    def get_interval(self):
+        return self._data['interval']
 
     def cancel_self(self):
         """
@@ -276,7 +279,7 @@ class RepeatEvent(Event):
 
 # Effects to make repeat events accessible and useful from gameplay flow
 
-@Effect.type('repeat_event_exec', ('repeat_type', str))
+@Effect.type('periodic_event_exec', ('periodic_type', str))
 def repeat_event_exec(user: User, effect_data: dict, **kwargs):
     """
     This effect type is used by `RepeatEvents` to execute their own, complete logic.
@@ -285,36 +288,36 @@ def repeat_event_exec(user: User, effect_data: dict, **kwargs):
     :param kwargs:      kwargs
     """
     # Input Sanity
-    repeat_type = effect_data['repeat_type']
-    if repeat_type not in RepeatEvent.repeat_types:
-        raise Exception(f"Requested Repeat Type does not exist: {repeat_type}")
+    periodic_type = effect_data['periodic_type']
+    if periodic_type not in PeriodicEvent.periodic_types:
+        raise Exception(f"Requested Repeat Type does not exist: {periodic_type}")
 
     # Get Event Object
-    repeat_event: RepeatEvent = user.get(f"event.repeat.{repeat_type}")
+    periodic_event: PeriodicEvent = user.get(f"event.periodic.{periodic_type}")
 
     # Execute the repeat type's logic
-    RepeatEvent.repeat_types[repeat_type]['fun'](user=user, event=repeat_event)
+    PeriodicEvent.periodic_types[periodic_type]['fun'](user=user, event=periodic_event)
 
     # Re-Schedule myself appropriately
-    if not repeat_event.is_remove_on_trigger():
-        repeat_event.reschedule_self()
+    if not periodic_event.is_remove_on_trigger():
+        periodic_event.reschedule_self()
 
 
-@Effect.type('start_repeat_event', ('repeat_type', str))
-def enqueue_repeat_event_for(user: User, effect_data: dict, **kwargs):
+@Effect.type('start_periodic_event', ('periodic_type', str))
+def enqueue_periodic_event_for(user: User, effect_data: dict, **kwargs):
     """
     Requests a new `RepeatEvent` to be attached to `user`.
     :param user:            Target user.
-    :param effect_data:     Effect Data including `repeat_type`
+    :param effect_data:     Effect Data including `periodic_type`
     :param kwargs:          kwargs
     """
     # Input Sanity
-    repeat_type = effect_data['repeat_type']
-    if repeat_type not in RepeatEvent.repeat_types:
-        raise Exception(f"Requested Repeat Type does not exist: {repeat_type}")
+    periodic_type = effect_data['periodic_type']
+    if periodic_type not in PeriodicEvent.periodic_types:
+        raise Exception(f"Requested Repeat Type does not exist: {periodic_type}")
 
     # Create (non-scheduled) RepeatEvent for user
-    event = RepeatEvent.generate_instance_for(user, repeat_type)
+    event = PeriodicEvent.generate_instance_for(user, periodic_type)
 
     # Reschedule yourself. Due to upsert call inserts this new event in DB
     event.reschedule_self()
@@ -326,17 +329,17 @@ def resolve_event_req(game_id: str, user: User, **kwargs):
     if is_uuid(splits[1]):
         # This is a generated field. We expect there to be an event with the corresponding `event_id`
         return None
-    if splits[1] == 'repeat':
+    if splits[1] == 'periodic':
         # This is a request for a repeat event. Formulate appropriate DB request:
         proj = {
             'target': user.get_id(),
-            'event_type': 'repeat_event',
-            'repeat_type': '.'.join(splits[2:])
+            'event_type': 'periodic',
+            'periodic_type': '.'.join(splits[2:])
         }
         res = mongo.db.events.find_one(proj, {'_id': 0})
         if not res:
             raise Exception(f"Cannot find event: {game_id}")
-        result = RepeatEvent(res)
+        result = PeriodicEvent(res)
 
     return result
 

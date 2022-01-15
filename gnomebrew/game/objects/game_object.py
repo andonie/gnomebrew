@@ -4,7 +4,7 @@ This module manages the game's in-loading
 import logging
 from copy import deepcopy
 from os.path import join
-from typing import Type, Any, Callable
+from typing import Type, Any, Callable, List
 
 from flask import render_template
 
@@ -130,6 +130,26 @@ class StaticGameObject(GameObject):
         :return:            `True` if this prefix is known. Otherwise `False`
         """
         return prefix in _static_lookup_tiered
+
+
+
+    @classmethod
+    def get_all_static_of_subtype(cls, subtype) -> list:
+        """
+        Convenience Method. For a given `subtype`, try to find all `StaticGameObject` entities that are currently
+        stored in this Gnomebrew session.
+        :param subtype:     Target subtype. Must be registered via `subtype` annotation
+        :return:            A List of all `subtype` objects known in the static data (as identified by their type
+                            parameter)
+        """
+        if subtype not in cls._subtype_data:
+            raise Exception(f"{cls} is not a known subtype.")
+
+        static_data_type = cls._subtype_data[subtype]['parenttype']
+        static_data = next(iter([job['data_type'] for job in _load_job_list if job['class'] == static_data_type]), None)
+        if not static_data:
+            raise Exception(f"Could not find data type for {subtype}")
+        return [subtype(o_data.get_json()) for o_data in _static_lookup_tiered[static_data].values() if o_data.is_subtype_compatible(subtype)]
 
 
 class PublicGameObject(GameObject):
@@ -296,7 +316,10 @@ def update_static_data():
 
     for job in _load_job_list:
         base_dict = dict()
-        entity_type = None
+        if 'data_type' in job:
+            entity_type = job['data_type']
+        else:
+            entity_type = None
         for doc in mongo.db[job['collection']].find({}, {'_id': False}):
             # Make Checks (for Exception Level Malformatted Input) before adding input to doc
             # Check if Empty Object was given
@@ -306,10 +329,14 @@ def update_static_data():
 
             # Ensure all game_id fields start with the same first split
             read_type = doc['game_id'].split('.')[0]
+
             if entity_type is None:
                 entity_type = read_type
+                job['data_type'] = read_type
             else:
-                assert read_type == entity_type
+                if read_type != entity_type:
+                    log("gb_system", f"Invalid Game ID detected in collection document. Must include {entity_type}. Was:{read_type}", level=logging.WARN)
+                    continue
 
             # Ensure the Game ID is not yet taken
             if doc['game_id'] in base_dict:

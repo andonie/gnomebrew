@@ -1,5 +1,12 @@
 {% extends "stations/_station.html" %}
 
+
+{% block infos %}{{ super() }}
+<div class="gb-info gb-info-default" title="Supply Chain Reaction Speed">
+    {{ icon('special.reaction_speed', class='gb-icon-sm') | safe }}
+    {% with pop_def = current_user.get('attr.station.market.popularity_deflation') %}<span class="attr-station-market-rank" data-value="{{ pop_def }}">{{ shorten_num(pop_def) }}</span>{% endwith %}
+</div>
+{% endblock %}
 {% block station_body %}
 {% with offers = current_user.get('data.station.market.offers') %}
 <div class="gb-icon-group" data-select-value="data.station.market.amount_choice">
@@ -17,8 +24,8 @@
     <input type="text" class="gb-filter" placeholder="Filter Market Offers" data-filters=".gb-market-offer">
 </div>
 <div class="gb-info-container" id="market-offers">
-    {% for offer in get_offers_for(current_user) %}{{ render_object('render.market_offer', data=offer.get_json()) | safe }}{% endfor %}
+    {% for offer in get_offers_for(current_user) %}{% if offer.get_current_stock() != 0 %}{{ render_object('render.market_offer', data=offer.get_json()) | safe }}{% endif %}{% endfor %}
 </div>
 {% endwith %}
-<div class="market-feedback"><span class="data-market-feedback">{{ current_user.get('data.station.market.feedback') }}</span></div>
+<div class="market-feedback"><span class="data-station-market-feedback" data-display-fun="str">{{ current_user.get('data.station.market.feedback') | safe }}</span></div>
 {% endblock %}

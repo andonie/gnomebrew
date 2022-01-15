@@ -3,7 +3,7 @@ This module contains core objects in Gnomebrew, such as Items, People, Stations,
 """
 
 from gnomebrew.game.objects.event import Event
-from gnomebrew.game.objects.event import RepeatEvent
+from gnomebrew.game.objects.event import PeriodicEvent
 from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.objects.effect import Effect as Effect
 from gnomebrew.game.objects.item import Item as Item
