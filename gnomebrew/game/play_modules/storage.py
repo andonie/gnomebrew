@@ -7,11 +7,13 @@ from typing import List
 from flask import url_for
 
 from gnomebrew import log
+from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.game_object import render_object
-from gnomebrew.game.objects.item import ItemCategory, Item
+from gnomebrew.game.objects.item import ItemCategory, Item, Fuel
 from gnomebrew.game.selection import selection_id
-from gnomebrew.game.user import User, id_update_listener, get_resolver, update_resolver
+from gnomebrew.game.testing import application_test
+from gnomebrew.game.user import User, id_update_listener, get_resolver, update_resolver, load_user
 from gnomebrew.game.util import global_jinja_fun, css_friendly, render_info, css_unfriendly, get_id_display_function
 
 
@@ -272,6 +274,7 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
     user.update('storage', inventory_update, is_bulk=True)
 
     for new_item in new_items:
+        new_item.process_event("inventory_first_time", user)
         # Generate The classes this item_amount render would belong to based on known convenctions
         container_class = "gb-storage-item-view gb-info gb-info-highlight"
         # Generate data that is the same for all renders independently of category
@@ -310,6 +313,21 @@ def delta_inventory(user: User, effect_data: dict, **kwargs):
         })
 
         # The new item might be orderable. In that case --> Add it to the price list
+
+
+@Item.on("inventory_first_time")
+def process_inventory_add(item: Item, user: User):
+    """
+    Called when `item` is added to `user`'s inventory.
+    :param item:        Object that just experienced the event.
+    :param user:        Target user.
+    """
+    print(f"BASE INVENTORY ADD {item}")
+
+
+@Fuel.on("inventory_first_time")
+def process_inventory_add_fuel(item: Fuel, user: User):
+    print(f"\n\n{item.get_burn_value()=}\n\nINVENTORY FUEL ADD BABYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n\n\n\n")
 
 
 @Effect.type_info('delta_inventory')
@@ -367,3 +385,25 @@ def generate_category_render_data(user: User, category: ItemCategory, player_inv
     cat_data['cat_order'] = category.get_static_value('cat_order') if category.has_static_key('cat_order') else 50
     cat_data['items'] = list(filter(lambda item: item.in_category(category.get_id()), [user.get(item_id) for item_id in player_inventory]))
     return cat_data
+
+
+@application_test(name='Delta Inventory', category='Basics')
+def delta_inventory_test(item_id: str, item_delta, username: str):
+    """
+    Executes a `delta_inventory` effect with `'delta': { item_id: item_delta }`.
+    """
+    response = GameResponse()
+    if not User.user_exists(username):
+        response.add_fail_msg(f"User {username} does not exist.")
+        return response
+
+    user = load_user(username)
+
+    Effect({
+        'effect_type': 'delta_inventory',
+        'delta': { item_id: int(item_delta) }
+    }).execute_on(user)
+
+    response.log(f"Executed Delta Inventory")
+
+    return response

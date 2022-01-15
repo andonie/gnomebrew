@@ -14,15 +14,6 @@ class Item(StaticGameObject):
     Item Wrapper Class
     """
 
-    @classmethod
-    def quality(cls, quality_type: str, *parameters):
-        """
-        Annotation function to mark a
-        :param quality_type:
-        :param parameters:
-        :return:
-        """
-
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
 
@@ -121,6 +112,7 @@ class Item(StaticGameObject):
         """
         # Magic Number 7 cuts off `'it_cat.'` before using the pure identifier
         return cat_id[7:] in self._data['categories']
+
 
 # Item Validation Code
 Item.validation_parameters(('game_id', str), ('name', str), ('description', str), ('categories', list))
@@ -237,7 +229,8 @@ def append_postfix(old: Item, splits: List[str]) -> Item:
         cat_item = Item.from_id(f"item.{split}")
         new_data['name'] = f"{cat_item.get_static_value('postfix_name_addition', default='')}{new_data['name']}"
         new_data['postfix']['src_item'] = cat_item.get_minimized_id()
-        new_data['description'] = f"{new_data['description']}{cat_item.get_static_value('postfix_description_addition', default='')}"
+        new_data[
+            'description'] = f"{new_data['description']}{cat_item.get_static_value('postfix_description_addition', default='')}"
     elif new_data['postfix_type'] == 'quality':
         new_data['name'] = f"{new_data['name']} ({split})"
         new_data['postfixed']['quality'] = split
@@ -249,4 +242,20 @@ def append_postfix(old: Item, splits: List[str]) -> Item:
 @get_resolver('it_cat')
 def it_cat(game_id: str, user: User, **kwargs):
     return ItemCategory.from_id(game_id)
+
+
+# Some Item Subtypes
+
+@Item.subtype('fuel', ('energy', int))
+class Fuel(Item):
+    """
+    Can burn and release energy
+    """
+
+    def __init__(self, data: dict):
+        Item.__init__(self, data)
+
+    def get_burn_value(self):
+        """Returns energy value per item burned"""
+        return self._data['fuel']['energy']
 

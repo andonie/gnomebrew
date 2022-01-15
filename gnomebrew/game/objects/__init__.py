@@ -5,6 +5,7 @@ This module contains core objects in Gnomebrew, such as Items, People, Stations,
 
 from gnomebrew.game.objects.effect import Effect as Effect
 from gnomebrew.game.objects.item import Item as Item
+from gnomebrew.game.objects.item import Fuel as Fuel
 from gnomebrew.game.objects.recipe import Recipe as Recipe
 from gnomebrew.game.objects.people import Person as Person
 from gnomebrew.game.objects.world import WorldLocation as WorldLocation

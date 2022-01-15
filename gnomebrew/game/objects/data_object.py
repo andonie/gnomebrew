@@ -9,6 +9,7 @@ from typing import Union, Any, Callable, List, Tuple
 
 from gnomebrew import log
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.user import User
 
 
 class DataObject:
@@ -76,6 +77,142 @@ class DataObject:
 
         # Copy Validation Scheme and assign it to this class
         cls.type_validators[cls] = copy.copy(cls.type_validators[other_cls])
+
+
+    # SUBTYPE SYSTEM - Implemented generically for every DataObject class
+
+    _subtype_data = dict()
+
+    @classmethod
+    def subtype(cls, subtype_fieldname: str, *validation_subparameters: Tuple[str, Any]):
+        """
+        Annotation Function to mark a **class** a subtype of another type.
+        To be used as:
+        ```python
+        @Item.subtype('fuel')
+        class Fuel(Item):
+            # ...
+        ```
+        :param cls:                         To be called on DIRECT parent class
+        :param subtype_fieldname:           If an object of the main type contains `subtype_fieldname`,
+                                            it will be considered to be of this subtype.
+        :param validation_subparameters:    Parameters to add for validation *within* the field of `subtype_fieldname`
+        """
+        if subtype_fieldname in cls._subtype_data:
+            raise Exception(f"Subtype Fieldname is already in use: {subtype_fieldname}")
+
+        if cls not in cls.type_validators:
+            raise Exception(f"Must create validation for base class {cls} before creating subtypes.")
+
+        def wrapper(subtype_class):
+            # Check to make sure the subtype class
+            if not issubclass(subtype_class, cls):
+                raise Exception(f"{subtype_class} must be subclass of {cls} to be subtype.")
+
+            # Create and store subtype data
+            data = dict()
+            data['typeclass'] = subtype_class
+            data['parenttype'] = cls
+            data['typefield'] = subtype_fieldname
+            if validation_subparameters:
+                data['validation_parameters'] = validation_subparameters
+            else:
+                data['validation_parameters'] = []
+            cls._subtype_data[subtype_class] = data
+
+            # Add Validation Features to this class
+
+
+            return subtype_class
+
+        return wrapper
+
+    def is_subtype_compatible(self, subtype) -> bool:
+        """
+        Checks if this object is compatible with a certain subtype.
+        :param subtype: Subtype to check
+        :return:        `True` if this object should be able to transform into `subtype`. Otherwise `False`
+        """
+        if subtype not in DataObject._subtype_data:
+            # No direct match. Is this a parent type?
+            if any([s_type for s_type in DataObject._subtype_data if subtype == DataObject._subtype_data[s_type]['parenttype']]):
+                # This is a parent type and by convention accepted
+                return True
+            raise Exception(f"Unknown Suptype Class: {subtype}")
+
+        typefield = DataObject._subtype_data[subtype]['typefield']
+        return typefield in self._data and all(
+                [par_name in self._data[typefield] and isinstance(self._data[typefield][par_name], par_type)
+                 for par_name, par_type in DataObject._subtype_data[subtype]['validation_parameters']])
+
+
+    def as_subtype(self, subtype, **kwargs) -> subtype:
+        """
+        Convenience Method. Makes this object available as a specific subtype.
+        :param subtype:     Subtype to convert to, e.g. `Fuel`
+        :keyword default:   If provided, will return `default` instead of an exception in case of missing `typefield` in
+                            object data.
+        :return:            The same object data in a class object of type `subtype`.
+        """
+        own_type = type(self)
+        # Special Cases: Identity and Parent Class
+        if own_type == subtype:
+            return self
+
+        if not self.is_subtype_compatible(subtype):
+            raise Exception(f"{subtype} is not compatible with {self}.\nCan be either bad object data or wrong subtype.")
+
+        subtype_data = self._subtype_data[subtype]
+
+        if subtype_data['typefield'] not in self._data:
+            if 'default' in kwargs:
+                return kwargs['default']
+            raise Exception(f"Cannot convert. Missing field {subtype_data['typefield']} in object.")
+
+        return subtype(self._data)
+
+
+    # Object Events
+
+    _event_handlers_by_code = dict()
+
+    @classmethod
+    def on(cls, event_code: str):
+        """
+        Decorator function. Used to mark the handling of an object event for a given event code.
+        :param event_code:  Unique event code
+        """
+        if event_code not in cls._event_handlers_by_code:
+            cls._event_handlers_by_code[event_code] = dict()
+        if cls in cls._event_handlers_by_code[event_code]:
+            raise Exception(f"Type ({cls}) already is registered for handling {event_code}.")
+
+        def wrapper(fun: Callable):
+            cls._event_handlers_by_code[event_code][cls] = fun
+            return fun
+
+        return wrapper
+
+
+    def process_event(self, event_code: str, user: User, data: dict = None):
+        """
+        Called to register an event on an object.
+        Calling this method results in the respectively listening routines to trigger.
+        :param event_code:  Code of the event that has happened, e.g. "first_inventory"
+        :param user:    Target user
+        :param data:    Optional. Containing any data that might be expected as per convention of the `event_code`
+        """
+        if event_code not in DataObject._event_handlers_by_code:
+            raise Exception(f"Unknown event code {event_code}")
+
+        for type_known in DataObject._event_handlers_by_code[event_code]:
+            if self.is_subtype_compatible(type_known):
+                to_execute = DataObject._event_handlers_by_code[event_code][type_known]
+                if not data:
+                    to_execute(self.as_subtype(type_known), user)
+                else:
+                    to_execute(self.as_subtype(type_known), user, data)
+
 
     def __init__(self, data: dict):
         """
