@@ -8,6 +8,7 @@ from typing import List, Tuple
 import re
 
 from gnomebrew.game.objects import DataObject, PlayerRequest, PeriodicEvent, Effect, Item
+from gnomebrew.game.objects.game_object import render_object
 from gnomebrew.game.selection import selection_id
 from gnomebrew.game.user import User, id_update_listener
 from gnomebrew.game.gnomebrew_io import GameResponse
@@ -68,17 +69,41 @@ class MarketItem(Item):
         """
         return int(self.get_base_value() * MARKET_BASE_MARGIN * (1 + amount/500))
 
+    def current_stock_for(self, user: User) -> int:
+        offers = user.get('data.station.market.offers')
+        if self.get_minimized_id() not in offers:
+            # This item has not been offered yet.
+            return 0
+        else:
+            return offers[self.get_minimized_id()]['stock']
+
 
 @MarketItem.on('market_restock')
 def on_market_restock(item: MarketItem, user: User):
     current_offers = user.get("data.station.market.offers")
 
-    # Check if this item was in stock before the restock
+    # If this item was not in stock before, update frontends with this.
+    pass
 
+@MarketItem.on('market_back_in_stock')
+def on_back_in_stock(item: MarketItem, user: User):
+    offer_data = MarketOffer.from_datasource(item.get_id(), user.get(f"data.station.market.offers.{item.get_id()}")).get_json()
+    user.frontend_update('ui', {
+        'type': 'append_element',
+        'selector': "#market-offers",
+        'element': render_object('render.market_offer',
+                                 data=offer_data,
+                                 current_user=user)
+    })
 
 @MarketItem.on("market_out_of_stock")
 def on_market_out_of_stock(item: MarketItem, user: User):
-    pass
+    """called when `item` is out of stock for `user`"""
+    # Remove this item from the market's offer view
+    user.frontend_update('ui', {
+        'type': 'remove_element',
+        'selector': f"#{css_friendly(item.get_id())}-market-offer"
+    })
 
 
 @global_jinja_fun
@@ -150,10 +175,14 @@ def market_buy(user: User, request_object: dict, **kwargs):
     stock_left = requested_offer.get_current_stock() - amount_to_buy
 
     # Update User Storage to reflect gained items and lost gold
-    user.update(f"storage", {
-        requested_offer.get_item_id(): amount_to_buy,
-        'item.gold': -revenue
-    }, is_bulk=True, mongo_command='$inc')
+    # To do this, use `delta_inventory` as that takes into account all kinks
+    Effect({
+        'effect_type': 'delta_inventory',
+        'delta': {
+            css_friendly(requested_offer.get_item_id()): amount_to_buy,
+            'item-gold': -revenue
+        }
+    }).execute_on(user)
 
     # Update Market Data to reflect reduced inventory
     user.update("data.station.market", {
@@ -192,14 +221,19 @@ def stock_up_on(user: User, effect_data: dict, **kwargs):
     item: MarketItem = user.get(effect_data['item_id']).as_subtype(MarketItem)
     amount = effect_data['amount']
 
-    offers = user.get("data.station.market.offers")
+    offers = user.get("data.station.market.offers.item")
 
     # What\'s the current amount & price?
-    current_amount = user.get(f"data.station.market.offers.{item.get_id()}.stock", default=0)
+    if item.get_minimized_id() in offers:
+        current_amount = offers[item.get_minimized_id()]['stock']
+    else:
+        current_amount = 0
 
     update_data = {
         'stock': current_amount + amount
     }
+
+    print(f"{update_data=} {current_amount=}")
 
     if 'price' in effect_data:
         update_data['price'] = effect_data['price']
@@ -208,6 +242,9 @@ def stock_up_on(user: User, effect_data: dict, **kwargs):
 
     # Invoke a `market_restock` event
     item.process_event("market_restock", user)
+
+    if current_amount == 0:
+        item.process_event('market_back_in_stock', user)
 
 
 
@@ -218,13 +255,6 @@ MARKET_UPDATE_INTERVAL_LEVELS_FACTOR = 1.8
 MAX_MARKET_UPDATE_INTERVAL = 60 * 60
 
 
-def _current_stock_of(market_item: MarketItem, user: User) -> int:
-    offers = user.get('data.station.market.offers')
-    if market_item.get_minimized_id() not in offers:
-        # This item has not been offered yet. High prio
-        return 0
-    else:
-        return offers[market_item.get_minimized_id()]['stock']
 
 
 def _current_popularity_of(market_item: MarketItem, user: User) -> Number:
