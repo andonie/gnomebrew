@@ -64,7 +64,6 @@ class EventThread(object):
                     event_errors = event_errors + 1
 
                 if event.is_remove_on_trigger():
-                    print(f"REMOVING {event}")
                     remove_ids.append(event_data['_id'])
 
             # Now all pending events have been executed and the IDs to remove have been determined.

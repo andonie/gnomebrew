@@ -10,6 +10,7 @@ import re
 from gnomebrew.game.objects import DataObject, PlayerRequest, PeriodicEvent, Effect, Item
 from gnomebrew.game.objects.game_object import render_object
 from gnomebrew.game.selection import selection_id
+from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import User, id_update_listener
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.util import global_jinja_fun, css_friendly, fuzzify
@@ -233,8 +234,6 @@ def stock_up_on(user: User, effect_data: dict, **kwargs):
         'stock': current_amount + amount
     }
 
-    print(f"{update_data=} {current_amount=}")
-
     if 'price' in effect_data:
         update_data['price'] = effect_data['price']
 
@@ -387,3 +386,14 @@ def forward_market_feedback(user: User, data: dict, game_id: str, **kwargs):
         'update_type': 'set',
         'updated_elements': updated_elements
     })
+
+
+@application_test(name='Print all Market Items', category='Item')
+def print_market_overview():
+    """Shows all currently available market items with pricing."""
+    response = GameResponse()
+
+    for market_item in Item.get_all_static_of_subtype(MarketItem):
+        response.log(f"{market_item.get_id():<20}: {market_item.get_base_value():>6}")
+
+    return response
