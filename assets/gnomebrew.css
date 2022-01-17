@@ -710,6 +710,8 @@ img {
     border-radius: 10px;
     background: #5E484F;
     color: #E7BF8B;
+    font-family: 'Press Start 2P';
+    font-size: 0.5em;
 }
 
 .gb-admin-description-field {
