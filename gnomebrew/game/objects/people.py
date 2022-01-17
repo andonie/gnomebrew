@@ -3,11 +3,113 @@ This module describes and generates people in Gnomebrew.
 People are a concrete implementation of `Entity` and share their general
 """
 from numbers import Number
+from typing import Any
 
 from gnomebrew.game.gnomebrew_io import GameResponse
+from gnomebrew.game.objects.game_object import StaticGameObject
 from gnomebrew.game.objects.entity import Entity
+from gnomebrew.game.objects.game_object import load_on_startup
 from gnomebrew.game.objects.generation import Generator, Environment
+from gnomebrew.game.static_data import dataframes
 from gnomebrew.game.testing import application_test
+from gnomebrew.game.user import get_resolver, User
+
+
+@load_on_startup('races')
+class Race(StaticGameObject):
+
+    def __init__(self, data: dict):
+        StaticGameObject.__init__(self, data)
+
+    def generate_size(self, gen: Generator) -> float:
+        """Generates an appropriate size for a person of this race"""
+        size_data = self._data['gen_info']['size']
+        return gen.rand_normal(median=size_data['avg'], deviation=size_data['std_d'])
+
+    def generate_name(self, gen: Generator, gender: str, type: str):
+        """
+        Helpfer function. Generates a name for this race.
+        :param gen:         Generator to use
+        :param gender:      Gender to use ('male', 'nonbinary', etc.)
+        :param type:        Either `names` or `surnames`
+        :return:            One generated name.
+        """
+        # Check Input
+        if type not in ['names', 'surnames'] or gender not in ['male', 'female', 'nonbinary']:
+            raise Exception(f"Illegal Input for Name Generation: {type}, {gender}")
+
+        # Pull Relevant Data from `gen_info`
+        gen_data = self._data['gen_info']['names']
+
+        # Can this configuration be done?
+        # Not all races support nonbinary specific names (yet)
+        if gender == 'nonbinary' and not gen_data['nonbinary']:
+            return self.generate_name(gen, gen.choose({'male': 1, 'female': 1}), type)
+
+        # Generate the base name of the source file to pull names from
+        if type == 'names':
+            source_base = f"{self.get_minimized_id()}_{gender}_{type}"
+        else:
+            source_base = f"{self.get_minimized_id()}_{type}"
+
+        # Does the name generation for this type happen in multiple syllables or at once?
+        gen_instruction = gen_data[type]
+
+        if gen_instruction == 'base':
+            # Base Case. There is one big name list. Choose one randomly
+            return gen.choose_from_data(source_base)
+        elif isinstance(gen_instruction, int):
+            # Interpret config as syllable number
+            name = ""
+            for syl_num in range(1, gen_instruction + 1):
+                name += str(gen.choose_from_data(f"{source_base}_syl{syl_num}"))
+            return name
+
+
+# Race Data Object Validation
+
+Race.validation_parameters(('game_id', str), ('name', str), ('description', str), ('gen_info', [
+    ('names', [('names', object), ('surnames', object), ('nonbinary', bool)]),
+    ('size', [('avg', Number), ('std_d', Number)])]))
+
+
+@load_on_startup('backgrounds')
+class Background(StaticGameObject):
+
+    def __init__(self, data: dict):
+        StaticGameObject.__init__(self, data)
+
+    def generate_has_title(self, gen: Generator) -> bool:
+        """
+        Let generator determine whether or not this background will generate a title for the target person.
+        :param gen:     Target generator
+        :return:        `True` if a title should be generated, otherwise `False`. Probabilities depend on
+                        given background.
+        """
+        return gen.rand_unit() < self._data['gen_info']['titles']['prob']
+
+    def generate_title(self, gen: Generator) -> str:
+        """
+        Generates an appropriate title for this background, if any.
+        :param gen:     Generator to use
+        :return:        Generated title. Empty string if no title is available.
+        """
+        # Access Titles Dataframe and filter according to background data
+        titles_df = dataframes['titles']
+
+        for filter, filter_list in self._data['gen_info']['titles']['filters'].items():
+            filter_regex = f"({'|'.join(filter_list)})"
+            titles_df = titles_df[titles_df[filter].str.contains(filter_regex, case=False)]
+
+        return gen.choose_from_dataframe(titles_df)
+
+
+Background.validation_parameters(('game_id', str), ('name', str), ('description', str),
+                                 ('gen_info', [
+                                     ('titles',
+                                      [('prob', Number), ('_filters', [('_function', list), ('_source', list)])]),
+                                     ('_tavern', [('budget', Number)])
+                                 ]))
 
 
 class Person(Entity):
@@ -33,12 +135,22 @@ class Person(Entity):
         'nonbinary': 4
     }
 
-    def get_styling_postfix(self):
-        """
-        :return: Returns a postfix (e.g. 'light', 'dark', 'green') to be used for state icons that are sensitive to
-                different person.
-        """
-        return Person._race_postfixes[self._data['race']]
+    RACE_BASE_CHOICES = {
+        'human': 30,
+        'elf': 5,
+        'half-elf': 17,
+        'orc': 7,
+        'dwarf': 13
+    }
+
+    BACKGROUND_CHOICES = {
+        'peasant': 30,
+        'noble': 1,
+        'soldier': 10,
+        'criminal': 5,
+        'cleric': 5,
+        'artisan': 4
+    }
 
     def get_data(self):
         return self._data
@@ -52,6 +164,15 @@ class Person(Entity):
         :return:this person's first name.
         """
         return self._data['name'].split(' ')[0]
+
+    def get_race(self) -> Race:
+        return Race.from_id(f"race.{self._data['race']}")
+
+
+@get_resolver('race', dynamic_buffer=False)
+def get_race_object(game_id: str, user: User, **kwargs):
+    return Race.from_id(game_id)
+
 
 # Person Data Validation
 
@@ -85,17 +206,19 @@ def generate_person(gen: Generator):
     data['entity_class'] = 'person'
     data['race'] = gen.generate('Race')
     data['gender'] = gen.generate('Gender')
+    data['background'] = gen.generate('Background')
     data['name'] = gen.generate('Person Name')
+    # Maybe the person will have a title. That's up to the character's background
+    bg: Background = Background.from_id(f"background.{data['background']}")
+    if bg.generate_has_title(gen):
+        data['title'] = bg.generate_title(gen)
     data['personality'] = gen.generate('Personality')
-    data['size'] = gen.generate('Size')
+    data['size'] = gen.generate('Person Size')
     return Person(data)
 
 
 @Generator.generation_type(gen_type='Gender', ret_type=str)
 def generate_gender(gen: Generator):
-    # if gen.get_env_var('Race') == 'warforged':
-    #     return 'nonbinary'
-
     return gen.choose(Person.GENDER_CHOICES)
 
 
@@ -110,18 +233,26 @@ def generate_personality(gen: Generator):
     return personality
 
 
-_RACE_BASE_CHOICES = {
-    'human': 30,
-    'warforged': 1,
-    'elf': 5,
-    'half-elf': 12,
-    'orc': 7
-}
-
-
 @Generator.generation_type(gen_type='Race', ret_type=str)
 def generate_race(gen: Generator):
-    return gen.choose(gen.get_variable('Prevalent People', default=_RACE_BASE_CHOICES))
+    return gen.choose(gen.get_variable('Prevalent People', default=Person.RACE_BASE_CHOICES))
+
+
+@Generator.generation_type(gen_type='Background', ret_type=str)
+def generate_background(gen: Generator):
+    return gen.choose(Person.BACKGROUND_CHOICES)
+
+
+@Generator.generation_type(gen_type='Person Size', ret_type=float)
+def generate_size(gen: Generator):
+    race_name = gen.get_variable('Race', default=None)
+    if not race_name:
+        # Set a race to use as the size
+        race_name = gen.choose(Person.RACE_BASE_CHOICES)
+
+    # Fetch Race Data
+    race_obj: Race = Race.from_id(f"race.{race_name}")
+    return race_obj.generate_size(gen)
 
 
 @application_test(name='Generate People', context='Generation')
@@ -136,7 +267,7 @@ def generate_many_people(seq_size):
     else:
         seq_size = int(seq_size)
 
-    gen = Generator(Generator.true_random_seed(), Environment())
+    gen = Generator(Generator.true_random_seed(), Environment.empty())
 
     for _ in range(seq_size):
         response.log(str(gen.generate("Person")))

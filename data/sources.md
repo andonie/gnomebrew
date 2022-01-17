@@ -10,6 +10,7 @@ at least all locations where data is sourced from directly are mentioned in here
 
 ## Names
 
+* [Fantasy Name Generators](https://www.fantasynamegenerators.com)
 * [Baby Names by Alexandra](https://data.world/alexandra/baby-names)
 * [Unisex Names](https://github.com/fivethirtyeight/data/edit/master/unisex-names/unisex_names_table.csv)
 * [Surnames](https://github.com/fivethirtyeight/data/blob/master/most-common-name/surnames.csv)

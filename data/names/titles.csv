@@ -1,4 +1,4 @@
-Title,Origin,Function,Usual Source of Authority,Usual Breadth of Authority
+title,origin,function,source,breadth_of_authority
 Abbess or Abbot,Latin,Executive,Elected,Institutional (abbey)
 Admiral of the Fleet,European,Executive,Appointed,Divisional (highest naval rank)
 Agha,"Kurdish, Turkish, Persian",Administrative,Identified or Appointed (Debatable),Tribal
@@ -141,7 +141,7 @@ Her/ His/ Your Grace,British,Executive/ legislative,Hereditary,Regional
 Her/ His/ Your Highness,European,Ceremonial,Hereditary,Courtly
 Her/ His/ Your Illustrious Highness,European,Ceremonial,Hereditary,Provincial
 Her/ His/ Your Imperial Highness,European,Ceremonial,Hereditary,Courtly
-Her/His/Your Imperial Majesty,European,Executive,Hereditary,Supranational
+Her/ His/ Your Imperial Majesty,European,Executive,Hereditary,Supranational
 Her/Your Ladyship or His/Your Lordship,British,Executive/ legislative,Hereditary,Provincial
 Her/ His/ Your Majesty,European,Executive,Hereditary,National
 Her/ His/ Your Royal Highness,European,Ceremonial,Hereditary,Courtly
