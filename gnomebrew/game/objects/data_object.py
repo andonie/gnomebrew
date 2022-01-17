@@ -279,6 +279,25 @@ class DataObject:
         """
         DataObject._collection_key_replace(self._data, '-', '.')
 
+    @staticmethod
+    def _test_field_and_types(data: dict, fields_and_types: List[Tuple], response: GameResponse):
+        for field, field_type in fields_and_types:
+            if field not in data:
+                response.add_fail_msg(f"Expected field {field} not found.")
+            else:
+                # Field is there. Check it for type correctness
+                if isinstance(field_type, list):
+                    # `field_type` is a list -> Describing a NESTED bit of info data instead of an actual type.
+                    # Check if the data itself is a dict
+                    if not isinstance(data[field], dict):
+                        response.add_fail_msg(f"Expected nested dict at {field} but found {type(data[field])}")
+                    else:
+                        # Passed dict check! Now recursively check this dict the list of nested parameters
+                        DataObject._test_field_and_types(data[field], field_type, response)
+                elif not isinstance(data[field], field_type):
+                    response.add_fail_msg(
+                        f"Type of field {field} should be {field_type} but is {type(data[field])}")
+
     def _apply_validation_job(self, validation_job: dict, response: GameResponse):
         """
         Helper Method for validating data objects. Executes *only* one `validation_job` dict
@@ -287,12 +306,7 @@ class DataObject:
         """
         # If this class has associated required fields (& types), make the necessary (strict) checks now.
         if 'required_fields' in validation_job:
-            for field, field_type in validation_job['required_fields']:
-                if field not in self._data:
-                    response.add_fail_msg(f"Expected field {field} not found.")
-                elif not isinstance(self._data[field], field_type):
-                    response.add_fail_msg(
-                        f"Type of field {field} should be {field_type} but is {type(self._data[field])}")
+            DataObject._test_field_and_types(self._data, validation_job['required_fields'], response)
 
         # If this class has associated required check function, run it now.
         if 'fun' in validation_job:
