@@ -206,7 +206,7 @@ class PeriodicEvent(Event):
     periodic_types = dict()
 
     @classmethod
-    def repeat_type(cls, typename: str, default_interval: int = 1200):
+    def periodic_type(cls, typename: str, default_interval: int = 1200):
         """
         Annotation function. Marks a function as the execution logic of a `RepeatEvent` type.
         :param typename:            Typename to register
@@ -269,10 +269,15 @@ class PeriodicEvent(Event):
         self._data['locked'] = False
 
     def reschedule_self(self):
+        """Updates this events DB data and ensures next execution happens in `interval` seconds from now"""
+        self.set_next_execution_in(datetime.timedelta(seconds=self._data['interval']))
+
+    def set_next_execution_in(self, timedelta: datetime.timedelta):
         """
-        Takes times and reschedules this event in the event collection accordingly.
+        Updates this event's execution time and updates all event data in DB.
+        :param timedelta:   Wait Time for next execution of this periodic event from now.
         """
-        self._data['due_time'] = datetime.datetime.utcnow() + datetime.timedelta(seconds=self._data['interval'])
+        self._data['due_time'] = datetime.datetime.utcnow() + timedelta
         self.update_db(upsert=True)
 
 
@@ -327,18 +332,23 @@ def resolve_event_req(game_id: str, user: User, **kwargs):
     splits = game_id.split('.')
     if is_uuid(splits[1]):
         # This is a generated field. We expect there to be an event with the corresponding `event_id`
-        return None
-    if splits[1] == 'periodic':
+        proj = {
+            'target': user.get_id(),
+            'event_id': splits[1]
+        }
+    elif splits[1] == 'periodic':
         # This is a request for a repeat event. Formulate appropriate DB request:
         proj = {
             'target': user.get_id(),
             'event_type': 'periodic',
             'periodic_type': '.'.join(splits[2:])
         }
-        res = mongo.db.events.find_one(proj, {'_id': 0})
-        if not res:
-            raise Exception(f"Cannot find event: {game_id}")
-        result = PeriodicEvent(res)
+    else:
+        raise Exception(f"Cannot interpret Game ID: {game_id}")
+    res = mongo.db.events.find_one(proj, {'_id': 0})
+    if not res:
+        raise Exception(f"Cannot find event: {game_id}")
+    result = PeriodicEvent(res)
 
     return result
 

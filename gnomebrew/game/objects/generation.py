@@ -7,6 +7,7 @@ from numbers import Number
 from typing import Dict, Any, Union, Tuple, Callable, List
 
 import numpy
+import pandas as pd
 
 from gnomebrew.game.gnomebrew_io import GameResponse
 from gnomebrew.game.objects.data_object import DataObject
@@ -92,7 +93,7 @@ class Generator:
         """
         Generates a normally distributed variable
         :keyword deviation  Standard deviation, 1 by default
-        :keyword media  Median. 0 by default
+        :keyword median  Median. 0 by default
         :return:    A random number following the standard normal distribution, unless specified otherwise.
         """
         if 'min' and 'max' in kwargs:
@@ -265,7 +266,17 @@ class Generator:
         if source not in dataframes:
             raise Exception(f"Unknown data source: {source}")
         target_df = dataframes[source]
-        total_rows = len(target_df.index)
+        return self.choose_from_dataframe(target_df, strategy, columns)
+
+    def choose_from_dataframe(self, dataframe:pd.DataFrame, strategy: str = 'uniform', columns: Union[int, str, List] = 0):
+        """
+        Choses from a raw pandas Dataframe
+        :param dataframe:   Pandas Dataframe to use
+        :param strategy:    Strategy to use
+        :param columns:     Output column
+        :return:            Chosen Dataframe value
+        """
+        total_rows = len(dataframe.index)
 
         # Pick an Index in bounds based on strategy chosen
         if strategy == 'uniform':
@@ -276,7 +287,7 @@ class Generator:
             raise Exception(f'Unknown strategy to pick from data source: {strategy}')
 
         # Get the row of the generated index
-        selection = target_df.iloc[index][columns]
+        selection = dataframe.iloc[index][columns]
         if isinstance(columns, list):
             # List of columns was provided. Turn output into list to get rid of panda frame
             selection = selection.values.tolist()

@@ -224,16 +224,26 @@ class DataObject:
             log('gb_system', f'object data was not a dict. Was: {str(data)}', level=logging.WARN)
         self._data = data
 
+    @staticmethod
+    def _format_data(data: dict, indentation=0) -> str:
+        """Recursive Helper Function"""
+        indents = "\t" * indentation
+        result = "{\n"
+        for field, value in data.items():
+            if isinstance(value, dict):
+                value_str = DataObject._format_data(value, indentation+1)
+            else:
+                value_str = str(value)
+            result += indents + f"{field:<20}: {value_str}\n"
+        result += indents + "}"
+        return result
+
     def __str__(self):
         """
         Custom String Conversion to make data easy to read in console.
         :return:    String representation of object with line breaks.
         """
-        string = "{\n"
-        for key in self._data:
-            string += f"{key}: {self._data[key]},"
-        string += "\n}"
-        return string
+        return DataObject._format_data(self._data)
 
     def get_json(self) -> dict:
         """
@@ -280,11 +290,21 @@ class DataObject:
         DataObject._collection_key_replace(self._data, '-', '.')
 
     @staticmethod
-    def _test_field_and_types(data: dict, fields_and_types: List[Tuple], response: GameResponse):
+    def _test_field_and_types(data: dict, fields_and_types: List[Tuple], response: GameResponse, parent_fieldname:str = ""):
         for field, field_type in fields_and_types:
-            if field not in data:
-                response.add_fail_msg(f"Expected field {field} not found.")
+            # If `field` starts with leading underscore '_', consider this field to be optional. In that case,
+            # do not remark if the field is missing, but remark any subsequent errors (e.g. malformatted nested data)
+            if field[0] == '_':
+                # Cut off leading underscore for testing
+                optional_field = True
+                field = field[1:]
             else:
+                optional_field = False
+
+            if field not in data and not optional_field:
+                response.add_fail_msg(
+                    f"Expected field {field} not found in{f' subelement {parent_fieldname}' if parent_fieldname else ''} data")
+            elif field in data:
                 # Field is there. Check it for type correctness
                 if isinstance(field_type, list):
                     # `field_type` is a list -> Describing a NESTED bit of info data instead of an actual type.
@@ -293,7 +313,8 @@ class DataObject:
                         response.add_fail_msg(f"Expected nested dict at {field} but found {type(data[field])}")
                     else:
                         # Passed dict check! Now recursively check this dict the list of nested parameters
-                        DataObject._test_field_and_types(data[field], field_type, response)
+                        DataObject._test_field_and_types(data[field], field_type, response,
+                                                         field if not parent_fieldname else f"{parent_fieldname}.{field}")
                 elif not isinstance(data[field], field_type):
                     response.add_fail_msg(
                         f"Type of field {field} should be {field_type} but is {type(data[field])}")
@@ -334,7 +355,7 @@ class DataObject:
             if parent_type in DataObject.type_validators:
                 validation_types.append(parent_type)
 
-        # Validate Self
+        # Validate based on own type
         if own_type in DataObject.type_validators:
             validation_types.append(own_type)
 

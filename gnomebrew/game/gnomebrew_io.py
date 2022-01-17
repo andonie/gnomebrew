@@ -83,7 +83,7 @@ class GameResponse(object):
         :param log: A string to be added to the log.
         """
         # Clean Up log for view:
-        log = log.replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>')
+        log = log.replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>').replace(' ', '&nbsp;').replace('\t', '&emsp;')
         if 'log' in self._data:
             self._data['log'] += '<br/>' + log
         else:
@@ -172,6 +172,7 @@ class GameResponse(object):
                     If no fail messages have been recorded through `add_fail_msg`, returns empty string.
         """
         return self._data['fail_msg'] if 'fail_msg' in self._data else ""
+
 
 
 
