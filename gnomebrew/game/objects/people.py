@@ -66,12 +66,26 @@ class Race(StaticGameObject):
                 name += str(gen.choose_from_data(f"{source_base}_syl{syl_num}"))
             return name
 
+    def generate_age(self, gen: Generator) -> float:
+        """
+        Generates an appropriate age for a person of this rage.
+        :param gen:     Generator to use.
+        :return:        Generated age in years.
+        """
+        age_data = self._data['gen_info']['age']
+        age_gen = gen.rand_normal(median=age_data['old'] * 1/3, deviation=age_data['maturity'] * 2/3)
+        return max(Person.MIN_AGE, min(Person.MAX_AGE, age_gen))
+
+    def is_mature_age(self, age: float):
+        return age >= self._data['gen_info']['age']['maturity']
+
 
 # Race Data Object Validation
 
 Race.validation_parameters(('game_id', str), ('name', str), ('description', str), ('gen_info', [
     ('names', [('names', object), ('surnames', object), ('nonbinary', bool)]),
-    ('size', [('avg', Number), ('std_d', Number)])]))
+    ('size', [('avg', Number), ('std_d', Number)]),
+    ('age', [('maturity', Number), ('old', Number)])]))
 
 
 @load_on_startup('backgrounds')
@@ -153,6 +167,9 @@ class Person(Entity):
         'artisan': 4
     }
 
+    MIN_AGE = 5
+    MAX_AGE = 100000
+
     def get_data(self):
         return self._data
 
@@ -177,7 +194,8 @@ def get_race_object(game_id: str, user: User, **kwargs):
 
 # Person Data Validation
 
-Person.validation_parameters(('personality', dict), ('race', str))
+Person.validation_parameters(('personality', dict), ('race', str), ('background', str), ('gender', str),
+                             ('age', Number))
 
 
 @Person.validation_function()
@@ -207,6 +225,7 @@ def generate_person(gen: Generator):
     data['game_id'] = f"entity.{generate_uuid()}"  # By convention: every generated entity has a `entity` uuid Game ID
     data['entity_class'] = 'person'
     data['race'] = gen.generate('Race')
+    data['age'] = gen.generate('Person Age')
     data['gender'] = gen.generate('Gender')
     data['background'] = gen.generate('Background')
     data['name'] = gen.generate('Person Name')
@@ -242,6 +261,17 @@ def generate_race(gen: Generator):
 
 @Generator.generation_type(gen_type='Background', ret_type=str)
 def generate_background(gen: Generator):
+    age = gen.get_variable('Person Age', default=None)
+    if age:
+        # An age has been provided. Check if this is a child.
+        race_name = gen.get_variable('Race', default=None)
+        if race_name:
+            # A race name has been set for this background. Ensure appropriate maturity ages are applied
+            race: Race = Race.from_id(f"race.{race_name}")
+            if not race.is_mature_age(age):
+                return 'child'
+
+
     return gen.choose(Person.BACKGROUND_CHOICES)
 
 
@@ -255,6 +285,17 @@ def generate_size(gen: Generator):
     # Fetch Race Data
     race_obj: Race = Race.from_id(f"race.{race_name}")
     return race_obj.generate_size(gen)
+
+
+@Generator.generation_type(gen_type='Person Age', reg_type=float)
+def generate_age(gen: Generator):
+    race_name = gen.get_variable('Race', default=None)
+    if not race_name:
+        # Set a race to use as the size
+        race_name = gen.choose(Person.RACE_BASE_CHOICES)
+
+    race: Race = Race.from_id(f"race.{race_name}")
+    return race.generate_age(gen)
 
 
 @application_test(name='Generate People', context='Generation')
