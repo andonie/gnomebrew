@@ -10,10 +10,12 @@ The game considers everything that can move and interact within the game world a
 - Dwarves
 """
 
-from gnomebrew.game.objects.game_object import GameObject
+from gnomebrew.game.objects.game_object import GameObject, DynamicGameObject, load_on_startup
 
 
-class Entity(GameObject):
+@load_on_startup('entities')
+@DynamicGameObject.setup(dynamic_collection_name='entities', game_id_prefix='entity')
+class Entity(DynamicGameObject):
     """
     Wraps any movable entity in the game
     """

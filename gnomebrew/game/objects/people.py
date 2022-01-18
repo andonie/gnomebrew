@@ -13,6 +13,7 @@ from gnomebrew.game.objects.generation import Generator, Environment
 from gnomebrew.game.static_data import dataframes
 from gnomebrew.game.testing import application_test
 from gnomebrew.game.user import get_resolver, User
+from gnomebrew.game.util import generate_uuid
 
 
 @load_on_startup('races')
@@ -203,6 +204,7 @@ def generate_person(gen: Generator):
     :return:    The generated Person.
     """
     data = dict()
+    data['game_id'] = f"entity.{generate_uuid()}"  # By convention: every generated entity has a `entity` uuid Game ID
     data['entity_class'] = 'person'
     data['race'] = gen.generate('Race')
     data['gender'] = gen.generate('Gender')
@@ -270,6 +272,8 @@ def generate_many_people(seq_size):
     gen = Generator(Generator.true_random_seed(), Environment.empty())
 
     for _ in range(seq_size):
-        response.log(str(gen.generate("Person")))
+        person: Person = gen.generate("Person")
+        response.log(str(person))
+        person.db_update()
 
     return response

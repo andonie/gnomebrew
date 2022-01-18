@@ -10,7 +10,6 @@ import numpy
 import pandas as pd
 
 from gnomebrew.game.gnomebrew_io import GameResponse
-from gnomebrew.game.objects.data_object import DataObject
 from gnomebrew.game.objects.environment import Environment
 from gnomebrew.game.static_data import dataframes
 from gnomebrew.game.testing import application_test

@@ -1,13 +1,13 @@
 """
 Governs adventure module of Gnomebrew
 """
-from gnomebrew.game.objects.game_object import PublicGameObject
+from gnomebrew.game.objects.game_object import DynamicGameObject
 
 # @PublicGameObject.setup(dynamic_collection_name='adventures', game_id_prefix='adventure')
 from gnomebrew.game.objects.generation import Generator
 
 
-class Adventure(PublicGameObject):
+class Adventure(DynamicGameObject):
     pass
 
 

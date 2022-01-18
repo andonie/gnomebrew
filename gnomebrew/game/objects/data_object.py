@@ -126,6 +126,34 @@ class DataObject:
 
         return wrapper
 
+    @classmethod
+    def get_subtype_by_fieldname(cls, subtype_fieldname: str):
+        """
+        Lookup function mapping a `subtype_fieldname` to its designated subtype.
+        :param subtype_fieldname:   Name of the subtype field.
+        :return:                    Corresponding type class
+        """
+        subtype_job = next(filter(lambda job: job['typefield'] == subtype_fieldname, cls._subtype_data.values()), None)
+        if not subtype_job:
+            raise Exception(f"Cannot find info on subtype fieldname: {subtype_fieldname}")
+
+        return subtype_job['typeclass']
+
+    @classmethod
+    def subtype_data_generator(cls):
+        """
+        Decorates a function that can generate subtype data from given object data.
+        """
+        if cls not in cls._subtype_data:
+            raise Exception(f"Unknown subtype: {cls}")
+        elif 'generator_fun' in cls._subtype_data[cls]:
+            raise Exception(f"Already have a generator function for subtype {cls}.")
+
+        def wrapper(fun: Callable):
+            cls._subtype_data[cls]['generator_fun'] = fun
+            return fun
+        return wrapper
+
     def is_subtype_compatible(self, subtype) -> bool:
         """
         Checks if this object is compatible with a certain subtype.
@@ -168,7 +196,33 @@ class DataObject:
                 return kwargs['default']
             raise Exception(f"Cannot convert. Missing field {subtype_data['typefield']} in object.")
 
-        return subtype(self._data)
+        return subtype(self._data)#
+
+    def generate_subtype(self, subtype, gen = None):
+        from gnomebrew.game.objects.generation import Generator
+        """
+        Generates data corresponding to a given `subtype`, making this object part of the subtype.
+        ```
+        person.generate_subtype(Patron)
+        patron = person.as_subtype(Patron)
+        ```
+        :param subtype:     Target subtype
+        :param gen:         Generator to use
+        :raise              Exception if `self` already is of `subtype`
+        """
+
+        if subtype not in self._subtype_data:
+            raise Exception(f"Unknown subtype: {subtype}")
+        elif 'generator_fun' not in self._subtype_data[subtype]:
+            raise Exception(f"No generation function known for {subtype}.")
+
+        # If no generator was provided, create a purely random one
+        if not gen:
+            gen = Generator.fresh()
+
+        # Generate appropriate subtype data and add it to the data
+        subtype_data = self._subtype_data[subtype]['generator_fun'](source_data=self._data, gen=gen)
+        self._data[self._subtype_data[subtype]['typefield']] = subtype_data
 
 
     # Object Events
@@ -212,7 +266,6 @@ class DataObject:
                 else:
                     to_execute(self.as_subtype(type_known), user, data)
 
-
     def __init__(self, data: dict):
         """
         Initializes the dataobject wrapper. This is a lightweight container designed to wrap data.
@@ -225,13 +278,13 @@ class DataObject:
         self._data = data
 
     @staticmethod
-    def _format_data(data: dict, indentation=0) -> str:
+    def _format_data_str(data: dict, indentation=0) -> str:
         """Recursive Helper Function"""
         indents = "\t" * indentation
         result = "{\n"
         for field, value in data.items():
             if isinstance(value, dict):
-                value_str = DataObject._format_data(value, indentation+1)
+                value_str = DataObject._format_data_str(value, indentation + 1)
             else:
                 value_str = str(value)
             result += indents + f"{field:<20}: {value_str}\n"
@@ -240,10 +293,23 @@ class DataObject:
 
     def __str__(self):
         """
-        Custom String Conversion to make data easy to read in console.
+        Custom String Conversion to make data easy to read.
         :return:    String representation of object with line breaks.
         """
-        return DataObject._format_data(self._data)
+        return DataObject._format_data_str(self._data)
+
+    def update_to_db(self, mongo_collection):
+        """
+        Writes this object into an *upsert* `update_one` command on the provided collection handle
+        :param mongo_collection:    Mongo collection handle
+        """
+        if 'game_id' not in self._data:
+            raise Exception(f"Cannot update object without game_id field set: { str(self) }")
+        mongo_collection.update_one({
+            'game_id': self._data['game_id']
+        }, {
+            '$set': self._data
+        }, upsert=True)
 
     def get_json(self) -> dict:
         """

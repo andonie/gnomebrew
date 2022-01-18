@@ -21,11 +21,8 @@ class GameObject(DataObject):
     Wraps any game logic entity that is to be displayed in some form to the player.
     """
 
-    def __init__(self, data, uuid: str = None):
+    def __init__(self, data):
         DataObject.__init__(self, data)
-        if uuid != None:
-            if uuid not in self._data:
-                self._data[uuid] = generate_uuid()
 
     def get_id(self):
         """
@@ -152,7 +149,7 @@ class StaticGameObject(GameObject):
         return [subtype(o_data.get_json()) for o_data in _static_lookup_tiered[static_data].values() if o_data.is_subtype_compatible(subtype)]
 
 
-class PublicGameObject(GameObject):
+class DynamicGameObject(StaticGameObject):
     """
     Wraps/describes a game object that is stored on DB Server in two dedicated formats: *Static* objects and *Generated*
     objects. This class wraps such a class, wiring together the features of static objects and reducing code overhead
@@ -164,7 +161,7 @@ class PublicGameObject(GameObject):
     @classmethod
     def setup(cls, dynamic_collection_name: str, game_id_prefix: str, **kwargs):
         """
-        Decorates a `PublicGameObject` class to set it up as a publicly accessible datatype.
+        Decorates a `DynamicGameObject` class to set it up as a publicly accessible datatype.
         :param dynamic_collection_name: the name of the MongoDB-collection that is managing the JSON data of this object type
         :param game_id_prefix: Basic Prefix to associate this class with (e.g. 'adventure')
         """
@@ -185,12 +182,12 @@ class PublicGameObject(GameObject):
 
         # Register a GET resolver for the data
         get_resolver(type=game_id_prefix,
-                     dynamic_buffer=True if 'dynamic_buffer' not in kwargs else kwargs['dynamic_buffer'],
+                     dynamic_buffer=False if 'dynamic_buffer' not in kwargs else kwargs['dynamic_buffer'],
                      postfix_start=2)(
-            cls.generate_get_resolver(game_id_prefix))
+            cls._generate_get_resolver(game_id_prefix))
 
         # Register an UPDATE resolver for the data
-        update_resolver(game_id_prefix)(cls.generate_update_resolver(game_id_prefix))
+        update_resolver(game_id_prefix)(cls._generate_update_resolver(game_id_prefix))
 
         # Need to return identity function for annotation/decoration placement
         return lambda x: x
@@ -216,7 +213,7 @@ class PublicGameObject(GameObject):
         return wrapper
 
     @classmethod
-    def generate_get_resolver(cls, id_prefix: str) -> Callable:
+    def _generate_get_resolver(cls, id_prefix: str) -> Callable:
         dynamic_collection = mongo.db[cls._public_id_lookup[id_prefix]['dynamic_collection']]
         special_id_lookup = cls._public_id_lookup[id_prefix]['special_get']
 
@@ -234,12 +231,12 @@ class PublicGameObject(GameObject):
                     return kwargs['default']
                 else:
                     raise Exception(f"Cannot resolve {game_id}")
-            return PublicGameObject(dict(result))
+            return DynamicGameObject(dict(result))
 
         return resolve_id_get
 
     @classmethod
-    def generate_update_resolver(cls, id_prefix: str) -> Callable:
+    def _generate_update_resolver(cls, id_prefix: str) -> Callable:
         target_collection = mongo.db[cls._public_id_lookup[id_prefix]['dynamic_collection']]
 
         def resolve_id_update(user: User, game_id: str, update, **kwargs):
@@ -267,6 +264,17 @@ class PublicGameObject(GameObject):
 
         return resolve_id_update
 
+    def __init__(self, data: dict):
+        """Wrap __init__ function for static loadin purposes"""
+        StaticGameObject.__init__(self, data)
+
+    def db_update(self):
+        """Updates this object's full data in the DB. To be called after transactions if changes were made to the entity."""
+        if 'game_id' not in self._data:
+            raise Exception(f"Cannot update object without game_id field set: {str(self._data)}")
+        # Find the appropriate mongo handle based on my Game ID.
+        mongo_handle = mongo.db[self._public_id_lookup[self._data['game_id'].split('.')[0]]['dynamic_collection']]
+        self.update_to_db(mongo_handle)
 
 # List of updates to run on reload
 _load_job_list = list()

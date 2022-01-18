@@ -18,7 +18,7 @@ from gnomebrew.game.objects.effect import Effect
 from gnomebrew.game.objects.item import Item
 from gnomebrew.game.objects.recipe import Recipe
 from gnomebrew.game.objects.entity import Entity
-from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, GameObject, PublicGameObject, \
+from gnomebrew.game.objects.game_object import StaticGameObject, load_on_startup, GameObject, DynamicGameObject, \
     render_object
 from gnomebrew.game.objects.objective import Objective
 from gnomebrew.game.testing import application_test
@@ -27,9 +27,9 @@ from gnomebrew.game.user import User, get_resolver, load_user, id_update_listene
 from gnomebrew.game.util import generate_uuid, css_friendly, render_info, is_game_id_formatted
 
 
-@PublicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest', dynamic_buffer=False)
+@DynamicGameObject.setup(dynamic_collection_name='generated_quests', game_id_prefix='quest', dynamic_buffer=False)
 @load_on_startup('scripted_quests')
-class Quest(StaticGameObject, PublicGameObject):
+class Quest(DynamicGameObject):
     """
     Describes a general quest in Gnomebrew.
     """
@@ -359,7 +359,7 @@ class QuestState(GameObject):
         return update_dict
 
     @staticmethod
-    @PublicGameObject.special_id_get('quest._active')
+    @DynamicGameObject.special_id_get('quest._active')
     def get_all_active_quests(user: User, game_id: str, **kwargs) -> dict:
         """
         Special ID `quest._active` returns a list of all active quests as data.
