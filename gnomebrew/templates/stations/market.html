@@ -9,7 +9,7 @@
 {% endblock %}
 {% block station_body %}
 {% with offers = current_user.get('data.station.market.offers') %}
-<div class="gb-icon-group" data-select-value="data.station.market.amount_choice">
+<div class="gb-icon-group">
     {{ icon( 'special.quantity', class='gb-icon gb-recipe-icon') | safe }}
     {% with selected_option = current_user.get('data.station.market.amount_choice') %}
     <div class="gb-radio-button-group" data-sync="selection.market.amount">

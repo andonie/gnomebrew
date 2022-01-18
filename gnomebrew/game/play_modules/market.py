@@ -275,7 +275,7 @@ def _item_restock_fitness(market_item: MarketItem, user: User) -> Number:
     return _current_popularity_of(market_item, user)
 
 
-@PeriodicEvent.repeat_type("market_update", default_interval=MARKET_UPDATE_BASE_INTERVAL)
+@PeriodicEvent.periodic_type("market_update", default_interval=MARKET_UPDATE_BASE_INTERVAL)
 def market_update(user: User, event: PeriodicEvent):
     """
     Executed regularly for every active `user` to re-assess market offers.
