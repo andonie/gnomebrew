@@ -416,6 +416,12 @@ class Generator:
 
         return wrapper
 
+    @classmethod
+    def fresh(cls):
+        """Convenience function returns a generator instance with random seed and empty environment"""
+        return Generator(Generator.true_random_seed(), Environment.empty())
+
+
 
 @load_on_startup('generation_rules')
 class GenerationRule(StaticGameObject):
