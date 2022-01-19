@@ -1,5 +1,6 @@
 """
-This module manages events and event dispatching
+This module manages events and event dispatching. Events cover all processes that are executed with some *time delay*
+(e.g. recipe execution time or time delay between patron actions).
 """
 import time
 from typing import Callable
@@ -88,6 +89,10 @@ class EventThread(object):
 
 
 class Event(DataObject):
+    """
+    Wrapper Class for Events.
+    Used for creating and enqueuing events as well as for executing them.
+    """
 
     def __init__(self, mongo_data: dict):
         """
@@ -100,10 +105,12 @@ class Event(DataObject):
         if 'event_data' not in self._data:
             self._data['event_data'] = dict()
 
-    """
-    Wrapper Class for Events
-    Used for creating and enqueuing events as well as for executing them.
-    """
+    def get_event_id(self) -> str:
+        """
+        :return:    Properly formatted `event_id` of this event.
+        """
+        # Internally, `event_id` is stored to be optimally usable with index. Change to Game ID:
+        return f"event.{self._data['event_id']}"
 
     def execute(self):
         """
@@ -237,11 +244,12 @@ class PeriodicEvent(Event):
 
         data = dict()
         data['target'] = user.get_id()
+        data['event_id'] = generate_uuid()
         data['event_type'] = 'periodic'
         data['periodic_type'] = periodic_type
         data['effect'] = [{
             'effect_type': 'periodic_event_exec',
-            'periodic_type': periodic_type
+            'event_id': data['event_id']
         }]
         data['locked'] = True # Lock this event to ensure it won't be autoremoved on execution
         data['interval'] = cls.periodic_types[periodic_type]['default_interval']
@@ -270,7 +278,8 @@ class PeriodicEvent(Event):
 
     def reschedule_self(self):
         """Updates this events DB data and ensures next execution happens in `interval` seconds from now"""
-        self.set_next_execution_in(datetime.timedelta(seconds=self._data['interval']))
+        delay_in_s = self._data['interval']
+        self.set_next_execution_in(datetime.timedelta(seconds=delay_in_s))
 
     def set_next_execution_in(self, timedelta: datetime.timedelta):
         """
@@ -279,6 +288,9 @@ class PeriodicEvent(Event):
         """
         self._data['due_time'] = datetime.datetime.utcnow() + timedelta
         self.update_db(upsert=True)
+
+    def get_periodic_type(self) -> str:
+        return self._data['periodic_type']
 
 
 # Effects to make repeat events accessible and useful from gameplay flow
@@ -292,15 +304,13 @@ def repeat_event_exec(user: User, effect_data: dict, **kwargs):
     :param kwargs:      kwargs
     """
     # Input Sanity
-    periodic_type = effect_data['periodic_type']
-    if periodic_type not in PeriodicEvent.periodic_types:
-        raise Exception(f"Requested Repeat Type does not exist: {periodic_type}")
+    event_id = effect_data['event_id']
 
     # Get Event Object
-    periodic_event: PeriodicEvent = user.get(f"event.periodic.{periodic_type}")
+    periodic_event: PeriodicEvent = user.get(f"event.{event_id}")
 
     # Execute the repeat type's logic
-    PeriodicEvent.periodic_types[periodic_type]['fun'](user=user, event=periodic_event)
+    PeriodicEvent.periodic_types[periodic_event.get_periodic_type()]['fun'](user=user, event=periodic_event)
 
     # Re-Schedule myself appropriately
     if not periodic_event.is_remove_on_trigger():
