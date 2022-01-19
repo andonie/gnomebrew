@@ -160,18 +160,34 @@ class DataObject:
         :param subtype: Subtype to check
         :return:        `True` if this object should be able to transform into `subtype`. Otherwise `False`
         """
+        return not self.subtype_compatibility_check(subtype).has_failed()
+
+    def subtype_compatibility_check(self, subtype) -> GameResponse:
+        """
+        Checks this object's compatibility with a given subtype and returns the 'rich' result as a GameResponse.
+        :param subtype:     Type to check.
+        :return:            `GameResponse` object showing compatibility check results.
+        """
+        response = GameResponse()
         if subtype not in DataObject._subtype_data:
             # No direct match. Is this a parent type?
             if any([s_type for s_type in DataObject._subtype_data if subtype == DataObject._subtype_data[s_type]['parenttype']]):
                 # This is a parent type and by convention accepted
-                return True
+                return response
             raise Exception(f"Unknown Suptype Class: {subtype}")
 
         typefield = DataObject._subtype_data[subtype]['typefield']
-        return typefield in self._data and all(
-                [par_name in self._data[typefield] and isinstance(self._data[typefield][par_name], par_type)
-                 for par_name, par_type in DataObject._subtype_data[subtype]['validation_parameters']])
+        if typefield not in self._data:
+            response.add_fail_msg(f"Missing subtype-field '{typefield}' in object: {self}")
+            return response
 
+        # Run a basic field-and-types test on my typefield data
+        DataObject._test_field_and_types(data=self._data[typefield],
+                                         fields_and_types=DataObject._subtype_data[subtype]['validation_parameters'],
+                                         response=response,
+                                         parent_fieldname=typefield)
+
+        return response
 
     def as_subtype(self, subtype, **kwargs) -> subtype:
         """
@@ -186,8 +202,10 @@ class DataObject:
         if own_type == subtype:
             return self
 
-        if not self.is_subtype_compatible(subtype):
-            raise Exception(f"{subtype} is not compatible with {self}.\nCan be either bad object data or wrong subtype.")
+
+        sub_comp_check_res = self.subtype_compatibility_check(subtype)
+        if sub_comp_check_res.has_failed():
+            raise Exception(f"{subtype} is not compatible with {self}\nDetailed response:\n{sub_comp_check_res.get_fail_messages()}")
 
         subtype_data = self._subtype_data[subtype]
 
@@ -206,6 +224,9 @@ class DataObject:
         person.generate_subtype(Patron)
         patron = person.as_subtype(Patron)
         ```
+        
+        A freshly generated patron is just about to enter the tavern and excited to place an order.
+        
         :param subtype:     Target subtype
         :param gen:         Generator to use
         :raise              Exception if `self` already is of `subtype`
@@ -224,6 +245,17 @@ class DataObject:
         subtype_data = self._subtype_data[subtype]['generator_fun'](source_data=self._data, gen=gen)
         self._data[self._subtype_data[subtype]['typefield']] = subtype_data
 
+    def remove_subtype(self, subtype):
+        """
+        Convenience function. Removes all data associated with a given `subtype` from this object.
+        :param subtype:     Target subtype
+        """
+        if subtype not in self._subtype_data:
+            raise Exception(f"Unknown subtype: {subtype}")
+
+        # Identify my associated typefield and remove it entirely from my data.
+        typefield = self._subtype_data[subtype]['typefield']
+        del self._data[typefield]
 
     # Object Events
 
@@ -233,7 +265,7 @@ class DataObject:
     def on(cls, event_code: str):
         """
         Decorator function. Used to mark the handling of an object event for a given event code.
-        :param event_code:  Unique event code
+        :param event_code:  Event code the decorated function is listening on.
         """
         if event_code not in cls._event_handlers_by_code:
             cls._event_handlers_by_code[event_code] = dict()
@@ -298,7 +330,7 @@ class DataObject:
         """
         return DataObject._format_data_str(self._data)
 
-    def update_to_db(self, mongo_collection):
+    def update_to(self, mongo_collection):
         """
         Writes this object into an *upsert* `update_one` command on the provided collection handle
         :param mongo_collection:    Mongo collection handle
@@ -310,6 +342,17 @@ class DataObject:
         }, {
             '$set': self._data
         }, upsert=True)
+
+    def remove_from(self, mongo_collection):
+        """
+        Removes this object from a given collection.
+        :param mongo_collection:    PyMongo target collection handle
+        """
+        if 'game_id' not in self._data:
+            raise Exception(f"Cannot remove object without game_id field set: { str(self) }")
+        mongo_collection.delete_many({
+            'game_id': self._data['game_id']
+        })
 
     def get_json(self) -> dict:
         """
@@ -385,6 +428,12 @@ class DataObject:
                     response.add_fail_msg(
                         f"Type of field {field} should be {field_type} but is {type(data[field])}")
 
+    @staticmethod
+    def test_data_validity(data: dict, fields_and_types: List[Tuple]) -> bool:
+        r = GameResponse()
+        DataObject._test_field_and_types(data, fields_and_types, r)
+        return not r.has_failed()
+
     def _apply_validation_job(self, validation_job: dict, response: GameResponse):
         """
         Helper Method for validating data objects. Executes *only* one `validation_job` dict
@@ -424,6 +473,10 @@ class DataObject:
         # Validate based on own type
         if own_type in DataObject.type_validators:
             validation_types.append(own_type)
+
+        # Subtype Checks if applicable
+
+
 
         if not validation_types:
             raise Exception(f"No known validation strategies for: {own_type}")

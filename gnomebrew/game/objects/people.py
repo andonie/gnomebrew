@@ -176,6 +176,9 @@ class Person(Entity):
     def name(self):
         return self._data['name']
 
+    def get_name(self):
+        return self.name()
+
     def first_name(self):
         """
         Returns this person's first name.

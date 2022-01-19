@@ -11,6 +11,11 @@ class SpecialEntity(StaticGameObject):
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
 
+    def get_name(self):
+        return self._data['name']
+
+    def get_description(self):
+        return self._data['description']
 
 # Special Entity Data Validation
 

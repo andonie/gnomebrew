@@ -70,6 +70,8 @@ class Generator:
         :param max_excl:    The upper limit of the next number needed (exclusive)
         :return:            A generated number n with 0 <= n < `max_excl`
         """
+        if max_excl < 1:
+            raise Exception(f"Invalid maximum for this random generation: {max_excl}")
         return self.next() % max_excl
 
     def rand_unit(self) -> float:
@@ -126,6 +128,9 @@ class Generator:
                 continue
             weight_total += choices_and_weights[option]
             reverse_lookup[weight_total] = option
+
+        if weight_total < 1:
+            raise Exception(f"Illegal Choices/Weights: {choices_and_weights}")
 
         random_val = self.rand_int_limited(weight_total)
         # Return the next biggest lookup value

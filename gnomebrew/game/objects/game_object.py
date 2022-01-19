@@ -268,13 +268,24 @@ class DynamicGameObject(StaticGameObject):
         """Wrap __init__ function for static loadin purposes"""
         StaticGameObject.__init__(self, data)
 
-    def db_update(self):
-        """Updates this object's full data in the DB. To be called after transactions if changes were made to the entity."""
+    def _get_mongo_handle(self):
+        """Convenience function. Retrieves this object's PyMongo collection handle."""
         if 'game_id' not in self._data:
             raise Exception(f"Cannot update object without game_id field set: {str(self._data)}")
         # Find the appropriate mongo handle based on my Game ID.
-        mongo_handle = mongo.db[self._public_id_lookup[self._data['game_id'].split('.')[0]]['dynamic_collection']]
-        self.update_to_db(mongo_handle)
+        return mongo.db[self._public_id_lookup[self._data['game_id'].split('.')[0]]['dynamic_collection']]
+
+    def global_db_update(self):
+        """Updates this object's full data in the DB. To be called after transactions if changes were made to the entity."""
+        mongo_handle = self._get_mongo_handle()
+        self.update_to(mongo_handle)
+
+    def global_db_remove(self):
+        """Removes this object's data entry from the designated DB"""
+        mongo_handle = self._get_mongo_handle()
+        self.remove_from(mongo_handle)
+
+
 
 # List of updates to run on reload
 _load_job_list = list()
