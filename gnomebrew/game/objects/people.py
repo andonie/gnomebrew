@@ -207,9 +207,9 @@ def validate_person_data(data: dict, response: GameResponse):
     response.append_into(Entity(data).validate())
 
     # Ensure personality is not malformatted
-    if not all([test_field in data['personality'] and isinstance(data['personality'][test_field], Number)
-                for test_field in ['openness', 'conscientousness', 'extraversion', 'agreeableness', 'neuroticism']]):
-        response.add_fail_msg(f"Malformatted Personality Data: {data['personality']}")
+    for test_field in ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism']:
+        if test_field not in data['personality'] or not isinstance(data['personality'][test_field], Number):
+            response.add_fail_msg(f"Missing Personality Data Field: {test_field}")
 
 
 # Generation Functions
@@ -314,7 +314,6 @@ def generate_many_people(seq_size):
 
     for _ in range(seq_size):
         person: Person = gen.generate("Person")
-        response.log(str(person))
-        person.db_update()
+        person.generate_subtype()
 
     return response
