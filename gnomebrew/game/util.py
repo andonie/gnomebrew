@@ -106,26 +106,6 @@ def is_weekday() -> bool:
 
 
 @global_jinja_fun
-def css_friendly(game_id: str) -> str:
-    """
-    Takes a (game) ID string and turns it into a string that's easy to process in CSS.
-    :param game_id:  An ID, e.g. 'data.storage.content.gold'
-    :return:    A CSS friendly ID, e.g. 'data-storage-content-gold'
-    """
-    return game_id.replace('.', '-').replace(':', '-')
-
-
-@global_jinja_fun
-def css_unfriendly(css_game_id: str) -> str:
-    """
-    Turns a CSS friendly formatted GameID into the core engine's Format
-    :param css_game_id:     Game ID CSS formatted
-    :return:                Game ID commonly formatted
-    """
-    # TODO imperfect projection, because both : and . map to -
-    return css_game_id.replace('-', '.')
-
-@global_jinja_fun
 def icon(game_id: str, **kwargs):
     """
     Wraps the <img> tag formatted for game icons to increase code readability in HTML templates.
@@ -312,8 +292,8 @@ def is_game_split_formatted(string: str) -> bool:
     return False
 
 
-game_uuid_re = re.compile(r"^[a-f0-9]{8}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{12}$")
-
+game_uuid_re = re.compile(r"[a-f0-9]{8}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{4}:[a-f0-9]{12}")
+game_uuid_re_reverse = re.compile(r"([a-f0-9]{8})-([a-f0-9]{4})-([a-f0-9]{4})-([a-f0-9]{4})-([a-f0-9]{12})")
 
 def is_uuid(string: str) -> bool:
     """
@@ -334,6 +314,31 @@ def generate_uuid() -> str:
     """
     return str(uuid.uuid4()).replace('-', ':')
 
+@global_jinja_fun
+def css_friendly(game_id: str) -> str:
+    """
+    Takes a (game) ID string and turns it into a string that's easy to process in CSS.
+    :param game_id:  An ID, e.g. 'data.storage.content.gold'
+    :return:    A CSS friendly ID, e.g. 'data-storage-content-gold'
+    """
+    return game_id.replace('.', '-').replace(':', '-')
+
+
+@global_jinja_fun
+def css_unfriendly(css_game_id: str) -> str:
+    """
+    Turns a CSS friendly formatted GameID into the core engine's Format
+    :param css_game_id:     Game ID CSS formatted
+    :return:                Game ID commonly formatted
+    """
+    # both ':' and '.' map to '-'. Since only generated UUIDs contain ':' so far, we check for their
+    # unique format and replace their characters first
+    uuid_matches = game_uuid_re_reverse.search(css_game_id)
+    if uuid_matches:
+        css_game_id = game_uuid_re_reverse.sub(r"\1:\2:\3:\4:\5", css_game_id)
+
+    # Now replace all remaining '-' with '.' since all '-' left are "legitimate" '.'-characters
+    return css_game_id.replace('-', '.')
 
 def get_id_display_function(game_id: str) -> str:
     """
