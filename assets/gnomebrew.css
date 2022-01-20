@@ -748,7 +748,12 @@ img {
     gap: 20px;
 }
 
-.gb-tab.gb-tab-selected {
+.gb-tab {
+    display: none;
+}
+
+.gb-tab.gb-selected {
+    display: block;
 }
 
 .gb-icon-group-pill.gb-tab-selected {

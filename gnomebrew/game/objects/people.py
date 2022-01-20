@@ -76,8 +76,24 @@ class Race(StaticGameObject):
         age_gen = gen.rand_normal(median=age_data['old'] * 1/3, deviation=age_data['maturity'] * 2/3)
         return max(Person.MIN_AGE, min(Person.MAX_AGE, age_gen))
 
+
+    def generate_looks(self, gen: Generator):
+        """
+        Generate a look for this person.
+        :param gen: Generator to use for the generation.
+        :return:    A `look` for a person of this race.
+        """
+        possible_looks = self._data['gen_info']['looks']
+        if len(possible_looks) > 1:
+            return gen.choose_from_list(possible_looks)
+        else:
+            raise Exception(f"Cannot choose looks from empty list: {self}")
+
+
+
     def is_mature_age(self, age: float):
         return age >= self._data['gen_info']['age']['maturity']
+
 
 
 # Race Data Object Validation
@@ -85,7 +101,8 @@ class Race(StaticGameObject):
 Race.validation_parameters(('game_id', str), ('name', str), ('description', str), ('gen_info', [
     ('names', [('names', object), ('surnames', object), ('nonbinary', bool)]),
     ('size', [('avg', Number), ('std_d', Number)]),
-    ('age', [('maturity', Number), ('old', Number)])]))
+    ('age', [('maturity', Number), ('old', Number)]),
+    ('looks', list)]))
 
 
 @load_on_startup('backgrounds')
@@ -189,6 +206,10 @@ class Person(Entity):
     def get_race(self) -> Race:
         return Race.from_id(f"race.{self._data['race']}")
 
+    def get_looks(self) -> str:
+        """Returns this person's `looks`"""
+        return self._data['looks']
+
 
 @get_resolver('race', dynamic_buffer=False)
 def get_race_object(game_id: str, user: User, **kwargs):
@@ -198,7 +219,7 @@ def get_race_object(game_id: str, user: User, **kwargs):
 # Person Data Validation
 
 Person.validation_parameters(('personality', dict), ('race', str), ('background', str), ('gender', str),
-                             ('age', Number))
+                             ('age', Number), ('looks', str))
 
 
 @Person.validation_function()
@@ -231,6 +252,7 @@ def generate_person(gen: Generator):
     data['age'] = gen.generate('Person Age')
     data['gender'] = gen.generate('Gender')
     data['background'] = gen.generate('Background')
+    data['looks'] = gen.generate('Person Looks')
     data['name'] = gen.generate('Person Name')
     # Maybe the person will have a title. That's up to the character's background
     bg: Background = Background.from_id(f"background.{data['background']}")
@@ -278,6 +300,19 @@ def generate_background(gen: Generator):
     return gen.choose(Person.BACKGROUND_CHOICES)
 
 
+@Generator.generation_type(gen_type='Person Looks', ret_type=Person)
+def generate_person_looks(gen: Generator):
+    race_name = gen.get_variable('Race', default=None)
+    if race_name:
+        # A race name has been set for this background. Ensure appropriate maturity ages are applied
+        race: Race = Race.from_id(f"race.{race_name}")
+        return race.generate_looks(gen)
+    else:
+        return gen.choose({
+            'light': 1,
+            'dark': 1,
+        })
+
 @Generator.generation_type(gen_type='Person Size', ret_type=float)
 def generate_size(gen: Generator):
     race_name = gen.get_variable('Race', default=None)
@@ -317,6 +352,6 @@ def generate_many_people(seq_size):
 
     for _ in range(seq_size):
         person: Person = gen.generate("Person")
-        person.generate_subtype()
+        response.log(str(person))
 
     return response

@@ -297,6 +297,16 @@ class Generator:
             selection = selection.values.tolist()
         return selection
 
+    def choose_from_list(self, list_of_equal_choices: list):
+        """
+        Makes a semi-random choice from a list with options of equal probability.
+        :param list_of_equal_choices:   Non-empty list to choose one element from.
+        :return:                        Semi-randomly chosen element from input list.
+        """
+        if not list_of_equal_choices:
+            raise Exception(f"Cannot chose from empty list.")
+        return list_of_equal_choices[self.rand_int_limited(len(list_of_equal_choices))]
+
     # Generation Rules
 
     def process_generation_rule(self, rule: dict):
