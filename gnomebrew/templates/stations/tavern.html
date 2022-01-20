@@ -1,44 +1,27 @@
 {% extends "stations/_station.html" %}
 
-{% block station_subtitle %}
-<h5 id="data.tavern.name">{% with name = current_user.get('data.tavern.name') %}{% if name %}{{ name }}{% else %}your tavern{% endif %}{% endwith %}</h5>
+{% block station_subtitle %}<h5>{% with name = current_user.get('data.station.tavern.name') %}{% if name %}{{ name }}{% else %}your tavern{% endif %}{% endwith %}</h5>{% endblock %}
+
+{% block infos %}{{ super() }}
+<div class="gb-info gb-info-default" title="Tavern Capacity">
+    {{ icon('special.tavern_capacity', class='gb-icon-sm') | safe }}
+    {% with cap = current_user.get('attr.station.tavern.capacity') %}<span class="attr-station-tavern-capacity" data-value="{{ cap }}">{{ shorten_num(cap) }}</span>{% endwith %}
+</div>
 {% endblock %}
 
 {% block station_body %}
-
-<div class="gb-top-buttons">
-    <button class="gb-button" data-target="gb-tavern-patrons">Patrons</button>
-    <button class="gb-button" data-target="gb-tavern-prices">{{ icon('special.cost') | safe }}</button>
+{% with selected_tab = current_user.get('selection.tavern.selected_tab') %}
+<div class="gb-radio-button-group" data-sync="selection.tavern.selected_tab" data-target="#tavern-content-pane">
+    <button class="gb-radio-button{% if selected_tab == 'tavern'  %} gb-radio-active{% endif %}" data-select-value="tavern">{{ icon('special.patrons') | safe }}</button>
+    <button class="gb-radio-button{% if selected_tab == 'offers' %} gb-radio-active{% endif %}" data-select-value="offers">{{ icon('special.price') | safe }}</button>
+    <button class="gb-radio-button{% if selected_tab == '?'  %} gb-radio-active{% endif %}" data-select-value="?">?</button>
 </div>
-<div class="gb-tab-pane">
-    <div class="gb-tab gb-active-tab" id="gb-tavern-patrons">
-        {% with patrons = [] %}
-        {% include 'snippets/_patron_list.html' %}
-        {% endwith %}
+<div id="tavern-content-pane">
+    <div class="gb-tab{% if selected_tab == 'tavern'  %} gb-selected{% endif %}" data-select-value="tavern">
+        <div class="tavern-patron-list gb-list-container gb-scrollable" id="tavern-patron-list">{% for patron in generate_patron_list(current_user) %}{{ render_object('render.patron', data=patron) | safe }}{% endfor %}</div>
     </div>
-    <div class="gb-tab" id="gb-tavern-prices">
-        {% with prices = current_user.get('data.tavern.prices') %}
-        {% include 'snippets/_tavern_price_list.html' %}
-        {% endwith %}
-    </div>
+    <div class="gb-tab{% if selected_tab == 'offers'  %} gb-selected{% endif %}" data-select-value="offers"></div>
+    <div class="gb-tab{% if selected_tab == '?'  %} gb-selected{% endif %}" data-select-value="?"></div>
 </div>
-<div class="tavern-prices collapse gb-table-wrap" id="tavern-prices">
-
-</div>
-<script>
-add_startup(function () {
-    $('#tavern-prices').on('show.bs.collapse', function() {
-        $('#price-toggle').html("Hide Prices");
-    });
-    $('#tavern-prices').on('hide.bs.collapse', function() {
-        $('#price-toggle').html("Show Prices");
-    });
-    $('#tavern-prices').on('shown.bs.collapse', function() {
-        rescale_ui();
-    });
-    $('#tavern-prices').on('hidden.bs.collapse', function() {
-        rescale_ui();
-    });
-});
-</script>
+{% endwith %}
 {% endblock %}

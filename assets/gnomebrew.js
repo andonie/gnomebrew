@@ -174,8 +174,6 @@ function handle_ui_req(data) {
             display_info(data.target, data.content, data.duration);
             break;
         case 'update_class':
-            console.log("YEAH");
-            console.log(data);
             if (data.action === 'add_class' ) {
                 $(data.target).addClass(data.class_data);
             }
@@ -183,6 +181,10 @@ function handle_ui_req(data) {
                 $(data.target).removeClass(data.class_data);
             }
             break;
+        case 'set_element_content':
+            $(data.selector).html(data.content);
+            break;
+
     }
     // After any UI update, Masonry gets card blanche to update the grid
     rescale_ui();
@@ -386,10 +388,11 @@ function market_buy(item_id, error_target, trigger_element) {
     }, error_target, trigger_element);
 }
 
-function serve_next(action, error_target, trigger_element) {
+function patron_interact(target_patron, action, error_target, trigger_element) {
     one_way_game_request({
-        request_type: 'serve_next',
-        what_do: action
+        request_type: 'patron_interact',
+        action: action,
+        target_patron: target_patron
     }, error_target, trigger_element);
 }
 

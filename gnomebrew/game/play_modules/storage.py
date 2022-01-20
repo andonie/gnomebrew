@@ -201,7 +201,9 @@ def get_storage_amounts(user: User, game_id: str, **kwargs):
     storage_data = user.get('data.station.storage.content', **kwargs)
     if splits[1] == '_content':
         # Return a full dict that describes the exact content with full item_id's mapped to the amount
-        return _full_storage_dict(user, **kwargs)
+        return _full_storage_dict(user, only_items=False)
+    elif splits[1] == '_allitems':
+        return _full_storage_dict(user, only_items=True)
     else:
         # Evaluate storage data
         ret = storage_data
@@ -355,7 +357,7 @@ def get_available_category_data(user: User, **kwargs) -> List[dict]:
     :param kwargs:  List of elements will be filtered by JSON data key/values from kwargs
     :return:        List of all item categories that meet the requirements.
     """
-    player_storage = user.get('storage._content', only_items=True)
+    player_storage = user.get('storage._allitems', only_items=True)
     cat_dict = ItemCategory.get_all_of_type('it_cat')
     result = list()
 

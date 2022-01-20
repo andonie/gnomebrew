@@ -31,6 +31,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/data/names/dwarf_male_names_syl2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/data/names/dwarf_male_names_syl3.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/data/names/dwarf_surnames_syl1.csv">
           <value>
             <Attribute>
@@ -60,6 +74,20 @@
           </value>
         </entry>
         <entry key="/data/names/elf_nonbinary_names.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/data/names/elf_surnames_syl1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/data/names/elf_surnames_syl2.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

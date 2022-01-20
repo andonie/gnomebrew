@@ -1,4 +1,5 @@
 import copy
+from numbers import Number
 from typing import List, Dict, Callable
 
 from gnomebrew.game.objects.data_object import DataObject
@@ -16,9 +17,6 @@ class Item(StaticGameObject):
 
     def __init__(self, mongo_data):
         super().__init__(mongo_data)
-
-    def __str__(self):
-        return f"<Item {self._data['name']} -- {self._data=}>"
 
     def get_name(self):
         return self._data['name']
@@ -43,53 +41,10 @@ class Item(StaticGameObject):
         Returns a number that's used as the order of the item. Used to keep the storage organized
         :return:    A number representing the order of this item.
         """
-        if self.is_orderable():
-            # Orderable Items have the highest order
-            return 0
         if 'categories' in self._data:
             return 1 if 'mundane' in self._data['categories'] \
                 else 2 if 'material' in self._data['categories'] \
                 else 4
-
-    def personality_adjust(self, personality: dict) -> float:
-        """
-        Applies a personality to this (*orderable*) item and returns a the % personality adjust.
-        This percentage represents how an items desirability and demand is affected by patron personality.
-        :param personality: A patron's personality JSON stored as `dict`
-        :return:            The % change due to personality adjust, NOT the multiplication factor.
-                            i.e. multiply by **1 +** `personality_adjust` to get the adjusted demand/desire
-        """
-        if 'orderable' not in self._data:
-            raise AssertionError(f"This item ({self}) is not orderable.")
-        if 'personality_adjust' not in self._data['orderable']:
-            # This item has no personality adjustment-data. No action.
-            return 1
-
-        adjust_val = 0
-        for adjustment in self._data['orderable']['personality_adjust']:
-            if adjustment in personality:
-                adjust_val += self._data['orderable']['personality_adjust'][adjustment] * personality[adjustment]
-
-        return adjust_val
-
-    def determine_fair_price(self, user, **kwargs) -> float:
-        """
-        Determines the 'fair' price for this item.
-        :param user:    Executing user.
-        :return:        A number representing this item's fair price considering the item's intrinsic value and
-                        possible user upgrades.
-        """
-        return self._data['base_value'] * user.get('attr.tavern.price_acceptance', default=1, **kwargs)
-
-    _order_list = list()
-
-    @classmethod
-    def on_data_update(cls):
-        """
-        This method is called from the backend whenever static item data is freshly updated from the database.
-        """
-        cls._order_list = list(
-            filter(lambda item: item.is_orderable(), StaticGameObject.get_all_of_type('item').values()))
 
     def has_storage_cap(self):
         """
@@ -259,3 +214,44 @@ class Fuel(Item):
         """Returns energy value per item burned"""
         return self._data['fuel']['energy']
 
+@Item.subtype("order", ('personality_adjust',
+                        [('_openness', Number), ('_conscientiousness', Number), ('_extraversion', Number),
+                         ('_agreeableness', Number), ('_neuroticism', Number)]),
+              ('fair_value', Number), ('fair_demand', Number), ('elasticity', Number),
+              ('saturation_speed', Number))
+class OrderItem(Item):
+    """Wraps the patron order specific subtype features."""
+
+    MIN_PERSONALITY_ADJUST = 0.25
+    MAX_PERSONALITY_ADJUST = 4
+
+    def __init__(self, data):
+        Item.__init__(self, data)
+
+    def calculate_personality_adjust(self, personality: dict) -> float:
+        """
+        Applies a personality to this (*Order*) item and returns the % personality adjust.
+        This percentage represents how an items desirability and demand is affected by patron personality.
+        :param personality:     A patron's personality JSON as `dict`
+        :return:                The % change due to personality adjust, NOT the multiplication factor.
+                                i.e. multiply by **1 +** `personality_adjust` to get the adjusted demand/desire
+        """
+        if 'personality_adjust' not in self._data['orderable']:
+            # This item has no personality adjustment-data. No action.
+            return 1
+
+        adjust_val = 0
+        for personality_attribute in self._data['orderable']['personality_adjust']:
+            adjust_val += self._data['orderable']['personality_adjust'][personality_attribute] * personality[
+                personality_attribute]
+
+        return max(OrderItem.MIN_PERSONALITY_ADJUST, min(1 + adjust_val, OrderItem.MAX_PERSONALITY_ADJUST))
+
+    def determine_fair_price(self, user, **kwargs) -> float:
+        """
+        Determines the 'fair' price for this item.
+        :param user:    Executing user.
+        :return:        A number representing this item's fair price considering the item's intrinsic value and
+                        possible user upgrades.
+        """
+        return self._data['orderable']['base_value'] * user.get('attr.station.tavern.price_acceptance', **kwargs)

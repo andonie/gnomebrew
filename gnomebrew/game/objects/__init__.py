@@ -23,6 +23,7 @@ from gnomebrew.game.objects.adventure import Adventure as Adventure
 from gnomebrew.game.objects.prompt import Prompt as Prompt
 from gnomebrew.game.objects.game_object import StaticGameObject as StaticGameObject
 from gnomebrew.game.objects.tier import Tier
+from gnomebrew.game.objects.patron import Patron
 
 import gnomebrew.game.objects.names
 import gnomebrew.game.objects.special_entities

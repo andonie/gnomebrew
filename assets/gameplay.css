@@ -29,16 +29,6 @@ input {
     width: inherit;
 }
 
-/* PRICE SELECTOR */
-
-.price-selector {
-    max-width: 102px;
-}
-
-.tavern-price {
-    font-family: 'Press Start 2P';
-}
-
 /* SLOTS */
 
 .slots {
@@ -473,6 +463,11 @@ input {
 
 /* TAVERN */
 
+.tavern-patron-list {
+    background: #e7bf8b;
+    border-radius: 12px;
+    padding: 5px 0px;
+}
 
 /* MARKET */
 

@@ -1,0 +1,10 @@
+<div class="gb-patron {{ css_friendly(data.get_id()) }}">
+    <div class="gb-icon-group">
+        {{ icon(data.get_state_icon_id(), class="gb-icon " + css_friendly(data.get_id()) + "-state") | safe }}
+        <div class="person-name-and-feedback">
+            <div class="patron-name gb-mini-heading gb-toggle-view" data-toggles=".{{ css_friendly(data.get_id()) }}-feedback">{{ data.get_name() }}</div>
+            <div class="gb-info-container {{ css_friendly(data.get_id()) }}-infos">{{ data.render_current_infos() | safe }}</div>
+        </div>
+    </div>
+    <div class="{{ css_friendly(data.get_id()) }}-feedback gb-foldout gb-toggle-hidden">{{ data.get_feedback_text() | safe }}</div>
+</div>

@@ -23,7 +23,9 @@ class Prompt(GameObject):
     prompt_types = ['guild', 'main', 'server']
 
     def __init__(self, data: dict):
-        GameObject.__init__(self, data, uuid='prompt_id')
+        GameObject.__init__(self, data)
+        if 'prompt_id' not in self._data:
+            self._data['prompt_id'] = generate_uuid()
 
     def enqueue(self, user: User, **kwargs):
         """

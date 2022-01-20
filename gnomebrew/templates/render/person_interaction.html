@@ -1,0 +1,1 @@
+{% with patron_interaction = static_get('special.' + data.action) %}<div class="gb-info gb-info-button" onclick="patron_interact('{{ data.patron_min_id }}', '{{ data.action }}', 'station.tavern-warning', this)" title="{{ patron_interaction.get_description() }}">{{ patron_interaction.get_name() }}</div>{% endwith %}
