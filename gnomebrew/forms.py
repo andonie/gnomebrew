@@ -1,5 +1,5 @@
-"""tf
-This
+"""
+Manages Gnomebrew's forms via `flask_wtf`
 """
 
 from flask_wtf import FlaskForm
