@@ -26,7 +26,7 @@ def generate_person_name(gen: Generator):
     """
     full_name = ''
     # If this person has a title, give them an extra first name
-    if gen.get_variable('Title', default='None'):
+    if gen.get_variable('Title', default=None):
         full_name += f"{gen.generate('First Name') } "
 
     # Basic: First + Last Name

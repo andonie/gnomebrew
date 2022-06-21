@@ -35,12 +35,6 @@ class Environment(DataObject):
             'stack': [[]]
         })
 
-    def __str__(self):
-        var_str = ''
-        for variable in self._data['variables']:
-            var_str += f"{variable}: {str(self._data['variables'][variable])},\n"
-        return f"<Environment:\n{var_str}>"
-
     def create_copy(self):
         """
         Creates a new environment with identical properties to this one.
